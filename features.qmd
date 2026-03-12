@@ -1,0 +1,300 @@
+---
+title: "Features"
+---
+
+## Core Features
+
+### Built-in Types
+
+sicher provides a comprehensive set of built-in types:
+
+```{r}
+library(sicher)
+
+# Basic types
+x %:% Integer %<-% 42L
+y %:% Double %<-% 3.14
+z %:% Numeric %<-% 100
+name %:% String %<-% "Alice"
+flag %:% Bool %<-% TRUE
+items %:% List %<-% list(1, 2, 3)
+anything %:% Any %<-% "could be anything"
+nothing %:% Null %<-% NULL
+func %:% Function %<-% function(x) x + 1
+df %:% DataFrame %<-% data.frame(a = 1:3, b = letters[1:3])
+```
+
+### Type Modifiers
+
+#### Scalar Types
+
+Enforce single values (vectors of length 1):
+
+```{r}
+#| error: true
+# This works
+single_value %:% Scalar(Numeric) %<-% 42
+
+# This fails
+single_value <- c(1, 2, 3)
+```
+
+#### Readonly Types
+
+Prevent reassignment after initial value:
+
+```{r}
+#| error: true
+
+# Set a readonly constant
+PI %:% Readonly(Double) %<-% 3.14159
+
+PI <- 3.0 # This fails
+```
+
+#### Optional Types
+
+Allow NULL values in addition to the base type:
+
+```{r}
+#| error: true
+
+PI <- 3.0
+
+# Optional string (can be string or NULL)
+middle_name %:% Optional(String) %<-% NULL
+middle_name <- "Marie"  # Also OK
+
+middle_name <- 123 # This fails
+```
+
+### Vector Size Types
+
+Specify exact vector lengths:
+
+```{r}
+#| error: true
+
+# Exactly 3 numeric values
+coords %:% Numeric[3] %<-% c(1, 2, 3)
+
+coords <- c(4, 5, 6) # This works
+
+coords <- c(1, 2)  # Too short
+```
+
+### Union Types
+
+Allow multiple types using the `|` operator:
+
+```{r}
+#| error: true
+
+# Accept either string or numeric
+id %:% (String | Numeric) %<-% "user123"
+id <- 456  # Also OK
+
+id <- TRUE
+```
+
+### Structured List Types
+
+Define object-like structures for lists:
+
+```{r}
+#| error: true
+
+# Define a Person type
+Person <- create_list_type(list(
+  name = String,
+  age = Numeric,
+  email = Optional(String)
+))
+
+# Use it
+person %:% Person %<-% list(
+  name = "Alice",
+  age = 30,
+  email = "alice@example.com"
+)
+
+# Missing required field fails
+person <- list(name = "Bob")
+
+# Extra fields not allowed fail
+person <- list(
+    name = "Charlie",
+    age = 25,
+    email = "charlie@example.com",
+    extra = "not allowed"
+)
+```
+
+### Data Frame Types
+
+Define schemas for data frames:
+
+```{r}
+#| error: true
+
+# Define a user table schema
+UserTable <- create_dataframe_type(list(
+  id = Integer,
+  username = String,
+  active = Bool,
+  last_login = Optional(String)
+))
+
+# Valid data frame
+users %:% UserTable %<-% data.frame(
+  id = 1:3,
+  username = c("alice", "bob", "charlie"),
+  active = c(TRUE, FALSE, TRUE)
+)
+
+# Missing required column fails
+users <- data.frame(
+  username = c("alice", "bob"),
+  active = c(TRUE, FALSE)
+)
+
+users <- data.frame(
+  id = 1:2,
+  username = c("alice", "bob"),
+  active = c("yes", "no")  # Should be logical
+)
+```
+
+### Homogeneous List Types
+
+For lists of similar items (like API responses):
+
+```{r}
+#| error: true
+
+# Define item structure
+TodoItem <- create_list_type(list(
+  userId = Numeric,
+  id = Numeric,
+  title = String,
+  completed = Bool
+))
+
+# List of todo items
+TodoList <- ListOf(TodoItem)
+
+# Valid list
+todos %:% TodoList %<-% list(
+  list(userId = 1, id = 1, title = "Task 1", completed = FALSE),
+  list(userId = 1, id = 2, title = "Task 2", completed = TRUE)
+)
+
+todos <- list(
+  list(userId = 1, id = 1, title = "Task 1", completed = FALSE),
+  list(wrong = "structure")
+)
+```
+
+### Combining Features
+
+All features can be combined:
+
+```{r}
+#| error: true
+
+# Complex nested structure
+Company <- create_list_type(list(
+  name = String,
+  employees = ListOf(create_list_type(list(
+    name = String,
+    salary = Numeric,
+    department = Optional(String)
+  ))),
+  founded = Numeric[3]  # [year, month, day]
+))
+
+company %:% Company %<-% list(
+  name = "Tech Corp",
+  employees = list(
+    list(name = "Alice", salary = 75000, department = "Engineering"),
+    list(name = "Bob", salary = 65000)  # department optional
+  ),
+  founded = c(2020, 1, 15)
+)
+```
+
+## Advanced Usage
+
+### Custom Types
+
+Create your own types using `create_type()`:
+
+```{r}
+#| error: true
+
+# Positive number type
+Positive <- create_type("positive", function(x) {
+  is.numeric(x) && all(x > 0)
+})
+
+value %:% Positive %<-% 5
+
+value <- -1
+```
+
+### Type Composition
+
+Build complex types from simpler ones:
+
+```{r}
+#| error: true
+
+# Email type
+Email <- create_type("email", function(x) {
+  is.character(x) && length(x) == 1 &&
+  grepl("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", x)
+})
+
+# Person with email
+PersonWithEmail <- create_list_type(list(
+  name = String,
+  email = Email,
+  age = Numeric
+))
+
+person %:% PersonWithEmail %<-% list(
+  name = "Alice",
+  email = "alice@example.com",
+  age = 30
+)
+
+person %:% PersonWithEmail %<-% list(
+    name = "Bob",
+    email = "invalid-email",
+    age = 25
+)
+```
+
+## Error Messages
+
+`sicher` provides clear, contextual error messages:
+
+```{r, error=TRUE}
+#| error: true
+
+# Type mismatch
+x %:% Numeric %<-% "not a number"
+```
+
+```{r, error=TRUE}
+# Missing required field
+PersonType <- create_list_type(list(name = String, age = Numeric))
+p %:% PersonType %<-% list(name = "Alice")
+```
+
+```{r, error=TRUE}
+# Wrong vector length
+vec %:% Numeric[3] %<-% c(1, 2)
+```
+
+

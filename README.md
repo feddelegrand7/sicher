@@ -1,0 +1,18 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+## What is sicher?
+
+**sicher** is an R package that brings type safety to R programming,
+similar to TypeScript for JavaScript. It allows you to define types for
+your variables and enforce them at runtime, catching type errors early
+and making your code more robust and maintainable.
+
+### Key Features
+
+- **Runtime Type Checking**: Catch type errors during development
+- **Intuitive Syntax**: Use familiar operators like `%:%` and `%<-%`
+- **Rich Type System**: Support for primitives, lists, data frames,
+  unions, and more
+- **Zero Runtime Overhead**: Types are checked only during assignment
+- **Gradual Adoption**: Add types incrementally to existing code

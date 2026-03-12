@@ -1,0 +1,26 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "sicher: Type Safety for R"
+  description: "A comprehensive type checking system for R, inspired by TypeScript."
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: features.qmd
+        text: Features
+      - href: api.qmd
+        text: API Reference
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    code-tools: false
+
+editor: visual

@@ -1,0 +1,156 @@
+---
+title: "API Reference"
+---
+
+
+```{r, echo=FALSE}
+library(sicher)
+```
+
+
+## Core Functions
+
+### `create_type(name, checker)`
+
+Creates a new type with a name and validation function.
+
+**Parameters:**
+- `name`: Character string for error messages
+- `checker`: Function that returns TRUE/FALSE for validation
+
+**Example:**
+```{r}
+Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
+```
+
+### `create_list_type(type_spec)`
+
+Creates a type for lists with specific field requirements.
+
+**Parameters:**
+- `type_spec`: Named list where names are field names and values are types
+
+**Example:**
+```{r}
+Person <- create_list_type(list(name = String, age = Numeric))
+```
+
+### `create_dataframe_type(col_spec)`
+
+Creates a type for data frames with column specifications.
+
+**Parameters:**
+- `col_spec`: Named list where names are column names and values are types
+
+**Example:**
+```{r}
+Table <- create_dataframe_type(list(id = Integer, name = String))
+```
+
+### `ListOf(element_type)`
+
+Creates a type for homogeneous lists.
+
+**Parameters:**
+- `element_type`: Type that each list element must satisfy
+
+**Example:**
+```{r}
+Numbers <- ListOf(Numeric)
+```
+
+## Type Modifiers
+
+### `Scalar(type)`
+
+Requires exactly one element (length 1).
+
+**Example:**
+```{r}
+SingleValue <- Scalar(Numeric)
+```
+
+### `Readonly(type)`
+
+Prevents reassignment after initial value.
+
+**Example:**
+```{r}
+Constant <- Readonly(String)
+```
+
+### `Optional(type)`
+
+Allows NULL in addition to the base type.
+
+**Example:**
+```{r}
+MaybeString <- Optional(String)
+```
+
+## Operators
+
+### `%:%`
+
+Type annotation operator.
+
+**Usage:**
+```r
+variable %:% Type
+```
+
+### `%<-%`
+
+Typed assignment operator.
+
+**Usage:**
+```r
+variable %:% Type %<-% value
+```
+
+### `|`
+
+Union operator for combining types.
+
+**Example:**
+```r
+StringOrNumber <- String | Numeric
+```
+
+### `[size]`
+
+Size constraint operator.
+
+**Example:**
+```r
+ThreeNumbers <- Numeric[3]
+```
+
+## Built-in Types
+
+### Primitive Types
+
+- `Integer`: Integer vectors
+- `Double`: Double-precision numeric vectors
+- `Numeric`: Any numeric vectors
+- `String`: Character vectors
+- `Bool`: Logical vectors
+- `List`: List objects
+- `Any`: Accepts any value
+- `Null`: Only NULL values
+- `Function`: Function objects
+- `DataFrame`: Data frame objects
+
+## Error Handling
+
+Type errors provide detailed context:
+
+```{r, error=TRUE}
+x %:% Numeric %<-% "text"
+```
+
+Error messages include:
+- Expected type
+- Actual type
+- Variable name (when available)
+- Value preview (for debugging)

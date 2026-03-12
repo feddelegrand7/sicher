@@ -1,0 +1,331 @@
+---
+title: ""
+subtitle: ""
+---
+
+## What is sicher?
+
+**sicher** is an R package that brings type safety to R programming, similar to TypeScript for JavaScript. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.
+
+### Key Features
+
+- **Runtime Type Checking**: Catch type errors during development
+- **Intuitive Syntax**: Use familiar operators like `%:%` and `%<-%`
+- **Rich Type System**: Support for primitives, lists, data frames, unions, and more
+- **Zero Runtime Overhead**: Types are checked only during assignment
+- **Gradual Adoption**: Add types incrementally to existing code
+
+## Quick Start
+
+Install the package and start using types immediately:
+
+```{r}
+#| error: TRUE
+
+library(sicher)
+
+# Basic type checking
+x %:% Numeric %<-% 42
+x <- "text"  # Error!
+```
+
+## Why Type Safety in R?
+
+R is a dynamically typed language, which offers great flexibility but can lead to:
+
+- **Runtime errors** from unexpected data types
+- **Bugs** that only appear with certain inputs
+- **Maintenance difficulties** in large codebases
+- **API confusion** when functions receive wrong types
+
+sicher addresses these issues by providing:
+
+- **Early error detection** during development
+- **Self-documenting code** through type annotations
+- **Better IDE support** and code completion
+- **Safer refactoring** with type guarantees
+
+## Real-World Use Cases
+
+### Example 1: 
+Suppose you write a function that calculates the average salary payout for employees. In a real company workflow, the data might come from, a CSV export from HR, manual editing in Excel, a database export and so on. Sometimes the numbers that are saved within those data sources can have invalid types (string for example): 
+
+```{r}
+calculate_mean_payroll <- function(salaries) {
+  average <- mean(salaries)
+  return(average)
+}
+```
+
+If the inputs have a correct data type, then we don't have any issue: 
+
+```{r}
+calculate_mean_payroll(c(1800, 2300, 4000, 1222))
+```
+Now, imagine that our input as following: 
+
+```{r}
+calculate_mean_payroll(c(1800, "2300", 4000, 1222))
+```
+Instead of getting an error, we get a warning and an `NA` value as a result. This is a very simple function but in a realistic example, you might have a script that uses thousands of lines of code and many functions to obtain a specific result, thus making this kind of debugging harder. We definitely expect more robustness from `R`. 
+
+Using `sicher` we can make sure that our data types remain valid and as we defined them.
+
+```{r}
+calculate_mean_payroll_safe <- function(salaries) {
+  salaries %:% Numeric %<-% salaries
+  average <- mean(salaries)
+  return(average)
+}
+```
+
+```{r}
+#| error: TRUE
+calculate_mean_payroll_safe(c(1800, "2300", 4000, 1222))
+```
+
+Note that when you define a `type` for a specific variable, that type is guarded throughout the execution of your code: 
+
+```{r}
+#| error: TRUE
+
+calculate_mean_payroll_safe <- function(salaries) {
+  salaries %:% Numeric %<-% salaries
+  average <- mean(salaries)
+  salaries <- "my salaries" # changing the type of the variable to string
+  return(average)
+}
+```
+
+```{r}
+#| error: TRUE
+calculate_mean_payroll_safe(c(1800, "2300", 4000, 1222))
+```
+
+
+## Example 2: 
+
+When working with Rest APIs, you want make sure that the data that you're getting has a specific shape and type, consider the following `API`: `https://jsonplaceholder.typicode.com/todos/1`
+
+It provides us with one object of the shape: 
+
+```{js}
+{
+  "userId": 1,
+  "id": 1,
+  "title": "delectus aut autem",
+  "completed": false
+}
+```
+
+Using `sicher` you can, similar to the `pydantic` Python framework, define the expected structure of the response: 
+
+```{r}
+ToDo <- create_list_type(
+  type_spec = list(
+    userId = Numeric,
+    id = Numeric,
+    title = String,
+    completed = Bool
+  )
+)
+
+ToDo
+```
+
+Then when fetching the data, you can safely check that the response corresponds to the expected object: 
+
+
+```{r}
+api_url <- "https://jsonplaceholder.typicode.com/todos/1"
+
+response %:% ToDo %<-% httr::content(httr::GET(api_url))
+
+response
+```
+
+If the API for whatever reason started to produce invalid responses, `sicher` would catch it immediately: 
+
+```{r}
+#| error: true
+invalid_response <- list(
+  userId = 1, 
+  id = 1, 
+  title = "delectus aut autem", 
+  completed = "yes" # Invalid! 
+)
+
+response <- invalid_response
+```
+
+```{r}
+#| error: true
+invalid_response <- list(
+  userId = 1, 
+  id = 1, 
+  title = "delectus aut autem", 
+  new_name_not_recognized = TRUE # Invalid! 
+)
+
+response <- invalid_response
+```
+
+The above URL returns only 1 object back, if we use the following URL `https://jsonplaceholder.typicode.com/todos/` we get several (200) json objects back: 
+
+```{r}
+api_url <- "https://jsonplaceholder.typicode.com/todos/"
+
+full_response <- httr::content(httr::GET(api_url))
+
+length(full_response)
+full_response[[1]]
+```
+Now how to set the type of a list of lists? using the `ListOf` function: 
+
+```{r}
+ToDos <- ListOf(ToDo)
+
+full_response %:% ToDos %<-% httr::content(httr::GET(api_url))
+```
+
+Now if we try to change the type of one element of the lists: 
+
+```{r}
+#| error: TRUE
+invalid_list <- full_response[[1]]$userId <- "A string" # Invalid type
+```
+
+
+### Data Frame Schemas
+
+```{r}
+#| error: TRUE
+
+# Define data frame structure
+SalesData <- create_dataframe_type(
+  col_spec = list(
+    date = String,
+    product = String,
+    quantity = Integer,
+    price = Numeric,
+    region = String
+  ))
+
+sales_df <- data.frame(
+  date = c("2024-01-01", "2024-01-02"),
+  product = c("Widget A", "Widget B"),
+  quantity = c(10, 5),
+  price = c(29.99, 49.99),
+  region = c("North", "South")
+)
+
+validated_sales %:% SalesData %<-% sales_df
+```
+
+
+```{r}
+sales_df <- data.frame(
+  date = c("2024-01-01", "2024-01-02"),
+  product = c("Widget A", "Widget B"),
+  quantity = c(10L, 5L),
+  price = c(29.99, 49.99),
+  region = c("North", "South")
+)
+
+validated_sales %:% SalesData %<-% sales_df
+```
+
+
+## Type System Overview
+
+### Built-in Types
+
+- **Primitives**: `Integer`, `Double`, `Numeric`, `String`, `Bool`
+- **Containers**: `List`, `DataFrame`, `Function`
+- **Special**: `Any`, `Null`
+
+### Type Modifiers
+
+- **Scalar**: Single element only
+- **Readonly**: Cannot be reassigned
+- **Optional**: Allows NULL values
+
+### Advanced Types
+
+- **Unions**: `TypeA | TypeB`
+- **Size constraints**: `Numeric[3]` (exactly 3 elements)
+- **List types**: Structured lists with field specifications
+- **Data frame types**: Column type specifications
+- **Homogeneous lists**: `ListOf(ElementType)`
+
+## Getting Started
+
+### Installation
+
+Currently, install from Github with:
+
+```{r, eval = FALSE}
+devtools::install_github("feddelegrand7/sicher")
+```
+
+### Basic Usage
+
+```{r}
+#| error: TRUE
+
+# 1. Annotate variables with types
+name %:% String %<-% "Alice"
+age %:% Numeric %<-% 30
+
+# 2. Create custom types
+PositiveNumber <- create_type("positive number", 
+  function(x) is.numeric(x) && all(x > 0))
+
+value %:% PositiveNumber %<-% 42
+
+# 3. Use type modifiers
+single_value %:% Scalar(String) %<-% "hello"
+constant %:% Readonly(Numeric) %<-% 3.14
+maybe_value %:% Optional(String) %<-% NULL
+
+# 4. Create structured types
+Person <- create_list_type(list(
+  name = String,
+  age = Numeric,
+  email = Optional(String)
+))
+
+person %:% Person %<-% list(
+  name = "Bob",
+  age = 25,
+  email = "bob@example.com"
+)
+```
+
+## Error Examples
+
+See how sicher catches type errors:
+
+```{r}
+#| error: TRUE
+
+# Wrong type assignment
+x %:% Numeric %<-% "text"
+```
+
+```{r}
+#| error: TRUE
+
+# Missing required fields
+User <- create_list_type(list(name = String, age = Numeric))
+user %:% User %<-% list(name = "Alice")  # Missing age
+```
+
+```{r}
+#| error: TRUE
+
+# Wrong data frame column types
+Table <- create_dataframe_type(list(id = Integer, name = String))
+df %:% Table %<-% data.frame(id = c("1", "2"), name = c("A", "B"))  # id should be integer
+```
+
