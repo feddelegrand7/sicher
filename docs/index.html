@@ -219,7 +219,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">42</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="st">"text"</span>  <span class="co"># Error!</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'x': Expected numeric, got string
+<pre><code>Error: Type error: Expected numeric, got string
   Received: [text]</code></pre>
 </div>
 </div>
@@ -282,8 +282,8 @@ returning NA</code></pre>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">calculate_mean_payroll_safe</span>(<span class="fu">c</span>(<span class="dv">1800</span>, <span class="st">"2300"</span>, <span class="dv">4000</span>, <span class="dv">1222</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'salaries': Expected numeric, got string
-  Received: [1800, 2300, 4000, ...] (length: 4)</code></pre>
+<pre><code>Error: Type error: Expected numeric, got string
+  Received: [1800, 2300, 4000, 1222]</code></pre>
 </div>
 </div>
 <p>Note that when you define a <code>type</code> for a specific variable, that type is guarded throughout the execution of your code:</p>
@@ -298,8 +298,8 @@ returning NA</code></pre>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">calculate_mean_payroll_safe</span>(<span class="fu">c</span>(<span class="dv">1800</span>, <span class="st">"2300"</span>, <span class="dv">4000</span>, <span class="dv">1222</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'salaries': Expected numeric, got string
-  Received: [1800, 2300, 4000, ...] (length: 4)</code></pre>
+<pre><code>Error: Type error: Expected numeric, got string
+  Received: [1800, 2300, 4000, 1222]</code></pre>
 </div>
 </div>
 </section>
@@ -372,7 +372,7 @@ $completed
 <span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> invalid_response</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'completed': Expected bool, got string
+<pre><code>Error: Type error: Expected bool, got string
   Received: [yes]</code></pre>
 </div>
 </div>
@@ -386,7 +386,9 @@ $completed
 <span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> invalid_response</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error in type$check(value): object 'context' not found</code></pre>
+<pre><code>Error: Type error: Expected {userId: numeric, id: numeric, title: string, completed: bool}, got list
+  Details: Missing required fields: completed
+  Received: [1, 1, delectus aut autem, TRUE]</code></pre>
 </div>
 </div>
 <p>The above URL returns only 1 object back, if we use the following URL <code>https://jsonplaceholder.typicode.com/todos/</code> we get several (200) json objects back:</p>
@@ -424,8 +426,8 @@ $completed
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>invalid_list <span class="ot">&lt;-</span> full_response[[<span class="dv">1</span>]]<span class="sc">$</span>userId <span class="ot">&lt;-</span> <span class="st">"A string"</span> <span class="co"># Invalid type</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'full_response': Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list
-  Received: [list(userId = "A string", id = 1, title = "delectus aut autem", completed = FALSE), list(userId = 1, id = 2, title = "quis ut nam facilis et officia qui", completed = FALSE), list(userId = 1, id = 3, title = "fugiat veniam minus", completed = FALSE), ...] (length: 200)</code></pre>
+<pre><code>Error: Type error: Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list
+  Received: [list(userId = "A string", id = 1, title = "delectus aut autem", completed = FALSE), list(userId = 1, id = 2, title = "quis ut nam facilis et officia qui", completed = FALSE), list(userId = 1, id = 3, title = "fugiat veniam minus", completed = FALSE), list(userId = 1, id = 4, title = "et porro tempora", completed = TRUE), list(userId = 1, id = 5, title = "laboriosam mollitia et enim quasi adipisci quia provident illum", completed = FALSE), ...] (length: 200)</code></pre>
 </div>
 </div>
 <section id="data-frame-schemas" class="level3">
@@ -451,7 +453,7 @@ $completed
 <span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>validated_sales <span class="sc">%:%</span> SalesData <span class="sc">%&lt;-%</span> sales_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'quantity': Expected integer, got double
+<pre><code>Error: Type error: Expected integer, got double
   Received: [10, 5]</code></pre>
 </div>
 </div>
@@ -546,7 +548,7 @@ $completed
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong type assignment</span></span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'x': Expected numeric, got string
+<pre><code>Error: Type error: Expected numeric, got string
   Received: [text]</code></pre>
 </div>
 </div>
@@ -555,7 +557,9 @@ $completed
 <span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>User <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
 <span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>user <span class="sc">%:%</span> User <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)  <span class="co"># Missing age</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error in type$check(value): object 'context' not found</code></pre>
+<pre><code>Error: Type error: Expected {name: string, age: numeric}, got list
+  Details: Missing required fields: age
+  Received: [Alice]</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -563,7 +567,7 @@ $completed
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>Table <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Integer, <span class="at">name =</span> String))</span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%:%</span> Table <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(<span class="at">id =</span> <span class="fu">c</span>(<span class="st">"1"</span>, <span class="st">"2"</span>), <span class="at">name =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>))  <span class="co"># id should be integer</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'id': Expected integer, got string
+<pre><code>Error: Type error: Expected integer, got string
   Received: [1, 2]</code></pre>
 </div>
 </div>
