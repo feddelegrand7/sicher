@@ -106,7 +106,7 @@ Integer <- create_type("integer", is.integer)
 #' A type that checks for double-precision numeric vectors.
 #'
 #' @export
-Double  <- create_type("double", is.double)
+Double <- create_type("double", is.double)
 
 #' Built-in Numeric Type
 #'
@@ -122,7 +122,7 @@ Numeric <- create_type("numeric", is.numeric)
 #' A type that checks for character vectors.
 #'
 #' @export
-String  <- create_type("string", is.character)
+String <- create_type("string", is.character)
 
 #' Built-in Boolean Type
 #'
@@ -130,7 +130,7 @@ String  <- create_type("string", is.character)
 #' A type that checks for logical vectors.
 #'
 #' @export
-Bool    <- create_type("bool", is.logical)
+Bool <- create_type("bool", is.logical)
 
 #' Built-in List Type
 #'
@@ -138,7 +138,7 @@ Bool    <- create_type("bool", is.logical)
 #' A type that checks for list objects.
 #'
 #' @export
-List    <- create_type("list", is.list)
+List <- create_type("list", is.list)
 
 #' Create a homogeneous list type
 #'
@@ -195,7 +195,7 @@ ListOf <- function(element_type) {
 #' A type that accepts any value.
 #'
 #' @export
-Any       <- create_type("any", function(x) TRUE)
+Any <- create_type("any", function(x) TRUE)
 
 #' Built-in Null Type
 #'
@@ -244,7 +244,9 @@ DataFrame <- create_type("data.frame", is.data.frame)
 #'
 #' @export
 `[.sicher_type` <- function(type, size) {
-  if (!is.numeric(size) || length(size) != 1 || size < 0 || size != as.integer(size)) {
+  is_valid_size <- is.numeric(size) && length(size) == 1 &&
+    size >= 0 && size == as.integer(size)
+  if (!is_valid_size) {
     stop("Size must be a non-negative integer", call. = FALSE)
   }
   create_type(
@@ -298,8 +300,15 @@ create_list_type <- function(type_spec) {
 
   # Validate that all values are sicher_type objects
   for (i in seq_along(type_spec)) {
-    if (!inherits(type_spec[[i]], "sicher_type") && !inherits(type_spec[[i]], "sicher_union")) {
-      stop(sprintf("Element '%s' must be a sicher_type or sicher_union", names(type_spec)[i]), call. = FALSE)
+    if (!inherits(type_spec[[i]], "sicher_type") &&
+        !inherits(type_spec[[i]], "sicher_union")) {
+      stop(
+        sprintf(
+          "Element '%s' must be a sicher_type or sicher_union",
+          names(type_spec)[i]
+        ),
+        call. = FALSE
+      )
     }
   }
 
@@ -318,11 +327,19 @@ create_list_type <- function(type_spec) {
   required_fields <- field_names[!is_optional]
   optional_fields <- field_names[is_optional]
 
-  type_name <- sprintf("{%s}", paste(sprintf("%s%s: %s",
-                                             field_names,
-                                             ifelse(is_optional, "?", ""),
-                                             sapply(type_spec, function(t) if (inherits(t, "sicher_type")) t$name else t$name)),
-                                     collapse = ", "))
+  type_labels <- sapply(type_spec, function(t) t$name)
+  type_name <- sprintf(
+    "{%s}",
+    paste(
+      sprintf(
+        "%s%s: %s",
+        field_names,
+        ifelse(is_optional, "?", ""),
+        type_labels
+      ),
+      collapse = ", "
+    )
+  )
 
   create_type(
     type_name,
@@ -332,21 +349,24 @@ create_list_type <- function(type_spec) {
       # Check that all required fields are present
       if (!all(required_fields %in% names(x))) {
         missing_fields <- setdiff(required_fields, names(x))
-        stop(type_error(scontext = NULL, type_name, "list", x,
-                        sprintf("Missing required fields: %s", paste(missing_fields, collapse = ", "))), call. = FALSE)
+        details <- sprintf(
+          "Missing required fields: %s",
+          paste(missing_fields, collapse = ", ")
+        )
+        stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
       }
 
       # Check that each present field has the correct type
       present_fields <- names(x)
       for (field in present_fields) {
         if (field %in% field_names) {
-          if (!check_type(x[[field]], type_spec[[field]], scontext = field)) {
+          if (!check_type(x[[field]], type_spec[[field]], context = field)) {
             return(FALSE)
           }
         } else {
           # Extra fields are not allowed
-          stop(type_error(scontext = NULL, type_name, "list", x,
-                          sprintf("Unexpected field: %s", field)), call. = FALSE)
+          details <- sprintf("Unexpected field: %s", field)
+          stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
         }
       }
 
@@ -392,8 +412,15 @@ create_dataframe_type <- function(col_spec) {
 
   # Validate each column type specification
   for (i in seq_along(col_spec)) {
-    if (!inherits(col_spec[[i]], "sicher_type") && !inherits(col_spec[[i]], "sicher_union")) {
-      stop(sprintf("Column '%s' must be a sicher_type or sicher_union", names(col_spec)[i]), call. = FALSE)
+    if (!inherits(col_spec[[i]], "sicher_type") &&
+        !inherits(col_spec[[i]], "sicher_union")) {
+      stop(
+        sprintf(
+          "Column '%s' must be a sicher_type or sicher_union",
+          names(col_spec)[i]
+        ),
+        call. = FALSE
+      )
     }
   }
 
@@ -410,11 +437,19 @@ create_dataframe_type <- function(col_spec) {
   required_cols <- col_names[!is_optional]
   optional_cols <- col_names[is_optional]
 
-  type_name <- sprintf("data.frame{%s}", paste(sprintf("%s%s: %s",
-                                                       ifelse(is_optional, col_names, ""),
-                                                       ifelse(is_optional, "?", ""),
-                                                       sapply(col_spec, function(t) if (inherits(t, "sicher_type")) t$name else t$name)),
-                                               collapse = ", "))
+  type_labels <- sapply(col_spec, function(t) t$name)
+  type_name <- sprintf(
+    "data.frame{%s}",
+    paste(
+      sprintf(
+        "%s%s: %s",
+        ifelse(is_optional, col_names, ""),
+        ifelse(is_optional, "?", ""),
+        type_labels
+      ),
+      collapse = ", "
+    )
+  )
 
   create_type(
     type_name,
@@ -434,7 +469,7 @@ create_dataframe_type <- function(col_spec) {
       # check each column type
       for (col in col_names) {
         if (col %in% names(x)) {
-          if (!check_type(x[[col]], col_spec[[col]], scontext = col)) {
+          if (!check_type(x[[col]], col_spec[[col]], context = col)) {
             return(FALSE)
           }
         }
@@ -584,12 +619,12 @@ get_type_name <- function(value) {
   class(value)[1]
 }
 
-type_error <- function(scontext = NULL, expected, got, value = NULL, details = NULL) {
-
-  base_msg <- if (is.null(scontext)) {
+type_error <- function(context = NULL, expected, got,
+                       value = NULL, details = NULL) {
+  base_msg <- if (is.null(context)) {
     sprintf("Type error: Expected %s, got %s", expected, got)
   } else {
-    sprintf("Type error in '%s': Expected %s, got %s", scontext, expected, got)
+    sprintf("Type error in '%s': Expected %s, got %s", context, expected, got)
   }
 
   if (!is.null(details)) {
@@ -626,7 +661,7 @@ type_error <- function(scontext = NULL, expected, got, value = NULL, details = N
 #'
 #' @param value The value to check
 #' @param type A sicher_type, sicher_union, or sicher_readonly object
-#' @param scontext Optional character string describing where the check is occurring
+#' @param context Optional character string describing where the check is occurring
 #'   (used in error messages)
 #'
 #' @return Returns `TRUE` invisibly if the value matches the type, otherwise
@@ -650,8 +685,8 @@ type_error <- function(scontext = NULL, expected, got, value = NULL, details = N
 #' check_type(5L, Integer)  # Returns TRUE
 #' check_type("hello", Integer)  # Throws error
 #'
-#' # With scontext for better error messages
-#' check_type(5L, String, scontext = "user_name")
+#' # With context for better error messages
+#' check_type(5L, String, context = "user_name")
 #'
 #' # With union types
 #' check_type(5L, Integer | String)  # Returns TRUE
@@ -659,7 +694,7 @@ type_error <- function(scontext = NULL, expected, got, value = NULL, details = N
 #' }
 #'
 #' @export
-check_type <- function(value, type, scontext = NULL) {
+check_type <- function(value, type, context = NULL) {
   if (inherits(type, "sicher_readonly")) {
     type <- type$base_type
   }
@@ -670,7 +705,7 @@ check_type <- function(value, type, scontext = NULL) {
         inherits(t, "sicher_type") && identical(t, Null)
       }))
       if (!has_null) {
-        stop(type_error(scontext = NULL, type$name, "null", value), call. = FALSE)
+        stop(type_error(NULL, type$name, "null", value), call. = FALSE)
       }
       return(TRUE)
     }
@@ -681,19 +716,25 @@ check_type <- function(value, type, scontext = NULL) {
       }
     }
 
-    stop(type_error(scontext, type$name, "null", value), call. = FALSE)
+    stop(type_error(context, type$name, "null", value), call. = FALSE)
   }
 
   if (inherits(type, "sicher_type")) {
     if (type$check(value)) return(TRUE)
-    stop(type_error(scontext = NULL, type$name, get_type_name(value), value), call. = FALSE)
+    stop(
+      type_error(NULL, type$name, get_type_name(value), value),
+      call. = FALSE
+    )
   }
 
   if (inherits(type, "sicher_union")) {
     for (t in type$types) {
       if (inherits(t, "sicher_type") && t$check(value)) return(TRUE)
     }
-    stop(type_error(scontext, type$name, get_type_name(value), value), call. = FALSE)
+    stop(
+      type_error(context, type$name, get_type_name(value), value),
+      call. = FALSE
+    )
   }
 
   stop("Invalid type specification", call. = FALSE)
@@ -707,7 +748,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
   is_readonly <- inherits(type, "sicher_readonly")
   actual_type <- if (is_readonly) type$base_type else type
 
-  check_type(value, actual_type, scontext = var_name)
+  check_type(value, actual_type, context = var_name)
 
   if (exists(var_name, envir = envir, inherits = FALSE)) {
     rm(list = var_name, envir = envir)
@@ -728,9 +769,12 @@ create_typed_binding <- function(var_name, value, type, envir) {
           penv$value
         } else {
           if (penv$readonly) {
-            stop(sprintf("Cannot reassign readonly variable '%s'", vname), call. = FALSE)
+            stop(
+              sprintf("Cannot reassign readonly variable '%s'", vname),
+              call. = FALSE
+            )
           }
-          check_type(new_value, penv$type, scontext = vname)
+          check_type(new_value, penv$type, context = vname)
           penv$value <- new_value
         }
       }
