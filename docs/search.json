@@ -116,7 +116,7 @@
     "href": "api.html#operators",
     "title": "API Reference",
     "section": "Operators",
-    "text": "Operators\n\n%:%\nType annotation operator.\nUsage:\nvariable %:% Type\n\n\n%&lt;-%\nTyped assignment operator.\nUsage:\nvariable %:% Type %&lt;-% value\n\n\n|\nUnion operator for combining types.\nExample:\nStringOrNumber &lt;- String | Numeric\n\n\n[size]\nSize constraint operator.\nExample:\nThreeNumbers &lt;- Numeric[3]"
+    "text": "Operators\n\n%:%\nType annotation operator.\nUsage:\nvariable %:% Type\n\n\n%&lt;-%\nTyped assignment operator.\nUsage:\nvariable %:% Type %&lt;-% value\n\n\n|\nUnion operator for combining types.\nExample:\nStringOrNumber &lt;- (String | Numeric)\n\n\n[size]\nSize constraint operator.\nExample:\nThreeNumbers &lt;- Numeric[3]"
   },
   {
     "objectID": "api.html#built-in-types",
@@ -130,7 +130,7 @@
     "href": "api.html#error-handling",
     "title": "API Reference",
     "section": "Error Handling",
-    "text": "Error Handling\nType errors provide detailed context:\n\nx %:% Numeric %&lt;-% \"text\"\n\nError: Type error in 'x': Expected numeric, got string\n  Received: [text]\n\n\nError messages include: - Expected type - Actual type - Variable name (when available) - Value preview (for debugging)"
+    "text": "Error Handling\nType errors provide detailed context:\n\nx %:% Numeric %&lt;-% \"text\"\n\nError: Type error: Expected numeric, got string\n  Received: [text]\n\n\nError messages include: - Expected type - Actual type - Variable name (when available) - Value preview (for debugging)"
   },
   {
     "objectID": "api.html#advanced-usage",

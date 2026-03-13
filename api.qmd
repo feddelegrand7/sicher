@@ -114,7 +114,7 @@ Union operator for combining types.
 
 **Example:**
 ```r
-StringOrNumber <- String | Numeric
+StringOrNumber <- (String | Numeric)
 ```
 
 ### `[size]`
