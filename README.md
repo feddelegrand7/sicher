@@ -33,8 +33,8 @@ age  %:% Numeric %<-% 30
 
 # The type is enforced on every subsequent assignment
 age <- "thirty"   # Error: Type error
-#> Error: Type error: Expected numeric, got string
-#> Received: [thirty]
+#> Error: Type error in 'age': Expected numeric, got string
+#> Received: thirty
 ```
 
 ## ✨ Core Features
@@ -77,7 +77,7 @@ df   %:% DataFrame %<-% data.frame(a = 1:3)
 ``` r
 single %:% Scalar(Numeric) %<-% 42
 single <- c(1, 2, 3)   # Error: length > 1
-#> Error: Type error: Expected scalar<numeric>, got double of length 3
+#> Error: Type error in 'single': Expected scalar<numeric>, got double of length 3
 #> Received: [1, 2, 3]
 ```
 
@@ -86,7 +86,7 @@ single <- c(1, 2, 3)   # Error: length > 1
 ``` r
 PI %:% Readonly(Double) %<-% 3.14159
 PI <- 3.0   # Error: cannot reassign readonly variable
-#> Error: Cannot reassign readonly variable 'PI'
+#> Error: Cannot reassign readonly variable 'PI'. Remove Readonly() from the type declaration if mutation is needed.
 ```
 
 #### ❓ `Optional()` — nullable values
@@ -96,7 +96,7 @@ middle_name %:% Optional(String) %<-% NULL   # OK
 middle_name <- "Marie"                        # Also OK
 middle_name <- 123                            # Error: not string or null
 #> Error: Type error in 'middle_name': Expected string | null, got double
-#> Received: [123]
+#> Received: 123
 ```
 
 ### 🔀 Union Types
@@ -108,7 +108,7 @@ id %:% (String | Numeric) %<-% "user123"
 id <- 456   # Also OK
 id <- TRUE  # Error: not string or numeric
 #> Error: Type error in 'id': Expected string | numeric, got bool
-#> Received: [TRUE]
+#> Received: TRUE
 ```
 
 ### 📏 Size-constrained Vectors
@@ -119,7 +119,7 @@ Append `[n]` to any type to require an exact vector length:
 coords %:% Numeric[3] %<-% c(1, 2, 3)
 coords <- c(4, 5, 6)   # OK — same length
 coords <- c(1, 2)      # Error: wrong length
-#> Error: Type error: Expected numeric[3], got double of length 2
+#> Error: Type error in 'coords': Expected numeric[3], got double of length 2
 #> Received: [1, 2]
 ```
 
@@ -139,7 +139,7 @@ person %:% Person %<-% list(name = "Alice", age = 30, email = "alice@example.com
 person <- list(name = "Bob")   # Error: missing required field 'age'
 #> Error: Type error: Expected {name: string, age: numeric, email?: string | null}, got list
 #> Details: Missing required field(s): age (expected fields: name, age)
-#> Received: [Bob]
+#> Received: list with fields: [name]
 ```
 
 ### 🗄️ Data Frame Schemas
@@ -165,7 +165,7 @@ users <- data.frame(
   username = c("alice", "bob"),
   active   = c(TRUE, FALSE)
 )
-#> Error: Type error: Expected integer, got string of length 2
+#> Error: Type error in 'id': Expected integer, got string of length 2
 #> Received: [1, 2]
 ```
 
@@ -191,8 +191,8 @@ todos <- list(
   list(id = 1, title = "Buy milk", completed = FALSE),
   list(wrong = "shape")   # Error: element does not match TodoItem
 )
-#> Error: Type error: Expected list<{id: numeric, title: string, completed: bool}>, got list of length 2
-#> Received: [list(id = 1, title = "Buy milk", completed = FALSE), list(wrong = "shape")]
+#> Error: Type error in 'todos': Expected list<{id: numeric, title: string, completed: bool}>, got list of length 2
+#> Received: list of length 2
 ```
 
 ### 🛠️ Custom Types
@@ -205,8 +205,8 @@ Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
 
 value %:% Positive %<-% 5
 value <- -1   # Error
-#> Error: Type error: Expected positive, got double
-#> Received: [-1]
+#> Error: Type error in 'value': Expected positive, got double
+#> Received: -1
 ```
 
 ## 🌍 Function usage
@@ -222,7 +222,7 @@ calculate_mean_payroll(c(1800, 2300, 4000))   # Works fine
 #> [1] 2700
 
 calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
-#> Error: Type error: Expected numeric, got string of length 3
+#> Error: Type error in 'salaries': Expected numeric, got string of length 3
 #> Received: [1800, 2300, 4000]
 ```
 

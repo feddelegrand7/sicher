@@ -235,7 +235,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># This fails</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>single_value <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected scalar&lt;numeric&gt;, got double of length 3
+<pre><code>Error: Type error in 'single_value': Expected scalar&lt;numeric&gt;, got double of length 3
 Received: [1, 2, 3]</code></pre>
 </div>
 </div>
@@ -249,7 +249,7 @@ Received: [1, 2, 3]</code></pre>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>PI <span class="ot">&lt;-</span> <span class="fl">3.0</span> <span class="co"># This fails</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Cannot reassign readonly variable 'PI'</code></pre>
+<pre><code>Error: Cannot reassign readonly variable 'PI'. Remove Readonly() from the type declaration if mutation is needed.</code></pre>
 </div>
 </div>
 </section>
@@ -259,7 +259,7 @@ Received: [1, 2, 3]</code></pre>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>PI <span class="ot">&lt;-</span> <span class="fl">3.0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Cannot reassign readonly variable 'PI'</code></pre>
+<pre><code>Error: Cannot reassign readonly variable 'PI'. Remove Readonly() from the type declaration if mutation is needed.</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional string (can be string or NULL)</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>middle_name <span class="sc">%:%</span> <span class="fu">Optional</span>(String) <span class="sc">%&lt;-%</span> <span class="cn">NULL</span></span>
@@ -268,7 +268,7 @@ Received: [1, 2, 3]</code></pre>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>middle_name <span class="ot">&lt;-</span> <span class="dv">123</span> <span class="co"># This fails</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'middle_name': Expected string | null, got double
-Received: [123]</code></pre>
+Received: 123</code></pre>
 </div>
 </div>
 </section>
@@ -284,7 +284,7 @@ Received: [123]</code></pre>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>coords <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)  <span class="co"># Too short</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected numeric[3], got double of length 2
+<pre><code>Error: Type error in 'coords': Expected numeric[3], got double of length 2
 Received: [1, 2]</code></pre>
 </div>
 </div>
@@ -300,7 +300,7 @@ Received: [1, 2]</code></pre>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>id <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'id': Expected string | numeric, got bool
-Received: [TRUE]</code></pre>
+Received: TRUE</code></pre>
 </div>
 </div>
 </section>
@@ -327,7 +327,7 @@ Received: [TRUE]</code></pre>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error: Expected {name: string, age: numeric, email?: string | null}, got list
 Details: Missing required field(s): age (expected fields: name, age)
-Received: [Bob]</code></pre>
+Received: list with fields: [name]</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extra fields not allowed fail</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>person <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
@@ -339,7 +339,7 @@ Received: [Bob]</code></pre>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error: Expected {name: string, age: numeric, email?: string | null}, got list
 Details: Unexpected field: 'extra' (valid fields: name, age, email)
-Received: [Charlie, 25, charlie@example.com, not allowed]</code></pre>
+Received: list with fields: [name, age, email, extra]</code></pre>
 </div>
 </div>
 </section>
@@ -368,8 +368,8 @@ Received: [Charlie, 25, charlie@example.com, not allowed]</code></pre>
 <span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>)</span>
 <span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected data.frame{id: integer, username: string, active: bool, last_login?: string | null}, got list of length 2
-Received: [c("alice", "bob"), c(TRUE, FALSE)]</code></pre>
+<pre><code>Error: Type error: Expected data.frame{id: integer, username: string, active: bool, last_login?: string | null}, got data.frame[2 x 2]
+Details: Missing required column(s): id (expected columns: id, username, active)</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>users <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
@@ -377,7 +377,7 @@ Received: [c("alice", "bob"), c(TRUE, FALSE)]</code></pre>
 <span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>)  <span class="co"># Should be logical</span></span>
 <span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected bool, got string of length 2
+<pre><code>Error: Type error in 'active': Expected bool, got string of length 2
 Received: [yes, no]</code></pre>
 </div>
 </div>
@@ -408,8 +408,8 @@ Received: [yes, no]</code></pre>
 <span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">wrong =</span> <span class="st">"structure"</span>)</span>
 <span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list of length 2
-Received: [list(userId = 1, id = 1, title = "Task 1", completed = FALSE), list(wrong = "structure")]</code></pre>
+<pre><code>Error: Type error in 'todos': Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list of length 2
+Received: list of length 2</code></pre>
 </div>
 </div>
 </section>
@@ -454,8 +454,8 @@ Received: [list(userId = 1, id = 1, title = "Task 1", completed = FALSE), list(w
 <span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>value <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected positive, got double
-Received: [-1]</code></pre>
+<pre><code>Error: Type error in 'value': Expected positive, got double
+Received: -1</code></pre>
 </div>
 </div>
 </section>
@@ -488,8 +488,8 @@ Received: [-1]</code></pre>
 <span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">age =</span> <span class="dv">25</span></span>
 <span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected email, got string
-Received: [invalid-email]</code></pre>
+<pre><code>Error: Type error in 'email': Expected email, got string
+Received: invalid-email</code></pre>
 </div>
 </div>
 </section>
@@ -501,8 +501,8 @@ Received: [invalid-email]</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected numeric, got string
-Received: [not a number]</code></pre>
+<pre><code>Error: Type error in 'x': Expected numeric, got string
+Received: not a number</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -512,14 +512,14 @@ Received: [not a number]</code></pre>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error: Expected {name: string, age: numeric}, got list
 Details: Missing required field(s): age (expected fields: name, age)
-Received: [Alice]</code></pre>
+Received: list with fields: [name]</code></pre>
 </div>
 </div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected numeric[3], got double of length 2
+<pre><code>Error: Type error in 'vec': Expected numeric[3], got double of length 2
 Received: [1, 2]</code></pre>
 </div>
 </div>
