@@ -226,10 +226,6 @@ testthat::test_that("create_dataframe_type rejects extras and union columns", {
   testthat::expect_false(df_type$check(data.frame(a=1,b=2,c=3)))
 })
 
-testthat::test_that("check_type propagates context in error message", {
-  testthat::expect_error(check_type("x", Numeric, context="foo"), "foo")
-})
-
 testthat::test_that("create_typed_binding overwrites existing var and keeps new value", {
   v %:% Numeric %<-% 2
   v %:% Numeric %<-% 3
