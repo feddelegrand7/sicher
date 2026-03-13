@@ -95,7 +95,7 @@ testthat::test_that("create_dataframe_type checks columns", {
   df2 <- data.frame(a = 1:2, b = letters[1:2], c = c(TRUE, FALSE))
   testthat::expect_true(df_type$check(df1))
   testthat::expect_true(df_type$check(df2))
-  testthat::expect_false(df_type$check(data.frame(a = 1:2)))
+  testthat::expect_error(df_type$check(data.frame(a = 1:2)), "Missing required column")
   testthat::expect_error(df_type$check(data.frame(a=1,b=2,c=3)))
 
   # invalid spec
@@ -129,7 +129,7 @@ testthat::test_that("%:% and %<-% assign with checking and context errors", {
   testthat::expect_error({ y %:% Numeric %<-% "a" }, "Type error")
 
   # using %<-% alone should raise guidance message
-  testthat::expect_error(y %<-% 1, "Use with %:% operator")
+  testthat::expect_error(y %<-% 1, "Use `%<-%` with `%:%`")
 
   # typed annotation print
   foo <- NULL
@@ -145,10 +145,10 @@ testthat::test_that("get_type_name returns correct strings", {
   testthat::expect_equal(get_type_name(1), "double")
   testthat::expect_equal(get_type_name("a"), "string")
   testthat::expect_equal(get_type_name(TRUE), "bool")
-  testthat::expect_equal(get_type_name(list()), "list of length 0")
+  testthat::expect_equal(get_type_name(list()), "list(0)")
   df <- data.frame(x=1)
-  # data.frames are lists so get_type_name returns "list"
-  testthat::expect_equal(get_type_name(df), "list")
+  # data.frames are reported with their dimensions
+  testthat::expect_equal(get_type_name(df), "data.frame[1 x 1]")
 })
 
 testthat::test_that("type_error formatting various values", {
@@ -236,7 +236,7 @@ testthat::test_that("create_dataframe_type rejects extras and union columns", {
   df_type <- create_dataframe_type(list(a = Numeric, b = String | Numeric))
   df <- data.frame(a=1, b=2)
   testthat::expect_true(df_type$check(df))
-  testthat::expect_false(df_type$check(data.frame(a=1,b=2,c=3)))
+  testthat::expect_error(df_type$check(data.frame(a=1,b=2,c=3)), "Unexpected column")
 })
 
 testthat::test_that("create_typed_binding overwrites existing var and keeps new value", {

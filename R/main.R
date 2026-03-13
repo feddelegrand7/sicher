@@ -78,13 +78,14 @@
 create_type <- function(name, checker) {
   if (!is.character(name) || length(name) != 1) {
     stop(glue::glue(
-      "name must be a single character string, ",
+      "`name` must be a single character string; ",
       "got {class(name)[1]} of length {length(name)}"
     ), call. = FALSE)
   }
   if (!is.function(checker)) {
     stop(glue::glue(
-      "checker must be a function, got {class(checker)[1]}"
+      "`checker` must be a function (e.g. is.numeric, is.character); ",
+      "got {class(checker)[1]}"
     ), call. = FALSE)
   }
   structure(
@@ -180,8 +181,9 @@ ListOf <- function(element_type) {
   if (!inherits(element_type, "sicher_type") &&
       !inherits(element_type, "sicher_union")) {
     stop(glue::glue(
-      "ListOf() requires a sicher_type or sicher_union, ",
-      "got {class(element_type)[1]}"
+      "ListOf() requires a sicher_type or sicher_union as its argument; ",
+      "got {class(element_type)[1]}. ",
+      "Example: ListOf(String) or ListOf(create_list_type(list(id = Numeric)))"
     ), call. = FALSE)
   }
   create_type(
@@ -256,7 +258,7 @@ DataFrame <- create_type("data.frame", is.data.frame)
     size >= 0 && size == as.integer(size)
   if (!is_valid_size) {
     stop(glue::glue(
-      "Size must be a non-negative integer, got {deparse(size)}"
+      "Size must be a non-negative integer (e.g. Numeric[3]), got {deparse(size)}"
     ), call. = FALSE)
   }
   create_type(
@@ -303,11 +305,17 @@ DataFrame <- create_type("data.frame", is.data.frame)
 create_list_type <- function(type_spec) {
   if (!is.list(type_spec) || is.null(names(type_spec))) {
     stop(glue::glue(
-      "type_spec must be a named list, got {class(type_spec)[1]}"
+      "`type_spec` must be a named list mapping field names to types; ",
+      "got {class(type_spec)[1]}. ",
+      "Example: create_list_type(list(name = String, age = Numeric))"
     ), call. = FALSE)
   }
   if (any(names(type_spec) == "")) {
-    stop("All elements in type_spec must be named", call. = FALSE)
+    stop(
+      "All elements in `type_spec` must be named. ",
+      "Provide a name for every field, e.g. list(name = String, age = Numeric)",
+      call. = FALSE
+    )
   }
 
   # Validate that all values are sicher_type objects
@@ -315,7 +323,8 @@ create_list_type <- function(type_spec) {
     if (!inherits(type_spec[[i]], "sicher_type") &&
         !inherits(type_spec[[i]], "sicher_union")) {
       stop(glue::glue(
-        "Element '{names(type_spec)[i]}' must be a sicher_type or sicher_union, ",
+        "Field '{names(type_spec)[i]}' must be a sicher_type or sicher_union ",
+        "(e.g. String, Numeric, Optional(Bool)); ",
         "got {class(type_spec[[i]])[1]}"
       ), call. = FALSE)
     }
@@ -406,11 +415,17 @@ create_list_type <- function(type_spec) {
 create_dataframe_type <- function(col_spec) {
   if (!is.list(col_spec) || is.null(names(col_spec))) {
     stop(glue::glue(
-      "col_spec must be a named list, got {class(col_spec)[1]}"
+      "`col_spec` must be a named list mapping column names to types; ",
+      "got {class(col_spec)[1]}. ",
+      "Example: create_dataframe_type(list(name = String, age = Numeric))"
     ), call. = FALSE)
   }
   if (any(names(col_spec) == "")) {
-    stop("All columns must be named", call. = FALSE)
+    stop(
+      "All columns in `col_spec` must be named. ",
+      "Provide a name for every column, e.g. list(name = String, age = Numeric)",
+      call. = FALSE
+    )
   }
 
   # Validate each column type specification
@@ -418,7 +433,8 @@ create_dataframe_type <- function(col_spec) {
     if (!inherits(col_spec[[i]], "sicher_type") &&
         !inherits(col_spec[[i]], "sicher_union")) {
       stop(glue::glue(
-        "Column '{names(col_spec)[i]}' must be a sicher_type or sicher_union, ",
+        "Column '{names(col_spec)[i]}' must be a sicher_type or sicher_union ",
+        "(e.g. String, Numeric, Optional(Bool)); ",
         "got {class(col_spec[[i]])[1]}"
       ), call. = FALSE)
     }
@@ -448,20 +464,28 @@ create_dataframe_type <- function(col_spec) {
 
       # check required columns exist
       if (!all(required_cols %in% names(x))) {
-        return(FALSE)
+        missing_cols <- setdiff(required_cols, names(x))
+        details <- glue::glue(
+          "Missing required column(s): {paste(missing_cols, collapse = ', ')} ",
+          "(expected columns: {paste(required_cols, collapse = ', ')})"
+        )
+        stop(type_error(NULL, type_name, get_type_name(x), NULL, details), call. = FALSE)
       }
 
       # no extra columns allowed
       if (!all(names(x) %in% col_names)) {
-        return(FALSE)
+        extra_cols <- setdiff(names(x), col_names)
+        details <- glue::glue(
+          "Unexpected column(s): {paste(extra_cols, collapse = ', ')} ",
+          "(valid columns: {paste(col_names, collapse = ', ')})"
+        )
+        stop(type_error(NULL, type_name, get_type_name(x), NULL, details), call. = FALSE)
       }
 
       # check each column type
       for (col in col_names) {
         if (col %in% names(x)) {
-          if (!check_type(x[[col]], col_spec[[col]], context = col)) {
-            return(FALSE)
-          }
+          check_type(x[[col]], col_spec[[col]], context = col)
         }
       }
 
@@ -489,7 +513,8 @@ create_dataframe_type <- function(col_spec) {
 Scalar <- function(type) {
   if (!inherits(type, "sicher_type")) {
     stop(glue::glue(
-      "Scalar() requires a type (sicher_type) argument, got {class(type)[1]}"
+      "Scalar() requires a type argument (sicher_type, e.g. Scalar(Numeric) or Scalar(String)); ",
+      "got {class(type)[1]}"
     ), call. = FALSE)
   }
   create_type(
@@ -603,13 +628,18 @@ create_union <- function(type1, type2) {
 
 get_type_name <- function(value) {
   if (is.null(value)) return("null")
+  if (is.data.frame(value)) {
+    return(glue::glue("data.frame[{nrow(value)} x {ncol(value)}]"))
+  }
   base_type <- if (is.integer(value)) "integer"
                else if (is.double(value)) "double"
                else if (is.character(value)) "string"
                else if (is.logical(value)) "bool"
                else if (is.list(value)) "list"
                else class(value)[1]
-  if (length(value) != 1) {
+  if (length(value) == 0) {
+    glue::glue("{base_type}(0)")
+  } else if (length(value) != 1) {
     glue::glue("{base_type} of length {length(value)}")
   } else {
     base_type
@@ -632,6 +662,21 @@ type_error <- function(context = NULL, expected, got,
     value_str <- tryCatch({
       if (length(value) == 0) {
         "(empty)"
+      } else if (is.list(value) && !is.data.frame(value)) {
+        fields <- names(value)
+        if (!is.null(fields) && length(fields) > 0) {
+          preview <- paste(utils::head(fields, 6), collapse = ", ")
+          if (length(fields) > 6) preview <- glue::glue("{preview}, ...")
+          glue::glue("list with fields: [{preview}]")
+        } else {
+          glue::glue("list of length {length(value)}")
+        }
+      } else if (is.data.frame(value)) {
+        col_preview <- paste(utils::head(names(value), 6), collapse = ", ")
+        if (ncol(value) > 6) col_preview <- glue::glue("{col_preview}, ...")
+        glue::glue("data.frame[{nrow(value)} x {ncol(value)}] with columns: [{col_preview}]")
+      } else if (length(value) == 1) {
+        as.character(value)
       } else if (length(value) > 6) {
         glue::glue(
           "[{paste(utils::head(value, 6), collapse = ', ')}, ...] (length: {length(value)})"
@@ -700,7 +745,7 @@ check_type <- function(value, type, context = NULL) {
         inherits(t, "sicher_type") && identical(t, Null)
       }))
       if (!has_null) {
-        stop(type_error(NULL, type$name, "null", value), call. = FALSE)
+        stop(type_error(context, type$name, "null", value), call. = FALSE)
       }
       return(TRUE)
     }
@@ -717,7 +762,7 @@ check_type <- function(value, type, context = NULL) {
   if (inherits(type, "sicher_type")) {
     if (type$check(value)) return(TRUE)
     stop(
-      type_error(NULL, type$name, get_type_name(value), value),
+      type_error(context, type$name, get_type_name(value), value),
       call. = FALSE
     )
   }
@@ -733,8 +778,9 @@ check_type <- function(value, type, context = NULL) {
   }
 
   stop(glue::glue(
-    "Invalid type specification: expected a sicher_type, sicher_union, or ",
-    "sicher_readonly, got {class(type)[1]}"
+    "Invalid type specification: expected a sicher_type, sicher_union, or sicher_readonly ",
+    "(e.g. Numeric, String | Bool, Optional(Integer)); ",
+    "got {class(type)[1]}"
   ), call. = FALSE)
 }
 
@@ -768,7 +814,10 @@ create_typed_binding <- function(var_name, value, type, envir) {
         } else {
           if (penv$readonly) {
             stop(
-              glue::glue("Cannot reassign readonly variable '{vname}'"),
+              glue::glue(
+                "Cannot reassign readonly variable '{vname}'. ",
+                "Remove Readonly() from the type declaration if mutation is needed."
+              ),
               call. = FALSE
             )
           }
@@ -833,7 +882,11 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' @export
 `%<-%` <- function(typed_annotation, value) {
   if (!inherits(typed_annotation, "sicher_typed_annotation")) {
-    stop("Use with %:% operator: x %:% type %<-% value", call. = FALSE)
+    stop(
+      "Use `%<-%` with `%:%`: `x %:% Type %<-% value`. ",
+      "Stand-alone use of `%<-%` is not supported.",
+      call. = FALSE
+    )
   }
 
   create_typed_binding(
