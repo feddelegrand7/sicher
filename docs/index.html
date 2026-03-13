@@ -204,6 +204,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Runtime Type Checking</strong>: Catch type errors during development</li>
 <li><strong>Intuitive Syntax</strong>: Use familiar operators like <code>%:%</code> and <code>%&lt;-%</code></li>
 <li><strong>Rich Type System</strong>: Support for primitives, lists, data frames, unions, and more</li>
+<li><strong>Typed Functions</strong>: Enforce parameter and return types on any function with <code>typed_function()</code></li>
 <li><strong>Zero Runtime Overhead</strong>: Types are checked only during assignment</li>
 <li><strong>Gradual Adoption</strong>: Add types incrementally to existing code</li>
 </ul>
@@ -496,6 +497,7 @@ Received: [10, 5]</code></pre>
 <li><strong>List types</strong>: Structured lists with field specifications</li>
 <li><strong>Data frame types</strong>: Column type specifications</li>
 <li><strong>Homogeneous lists</strong>: <code>ListOf(ElementType)</code></li>
+<li><strong>Typed functions</strong>: <code>typed_function(fn, params, .return)</code></li>
 </ul>
 </section>
 </section>

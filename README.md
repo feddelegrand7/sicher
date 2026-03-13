@@ -211,9 +211,9 @@ value <- -1   # Error
 
 ## 🔤 Typed Functions
 
-Use `typed_function()` to wrap any function with runtime type checks on its
-parameters and, optionally, its return value — a typed function signature for
-R:
+Use `typed_function()` to wrap any function with runtime type checks on
+its parameters and, optionally, its return value — a typed function
+signature for R:
 
 ``` r
 # Basic typed function — checks params and return type
@@ -226,7 +226,7 @@ add <- typed_function(
 add(1, 2)     # Returns 3
 #> [1] 3
 add("a", 2)   # Error: Type error in 'x'
-#> Error: Type error in 'x': Expected numeric, got string of length 1
+#> Error: Type error in 'x': Expected numeric, got string
 #> Received: a
 ```
 
@@ -245,7 +245,7 @@ greet("Alice")                   # "Hello, Alice"
 greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
 #> [1] "Hello, Dr. Alice"
 greet("Alice", title = 42)       # Error: Type error in 'title'
-#> Error: Type error in 'title': Expected string or null, got double of length 1
+#> Error: Type error in 'title': Expected string | null, got double
 #> Received: 42
 ```
 
@@ -262,7 +262,7 @@ describe("abc")   # "ID: abc"
 describe(123)     # "ID: 123"
 #> [1] "ID: 123"
 describe(TRUE)    # Error: Type error in 'id'
-#> Error: Type error in 'id': Expected string or numeric, got logical of length 1
+#> Error: Type error in 'id': Expected string | numeric, got bool
 #> Received: TRUE
 ```
 
