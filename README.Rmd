@@ -195,7 +195,7 @@ value %:% Positive %<-% 5
 value <- -1   # Error
 ```
 
-## 🌍 Real-World Example
+## 🌍 Function usage
 
 ```{r, error = TRUE}
 # Catch bad payroll data early instead of getting silent NAs
