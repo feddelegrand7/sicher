@@ -833,6 +833,167 @@ create_typed_binding <- function(var_name, value, type, envir) {
 }
 
 # =============================================================================
+# Typed Function
+# =============================================================================
+
+#' Create a type-checked function
+#'
+#' @description
+#' Wraps a function with runtime type checking for its parameters and,
+#' optionally, its return value. This is the function counterpart to the
+#' typed variable operators (`\%:\%` / `\%<-\%`), providing a syntax analogous
+#' to typed function signatures:
+#'
+#' \preformatted{
+#'   add <- typed_function(
+#'     function(x, y) x + y,
+#'     params  = list(x = Numeric, y = Numeric),
+#'     .return = Numeric
+#'   )
+#' }
+#'
+#' @param fn The function to wrap. Its formals are preserved in the wrapper so
+#'   callers use the exact same signature.
+#' @param params A named list mapping parameter names to their types
+#'   (e.g. \code{list(x = Numeric, y = String)}). Only listed parameters are
+#'   type-checked on each call; unlisted parameters pass through unchecked.
+#'   Defaults to an empty list (no parameter checking).
+#' @param .return Optional return type. When \code{NULL} (the default), the
+#'   return value is not checked. Accepts any \code{sicher_type} or
+#'   \code{sicher_union}.
+#'
+#' @return A function with the same formals as \code{fn} and S3 class
+#'   \code{"sicher_typed_function"} that:
+#' \itemize{
+#'   \item Validates each listed parameter on every call.
+#'   \item Validates the return value when \code{.return} is specified.
+#'   \item Delegates all argument passing to \code{fn} unchanged.
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Basic typed function
+#' add <- typed_function(
+#'   function(x, y) x + y,
+#'   params  = list(x = Numeric, y = Numeric),
+#'   .return = Numeric
+#' )
+#' add(1, 2)     # Returns 3
+#' add("a", 2)   # Error: Type error in 'x': Expected numeric, got string
+#'
+#' # Optional parameter
+#' greet <- typed_function(
+#'   function(name, title = NULL) {
+#'     if (is.null(title)) paste("Hello,", name)
+#'     else paste("Hello,", title, name)
+#'   },
+#'   params = list(name = String, title = Optional(String))
+#' )
+#' greet("Alice")                   # "Hello, Alice"
+#' greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
+#' greet("Alice", title = 42)       # Error: Type error in 'title'
+#'
+#' # Union type in params
+#' describe <- typed_function(
+#'   function(id) paste("ID:", id),
+#'   params  = list(id = String | Numeric),
+#'   .return = String
+#' )
+#' describe("abc")  # "ID: abc"
+#' describe(123)    # "ID: 123"
+#' describe(TRUE)   # Error: Type error in 'id'
+#' }
+#'
+#' @export
+typed_function <- function(fn, params = list(), .return = NULL) {
+  # Validate fn
+  if (!is.function(fn)) {
+    stop(glue::glue(
+      "`fn` must be a function; got {class(fn)[1]}"
+    ), call. = FALSE)
+  }
+
+  # Validate params
+  if (!is.list(params)) {
+    stop(glue::glue(
+      "`params` must be a named list of types ",
+      "(e.g. list(x = Numeric, y = String)); got {class(params)[1]}"
+    ), call. = FALSE)
+  }
+  if (length(params) > 0) {
+    if (is.null(names(params)) || any(nchar(names(params)) == 0)) {
+      stop(
+        "`params` must be a fully named list; every element must have a parameter name.",
+        call. = FALSE
+      )
+    }
+    for (nm in names(params)) {
+      tp <- params[[nm]]
+      if (!inherits(tp, "sicher_type") &&
+          !inherits(tp, "sicher_union") &&
+          !inherits(tp, "sicher_readonly")) {
+        stop(glue::glue(
+          "`params${nm}` must be a sicher_type, sicher_union, or sicher_readonly ",
+          "(e.g. Numeric, String | Bool, Optional(Integer)); got {class(tp)[1]}"
+        ), call. = FALSE)
+      }
+    }
+  }
+
+  # Validate .return
+  if (!is.null(.return)) {
+    if (!inherits(.return, "sicher_type") &&
+        !inherits(.return, "sicher_union")) {
+      stop(glue::glue(
+        "`.return` must be a sicher_type or sicher_union ",
+        "(e.g. Numeric, String | Bool); got {class(.return)[1]}"
+      ), call. = FALSE)
+    }
+  }
+
+  # Rename to avoid masking inside the closure
+  .params <- params
+  .ret    <- .return
+
+  # Build a wrapper that validates types before delegating to fn
+  wrapper <- function() {
+    mc     <- match.call()
+    caller <- parent.frame()
+
+    # Evaluate all explicitly supplied arguments in the calling environment
+    supplied <- as.list(mc[-1])
+    evaled   <- lapply(supplied, eval, envir = caller)
+
+    # Type-check each annotated parameter
+    for (nm in names(.params)) {
+      if (nm %in% names(evaled)) {
+        check_type(evaled[[nm]], .params[[nm]], context = nm)
+      }
+    }
+
+    # Delegate to the original function
+    result <- do.call(fn, evaled)
+
+    # Optionally validate the return value
+    if (!is.null(.ret)) {
+      check_type(result, .ret, context = "<return value>")
+    }
+
+    result
+  }
+
+  # Preserve fn's formals so the wrapper has the same signature
+  formals(wrapper) <- formals(fn)
+
+  # Attach metadata and tag with the sicher_typed_function class
+  attr(wrapper, "params")      <- .params
+  attr(wrapper, "return_type") <- .ret
+  class(wrapper) <- c("sicher_typed_function", "function")
+
+  wrapper
+}
+
+# =============================================================================
 # Assignment Operators
 # =============================================================================
 
@@ -937,5 +1098,33 @@ print.sicher_union <- function(x, ...) {
 #' @export
 print.sicher_typed_annotation <- function(x, ...) {
   cat("<typed:", x$var_name, "%:%", x$type$name, ">\n")
+  invisible(x)
+}
+
+#' Print method for sicher_typed_function
+#'
+#' @param x A sicher_typed_function object
+#' @param ... Additional arguments (ignored)
+#'
+#' @return Invisibly returns the input object
+#'
+#' @export
+print.sicher_typed_function <- function(x, ...) {
+  p <- attr(x, "params")
+  param_str <- if (length(p) == 0L) {
+    ""
+  } else {
+    paste(
+      mapply(
+        function(nm, tp) paste0(nm, ": ", tp$name),
+        names(p), p,
+        SIMPLIFY = TRUE, USE.NAMES = FALSE
+      ),
+      collapse = ", "
+    )
+  }
+  ret <- attr(x, "return_type")
+  ret_str <- if (is.null(ret)) "" else paste0(": ", ret$name)
+  cat(glue::glue("<typed_function ({param_str}){ret_str}>\n"))
   invisible(x)
 }
