@@ -10,6 +10,40 @@ library(sicher)
 
 ## Core Functions
 
+### `typed_function(fn, params, .return)`
+
+Wraps a function with runtime type checks for its parameters and, optionally,
+its return value.
+
+**Parameters:**
+- `fn`: The function to wrap. Its formals are preserved so callers use the
+  same signature.
+- `params`: A named list mapping parameter names to their types
+  (e.g. `list(x = Numeric, y = String)`). Only listed parameters are checked.
+  Defaults to an empty list (no parameter checking).
+- `.return`: Optional return type. When `NULL` (the default), the return value
+  is not checked. Accepts any `sicher_type` or `sicher_union`.
+
+**Returns:** A function with S3 class `"sicher_typed_function"` that validates
+types on every call and delegates argument passing to `fn` unchanged.
+
+**Example:**
+```{r}
+add <- typed_function(
+  function(x, y) x + y,
+  params  = list(x = Numeric, y = Numeric),
+  .return = Numeric
+)
+
+greet <- typed_function(
+  function(name, title = NULL) {
+    if (is.null(title)) paste("Hello,", name)
+    else paste("Hello,", title, name)
+  },
+  params = list(name = String, title = Optional(String))
+)
+```
+
 ### `create_type(name, checker)`
 
 Creates a new type with a name and validation function.

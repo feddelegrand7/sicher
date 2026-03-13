@@ -209,6 +209,63 @@ value <- -1   # Error
 #> Received: -1
 ```
 
+## 🔤 Typed Functions
+
+Use `typed_function()` to wrap any function with runtime type checks on its
+parameters and, optionally, its return value — a typed function signature for
+R:
+
+``` r
+# Basic typed function — checks params and return type
+add <- typed_function(
+  function(x, y) x + y,
+  params  = list(x = Numeric, y = Numeric),
+  .return = Numeric
+)
+
+add(1, 2)     # Returns 3
+#> [1] 3
+add("a", 2)   # Error: Type error in 'x'
+#> Error: Type error in 'x': Expected numeric, got string of length 1
+#> Received: a
+```
+
+``` r
+# Optional parameter
+greet <- typed_function(
+  function(name, title = NULL) {
+    if (is.null(title)) paste("Hello,", name)
+    else paste("Hello,", title, name)
+  },
+  params = list(name = String, title = Optional(String))
+)
+
+greet("Alice")                   # "Hello, Alice"
+#> [1] "Hello, Alice"
+greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
+#> [1] "Hello, Dr. Alice"
+greet("Alice", title = 42)       # Error: Type error in 'title'
+#> Error: Type error in 'title': Expected string or null, got double of length 1
+#> Received: 42
+```
+
+``` r
+# Union type in params
+describe <- typed_function(
+  function(id) paste("ID:", id),
+  params  = list(id = String | Numeric),
+  .return = String
+)
+
+describe("abc")   # "ID: abc"
+#> [1] "ID: abc"
+describe(123)     # "ID: 123"
+#> [1] "ID: 123"
+describe(TRUE)    # Error: Type error in 'id'
+#> Error: Type error in 'id': Expected string or numeric, got logical of length 1
+#> Received: TRUE
+```
+
 ## 🌍 Function usage
 
 ``` r
