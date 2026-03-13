@@ -77,10 +77,15 @@
 #' @export
 create_type <- function(name, checker) {
   if (!is.character(name) || length(name) != 1) {
-    stop("name must be a single character string", call. = FALSE)
+    stop(glue::glue(
+      "name must be a single character string, ",
+      "got {class(name)[1]} of length {length(name)}"
+    ), call. = FALSE)
   }
   if (!is.function(checker)) {
-    stop("checker must be a function", call. = FALSE)
+    stop(glue::glue(
+      "checker must be a function, got {class(checker)[1]}"
+    ), call. = FALSE)
   }
   structure(
     list(name = name, check = checker),
@@ -174,10 +179,13 @@ List <- create_type("list", is.list)
 ListOf <- function(element_type) {
   if (!inherits(element_type, "sicher_type") &&
       !inherits(element_type, "sicher_union")) {
-    stop("ListOf() requires a sicher_type or sicher_union", call. = FALSE)
+    stop(glue::glue(
+      "ListOf() requires a sicher_type or sicher_union, ",
+      "got {class(element_type)[1]}"
+    ), call. = FALSE)
   }
   create_type(
-    sprintf("list<%s>", element_type$name),
+    glue::glue("list<{element_type$name}>"),
     function(x) {
       if (!is.list(x)) return(FALSE)
       # empty list is OK
@@ -247,10 +255,12 @@ DataFrame <- create_type("data.frame", is.data.frame)
   is_valid_size <- is.numeric(size) && length(size) == 1 &&
     size >= 0 && size == as.integer(size)
   if (!is_valid_size) {
-    stop("Size must be a non-negative integer", call. = FALSE)
+    stop(glue::glue(
+      "Size must be a non-negative integer, got {deparse(size)}"
+    ), call. = FALSE)
   }
   create_type(
-    sprintf("%s[%d]", type$name, size),
+    glue::glue("{type$name}[{as.integer(size)}]"),
     function(x) type$check(x) && length(x) == size
   )
 }
@@ -292,7 +302,9 @@ DataFrame <- create_type("data.frame", is.data.frame)
 #' @export
 create_list_type <- function(type_spec) {
   if (!is.list(type_spec) || is.null(names(type_spec))) {
-    stop("type_spec must be a named list", call. = FALSE)
+    stop(glue::glue(
+      "type_spec must be a named list, got {class(type_spec)[1]}"
+    ), call. = FALSE)
   }
   if (any(names(type_spec) == "")) {
     stop("All elements in type_spec must be named", call. = FALSE)
@@ -302,13 +314,10 @@ create_list_type <- function(type_spec) {
   for (i in seq_along(type_spec)) {
     if (!inherits(type_spec[[i]], "sicher_type") &&
         !inherits(type_spec[[i]], "sicher_union")) {
-      stop(
-        sprintf(
-          "Element '%s' must be a sicher_type or sicher_union",
-          names(type_spec)[i]
-        ),
-        call. = FALSE
-      )
+      stop(glue::glue(
+        "Element '{names(type_spec)[i]}' must be a sicher_type or sicher_union, ",
+        "got {class(type_spec[[i]])[1]}"
+      ), call. = FALSE)
     }
   }
 
@@ -328,18 +337,8 @@ create_list_type <- function(type_spec) {
   optional_fields <- field_names[is_optional]
 
   type_labels <- sapply(type_spec, function(t) t$name)
-  type_name <- sprintf(
-    "{%s}",
-    paste(
-      sprintf(
-        "%s%s: %s",
-        field_names,
-        ifelse(is_optional, "?", ""),
-        type_labels
-      ),
-      collapse = ", "
-    )
-  )
+  field_parts <- glue::glue("{field_names}{ifelse(is_optional, '?', '')}: {type_labels}")
+  type_name <- glue::glue("{{{paste(field_parts, collapse = ', ')}}}")
 
   create_type(
     type_name,
@@ -349,9 +348,9 @@ create_list_type <- function(type_spec) {
       # Check that all required fields are present
       if (!all(required_fields %in% names(x))) {
         missing_fields <- setdiff(required_fields, names(x))
-        details <- sprintf(
-          "Missing required fields: %s",
-          paste(missing_fields, collapse = ", ")
+        details <- glue::glue(
+          "Missing required field(s): {paste(missing_fields, collapse = ', ')} ",
+          "(expected fields: {paste(required_fields, collapse = ', ')})"
         )
         stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
       }
@@ -365,7 +364,9 @@ create_list_type <- function(type_spec) {
           }
         } else {
           # Extra fields are not allowed
-          details <- sprintf("Unexpected field: %s", field)
+          details <- glue::glue(
+            "Unexpected field: '{field}' (valid fields: {paste(field_names, collapse = ', ')})"
+          )
           stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
         }
       }
@@ -404,7 +405,9 @@ create_list_type <- function(type_spec) {
 #' @export
 create_dataframe_type <- function(col_spec) {
   if (!is.list(col_spec) || is.null(names(col_spec))) {
-    stop("col_spec must be a named list", call. = FALSE)
+    stop(glue::glue(
+      "col_spec must be a named list, got {class(col_spec)[1]}"
+    ), call. = FALSE)
   }
   if (any(names(col_spec) == "")) {
     stop("All columns must be named", call. = FALSE)
@@ -414,13 +417,10 @@ create_dataframe_type <- function(col_spec) {
   for (i in seq_along(col_spec)) {
     if (!inherits(col_spec[[i]], "sicher_type") &&
         !inherits(col_spec[[i]], "sicher_union")) {
-      stop(
-        sprintf(
-          "Column '%s' must be a sicher_type or sicher_union",
-          names(col_spec)[i]
-        ),
-        call. = FALSE
-      )
+      stop(glue::glue(
+        "Column '{names(col_spec)[i]}' must be a sicher_type or sicher_union, ",
+        "got {class(col_spec[[i]])[1]}"
+      ), call. = FALSE)
     }
   }
 
@@ -438,18 +438,8 @@ create_dataframe_type <- function(col_spec) {
   optional_cols <- col_names[is_optional]
 
   type_labels <- sapply(col_spec, function(t) t$name)
-  type_name <- sprintf(
-    "data.frame{%s}",
-    paste(
-      sprintf(
-        "%s%s: %s",
-        ifelse(is_optional, col_names, ""),
-        ifelse(is_optional, "?", ""),
-        type_labels
-      ),
-      collapse = ", "
-    )
-  )
+  col_parts <- glue::glue("{col_names}{ifelse(is_optional, '?', '')}: {type_labels}")
+  type_name <- glue::glue("data.frame{{{paste(col_parts, collapse = ', ')}}}")
 
   create_type(
     type_name,
@@ -498,10 +488,12 @@ create_dataframe_type <- function(col_spec) {
 #' @export
 Scalar <- function(type) {
   if (!inherits(type, "sicher_type")) {
-    stop("Scalar() requires a type argument", call. = FALSE)
+    stop(glue::glue(
+      "Scalar() requires a type (sicher_type) argument, got {class(type)[1]}"
+    ), call. = FALSE)
   }
   create_type(
-    sprintf("scalar<%s>", type$name),
+    glue::glue("scalar<{type$name}>"),
     function(x) length(x) == 1 && type$check(x)
   )
 }
@@ -622,13 +614,13 @@ get_type_name <- function(value) {
 type_error <- function(context = NULL, expected, got,
                        value = NULL, details = NULL) {
   base_msg <- if (is.null(context)) {
-    sprintf("Type error: Expected %s, got %s", expected, got)
+    glue::glue("Type error: Expected {expected}, got {got}")
   } else {
-    sprintf("Type error in '%s': Expected %s, got %s", context, expected, got)
+    glue::glue("Type error in '{context}': Expected {expected}, got {got}")
   }
 
   if (!is.null(details)) {
-    base_msg <- sprintf("%s\n  Details: %s", base_msg, details)
+    base_msg <- glue::glue("{base_msg}\n  Details: {details}")
   }
 
   if (!is.null(value)) {
@@ -636,17 +628,15 @@ type_error <- function(context = NULL, expected, got,
       if (length(value) == 0) {
         "(empty)"
       } else if (length(value) > 6) {
-        sprintf(
-          "[%s, ...] (length: %d)",
-          paste(utils::head(value, 6), collapse = ", "),
-          length(value)
+        glue::glue(
+          "[{paste(utils::head(value, 6), collapse = ', ')}, ...] (length: {length(value)})"
         )
       } else {
-        sprintf("[%s]", paste(value, collapse = ", "))
+        glue::glue("[{paste(value, collapse = ', ')}]")
       }
     }, error = function(e) "<unprintable>")
 
-    base_msg <- sprintf("%s\n  Received: %s", base_msg, value_str)
+    base_msg <- glue::glue("{base_msg}\n  Received: {value_str}")
   }
 
   base_msg
@@ -737,7 +727,10 @@ check_type <- function(value, type, context = NULL) {
     )
   }
 
-  stop("Invalid type specification", call. = FALSE)
+  stop(glue::glue(
+    "Invalid type specification: expected a sicher_type, sicher_union, or ",
+    "sicher_readonly, got {class(type)[1]}"
+  ), call. = FALSE)
 }
 
 # =============================================================================
@@ -770,7 +763,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
         } else {
           if (penv$readonly) {
             stop(
-              sprintf("Cannot reassign readonly variable '%s'", vname),
+              glue::glue("Cannot reassign readonly variable '{vname}'"),
               call. = FALSE
             )
           }
