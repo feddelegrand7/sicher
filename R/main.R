@@ -603,12 +603,17 @@ create_union <- function(type1, type2) {
 
 get_type_name <- function(value) {
   if (is.null(value)) return("null")
-  if (is.integer(value)) return("integer")
-  if (is.double(value)) return("double")
-  if (is.character(value)) return("string")
-  if (is.logical(value)) return("bool")
-  if (is.list(value)) return("list")
-  class(value)[1]
+  base_type <- if (is.integer(value)) "integer"
+               else if (is.double(value)) "double"
+               else if (is.character(value)) "string"
+               else if (is.logical(value)) "bool"
+               else if (is.list(value)) "list"
+               else class(value)[1]
+  if (length(value) != 1) {
+    glue::glue("{base_type} of length {length(value)}")
+  } else {
+    base_type
+  }
 }
 
 type_error <- function(context = NULL, expected, got,

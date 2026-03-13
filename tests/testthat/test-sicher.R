@@ -161,6 +161,19 @@ testthat::test_that("type_error formatting various values", {
   testthat::expect_match(err2, "\\(empty\\)")
 })
 
+testthat::test_that("get_type_name includes length for non-scalar values", {
+  testthat::expect_error(
+    check_type(c(1, 2, 3), Scalar(Numeric)),
+    "got double of length 3"
+  )
+  testthat::expect_error(
+    check_type(c("a", "b"), Scalar(String)),
+    "got string of length 2"
+  )
+  # scalar value: no length suffix
+  testthat::expect_error(check_type("x", Integer), "got string$")
+})
+
 testthat::test_that("check_type errors for invalid type specification", {
   testthat::expect_error(check_type(1, 5), "Invalid type specification")
   testthat::expect_error(check_type(1, NULL), "Invalid type specification")
