@@ -1,15 +1,15 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# sicher
+# sicher 🔐
 
 **sicher** (German for *safe* or *certain*) is an R package that brings
 runtime type safety to R programming — inspired by TypeScript for
 JavaScript. Declare types for your variables and have them enforced
 automatically on every assignment, catching type errors early and making
-your code more robust and self-documenting.
+your code more robust and self-documenting. 🛡️
 
-## Installation
+## 📦 Installation
 
 Install the development version from GitHub:
 
@@ -18,7 +18,7 @@ Install the development version from GitHub:
 devtools::install_github("feddelegrand7/sicher")
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ``` r
 library(sicher)
@@ -33,9 +33,9 @@ age <- "thirty"   # Error: Type error
 #>   Received: [thirty]
 ```
 
-## Core Features
+## ✨ Core Features
 
-### Built-in Types
+### 🧩 Built-in Types
 
 sicher ships with a complete set of primitive and container types:
 
@@ -59,16 +59,16 @@ flag %:% Bool      %<-% TRUE
 df   %:% DataFrame %<-% data.frame(a = 1:3)
 ```
 
-### Operators
+### ⚙️ Operators
 
 | Operator | Purpose                         |
 |----------|---------------------------------|
 | `%:%`    | Annotate a variable with a type |
 | `%<-%`   | Assign a value (type-checked)   |
 
-### Type Modifiers
+### 🔧 Type Modifiers
 
-#### `Scalar()` — single-element values
+#### 1️⃣ `Scalar()` — single-element values
 
 ``` r
 single %:% Scalar(Numeric) %<-% 42
@@ -77,7 +77,7 @@ single <- c(1, 2, 3)   # Error: length > 1
 #>   Received: [1, 2, 3]
 ```
 
-#### `Readonly()` — immutable variables
+#### 🔒 `Readonly()` — immutable variables
 
 ``` r
 PI %:% Readonly(Double) %<-% 3.14159
@@ -85,7 +85,7 @@ PI <- 3.0   # Error: cannot reassign readonly variable
 #> Error: Cannot reassign readonly variable 'PI'
 ```
 
-#### `Optional()` — nullable values
+#### ❓ `Optional()` — nullable values
 
 ``` r
 middle_name %:% Optional(String) %<-% NULL   # OK
@@ -95,7 +95,7 @@ middle_name <- 123                            # Error: not string or null
 #>   Received: [123]
 ```
 
-### Union Types
+### 🔀 Union Types
 
 Accept more than one type with `|`:
 
@@ -107,7 +107,7 @@ id <- TRUE  # Error: not string or numeric
 #>   Received: [TRUE]
 ```
 
-### Size-constrained Vectors
+### 📏 Size-constrained Vectors
 
 Append `[n]` to any type to require an exact vector length:
 
@@ -119,7 +119,7 @@ coords <- c(1, 2)      # Error: wrong length
 #>   Received: [1, 2]
 ```
 
-### Structured List Types
+### 📋 Structured List Types
 
 Define object-like schemas with `create_list_type()`:
 
@@ -137,7 +137,7 @@ person <- list(name = "Bob")   # Error: missing required field 'age'
 #>   Details: Missing required fields: age
 ```
 
-### Data Frame Schemas
+### 🗄️ Data Frame Schemas
 
 Validate column names and types with `create_dataframe_type()`:
 
@@ -163,7 +163,7 @@ users <- data.frame(
 #> Error: Type error in 'users': Expected data.frame{...}, got data.frame
 ```
 
-### Homogeneous Lists with `ListOf()`
+### 📦 Homogeneous Lists with `ListOf()`
 
 Validate every element of a list against the same type:
 
@@ -188,7 +188,7 @@ todos <- list(
 #> Error: Type error in 'todos': Expected list<{id: numeric, title: string, completed: bool}>, got list
 ```
 
-### Custom Types
+### 🛠️ Custom Types
 
 Use `create_type()` to define your own validator with any predicate
 function:
@@ -202,7 +202,7 @@ value <- -1   # Error
 #>   Received: [-1]
 ```
 
-## Real-World Example
+## 🌍 Real-World Example
 
 ``` r
 # Catch bad payroll data early instead of getting silent NAs
@@ -219,7 +219,7 @@ calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
 #>   Received: [1800, 2300, 4000, ...]
 ```
 
-## Learn More
+## 📚 Learn More
 
 Full documentation and worked examples are available at the package
 website.
