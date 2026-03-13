@@ -195,6 +195,51 @@ value %:% Positive %<-% 5
 value <- -1   # Error
 ```
 
+## 🔤 Typed Functions
+
+Use `typed_function()` to wrap any function with runtime type checks on its
+parameters and, optionally, its return value — a typed function signature for R:
+
+```{r, error = TRUE}
+# Basic typed function — checks params and return type
+add <- typed_function(
+  function(x, y) x + y,
+  params  = list(x = Numeric, y = Numeric),
+  .return = Numeric
+)
+
+add(1, 2)     # Returns 3
+add("a", 2)   # Error: Type error in 'x'
+```
+
+```{r, error = TRUE}
+# Optional parameter
+greet <- typed_function(
+  function(name, title = NULL) {
+    if (is.null(title)) paste("Hello,", name)
+    else paste("Hello,", title, name)
+  },
+  params = list(name = String, title = Optional(String))
+)
+
+greet("Alice")                   # "Hello, Alice"
+greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
+greet("Alice", title = 42)       # Error: Type error in 'title'
+```
+
+```{r, error = TRUE}
+# Union type in params
+describe <- typed_function(
+  function(id) paste("ID:", id),
+  params  = list(id = String | Numeric),
+  .return = String
+)
+
+describe("abc")   # "ID: abc"
+describe(123)     # "ID: 123"
+describe(TRUE)    # Error: Type error in 'id'
+```
+
 ## 🌍 Function usage
 
 ```{r, error = TRUE}
