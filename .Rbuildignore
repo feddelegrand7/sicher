@@ -2,3 +2,10 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^README\.Rmd$
+^_quarto\.yml$
+^api\.qmd$
+^docs$
+^features\.qmd$
+^index\.qmd$
+^styles\.css$
+^\.quarto$

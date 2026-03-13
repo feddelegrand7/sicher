@@ -16,8 +16,10 @@ be a predicate (e.g., `is.numeric`, `is.character`).}
 }
 \value{
 An object of class `"sicher_type"` containing:
+\describe{
   \item{name}{The type name as a character string}
   \item{check}{The checker function}
+}
 }
 \description{
 Creates a new type object for use in the type checking system. A type consists
@@ -36,14 +38,16 @@ The checker function should:
 }
 }
 \examples{
-# Create a custom positive number type
+# Create a custom positive number
 Positive <- create_type("positive", function(x) {
   is.numeric(x) && all(x > 0)
 })
 
 # Use it in type annotations
+\dontrun{
 age \%:\% Positive \%<-\% 25
 age <- -5  # Error: Type error
+}
 
 # Create a custom email type
 Email <- create_type("email", function(x) {
@@ -52,15 +56,19 @@ Email <- create_type("email", function(x) {
     grepl("^[^@]+@[^@]+\\\\.[^@]+$", x)
 })
 
+\dontrun{
 user_email \%:\% Email \%<-\% "user@example.com"
+}
 
 # Create a type for even integers
 EvenInt <- create_type("even_int", function(x) {
   is.integer(x) && all(x \%\% 2 == 0)
 })
 
+\dontrun{
 value \%:\% EvenInt \%<-\% 4L
 value <- 5L  # Error: Type error
+}
 
 # Create a type that checks data frame structure
 PersonDF <- create_type("person_df", function(x) {

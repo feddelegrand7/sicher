@@ -7,7 +7,7 @@
 name \%:\% type
 }
 \arguments{
-\item{name}{Variable name.}
+\item{name}{Variable name (unevaluated).}
 
 \item{type}{Type specification (e.g., Integer, String, Double).}
 }
@@ -15,11 +15,13 @@ name \%:\% type
 A typed annotation object.
 }
 \description{
-Creates a typed variable annotation used together with `%<-%`.
+Creates a typed variable annotation used together with `\%<-\%`.
 }
 \examples{
+\dontrun{
 x \%:\% Integer \%<-\% 5L
 name \%:\% String \%<-\% "Alice"
 id \%:\% (Integer | String) \%<-\% 42L
+}
 
 }

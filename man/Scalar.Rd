@@ -16,7 +16,9 @@ A new sicher_type that checks for length 1
 Creates a type that only accepts single values (vectors of length 1).
 }
 \examples{
+\dontrun{
 age \%:\% Scalar(Integer) \%<-\% 30L
 # age <- c(30L, 40L)  # Error: not scalar
+}
 
 }

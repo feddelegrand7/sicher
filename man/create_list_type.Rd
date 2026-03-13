@@ -28,10 +28,12 @@ User <- create_list_type(list(
 ))
 
 # Use it
+\dontrun{
 user \%:\% User \%<-\% list(
   name = "Alice",
   age = 25,
   preferences = list(color = "red", movie = "batman")
 )
+}
 
 }

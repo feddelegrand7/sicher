@@ -11,8 +11,10 @@
 #'   be a predicate (e.g., `is.numeric`, `is.character`).
 #'
 #' @return An object of class `"sicher_type"` containing:
+#' \describe{
 #'   \item{name}{The type name as a character string}
 #'   \item{check}{The checker function}
+#' }
 #'
 #' @details
 #' This is the fundamental building block of the type system. Built-in types
@@ -32,14 +34,16 @@
 #' \code{\link{Readonly}} for creating readonly type variants
 #'
 #' @examples
-#' # Create a custom positive number type
+#' # Create a custom positive number
 #' Positive <- create_type("positive", function(x) {
 #'   is.numeric(x) && all(x > 0)
 #' })
 #'
 #' # Use it in type annotations
+#' \dontrun{
 #' age %:% Positive %<-% 25
 #' age <- -5  # Error: Type error
+#' }
 #'
 #' # Create a custom email type
 #' Email <- create_type("email", function(x) {
@@ -48,15 +52,19 @@
 #'     grepl("^[^@]+@[^@]+\\.[^@]+$", x)
 #' })
 #'
+#' \dontrun{
 #' user_email %:% Email %<-% "user@example.com"
+#' }
 #'
 #' # Create a type for even integers
 #' EvenInt <- create_type("even_int", function(x) {
 #'   is.integer(x) && all(x %% 2 == 0)
 #' })
 #'
+#' \dontrun{
 #' value %:% EvenInt %<-% 4L
 #' value <- 5L  # Error: Type error
+#' }
 #'
 #' # Create a type that checks data frame structure
 #' PersonDF <- create_type("person_df", function(x) {
@@ -84,21 +92,51 @@ create_type <- function(name, checker) {
 # Built-in Types (CamelCase to avoid conflicts with base R)
 # =============================================================================
 
+#' Built-in Integer Type
+#'
+#' @description
+#' A type that checks for integer vectors.
+#'
 #' @export
 Integer <- create_type("integer", is.integer)
 
+#' Built-in Double Type
+#'
+#' @description
+#' A type that checks for double-precision numeric vectors.
+#'
 #' @export
 Double  <- create_type("double", is.double)
 
+#' Built-in Numeric Type
+#'
+#' @description
+#' A type that checks for numeric vectors (integer or double).
+#'
 #' @export
 Numeric <- create_type("numeric", is.numeric)
 
+#' Built-in String Type
+#'
+#' @description
+#' A type that checks for character vectors.
+#'
 #' @export
 String  <- create_type("string", is.character)
 
+#' Built-in Boolean Type
+#'
+#' @description
+#' A type that checks for logical vectors.
+#'
 #' @export
 Bool    <- create_type("bool", is.logical)
 
+#' Built-in List Type
+#'
+#' @description
+#' A type that checks for list objects.
+#'
 #' @export
 List    <- create_type("list", is.list)
 
@@ -121,10 +159,12 @@ List    <- create_type("list", is.list)
 #'
 #' # Now require a list of records
 #' Records <- ListOf(Record)
+#' \dontrun{
 #' records %:% Records %<-% list(
 #'   list(id = 1, name = "a"),
 #'   list(id = 2, name = "b")
 #' )
+#' }
 #'
 #' # fixed-size list of ten records
 #' TenRecs <- Records[10]
@@ -136,7 +176,6 @@ ListOf <- function(element_type) {
       !inherits(element_type, "sicher_union")) {
     stop("ListOf() requires a sicher_type or sicher_union", call. = FALSE)
   }
-
   create_type(
     sprintf("list<%s>", element_type$name),
     function(x) {
@@ -150,15 +189,35 @@ ListOf <- function(element_type) {
   )
 }
 
+#' Built-in Any Type
+#'
+#' @description
+#' A type that accepts any value.
+#'
 #' @export
 Any       <- create_type("any", function(x) TRUE)
 
+#' Built-in Null Type
+#'
+#' @description
+#' A type that checks for NULL values.
+#'
 #' @export
 Null <- create_type("null", is.null)
 
+#' Built-in Function Type
+#'
+#' @description
+#' A type that checks for function objects.
+#'
 #' @export
 Function <- create_type("Function", is.function)
 
+#' Built-in DataFrame Type
+#'
+#' @description
+#' A type that checks for data.frame objects.
+#'
 #' @export
 DataFrame <- create_type("data.frame", is.data.frame)
 
@@ -177,9 +236,11 @@ DataFrame <- create_type("data.frame", is.data.frame)
 #' @return A new sicher_type that checks for the specified length
 #'
 #' @examples
+#' \dontrun{
 #' vec %:% Numeric[3] %<-% c(1, 2, 3)
 #' # vec <- c(1, 2)  # Error: wrong length
 #' # vec <- c("a", "b", "c")  # Error: wrong type
+#' }
 #'
 #' @export
 `[.sicher_type` <- function(type, size) {
@@ -218,18 +279,19 @@ DataFrame <- create_type("data.frame", is.data.frame)
 #' ))
 #'
 #' # Use it
+#' \dontrun{
 #' user %:% User %<-% list(
 #'   name = "Alice",
 #'   age = 25,
 #'   preferences = list(color = "red", movie = "batman")
 #' )
+#' }
 #'
 #' @export
 create_list_type <- function(type_spec) {
   if (!is.list(type_spec) || is.null(names(type_spec))) {
     stop("type_spec must be a named list", call. = FALSE)
   }
-
   if (any(names(type_spec) == "")) {
     stop("All elements in type_spec must be named", call. = FALSE)
   }
@@ -257,10 +319,10 @@ create_list_type <- function(type_spec) {
   optional_fields <- field_names[is_optional]
 
   type_name <- sprintf("{%s}", paste(sprintf("%s%s: %s",
-    field_names,
-    ifelse(is_optional, "?", ""),
-    sapply(type_spec, function(t) if (inherits(t, "sicher_type")) t$name else t$name)),
-    collapse = ", "))
+                                             field_names,
+                                             ifelse(is_optional, "?", ""),
+                                             sapply(type_spec, function(t) if (inherits(t, "sicher_type")) t$name else t$name)),
+                                     collapse = ", "))
 
   create_type(
     type_name,
@@ -270,8 +332,8 @@ create_list_type <- function(type_spec) {
       # Check that all required fields are present
       if (!all(required_fields %in% names(x))) {
         missing_fields <- setdiff(required_fields, names(x))
-        stop(type_error(context, type_name, "list", x, 
-          sprintf("Missing required fields: %s", paste(missing_fields, collapse = ", "))), call. = FALSE)
+        stop(type_error(context, type_name, "list", x,
+                        sprintf("Missing required fields: %s", paste(missing_fields, collapse = ", "))), call. = FALSE)
       }
 
       # Check that each present field has the correct type
@@ -284,7 +346,7 @@ create_list_type <- function(type_spec) {
         } else {
           # Extra fields are not allowed
           stop(type_error(context, type_name, "list", x,
-            sprintf("Unexpected field: %s", field)), call. = FALSE)
+                          sprintf("Unexpected field: %s", field)), call. = FALSE)
         }
       }
 
@@ -312,17 +374,18 @@ create_list_type <- function(type_spec) {
 #'   height = Optional(Numeric)
 #' ))
 #'
+#' \dontrun{
 #' df %:% PersonDF %<-% data.frame(
 #'   name = c("Alice", "Bob"),
 #'   age = c(25, 30)
 #' )
+#' }
 #'
 #' @export
 create_dataframe_type <- function(col_spec) {
   if (!is.list(col_spec) || is.null(names(col_spec))) {
     stop("col_spec must be a named list", call. = FALSE)
   }
-
   if (any(names(col_spec) == "")) {
     stop("All columns must be named", call. = FALSE)
   }
@@ -348,10 +411,10 @@ create_dataframe_type <- function(col_spec) {
   optional_cols <- col_names[is_optional]
 
   type_name <- sprintf("data.frame{%s}", paste(sprintf("%s%s: %s",
-    ifelse(is_optional, col_names, ""),
-    ifelse(is_optional, "?", ""),
-    sapply(col_spec, function(t) if (inherits(t, "sicher_type")) t$name else t$name)),
-    collapse = ", "))
+                                                       ifelse(is_optional, col_names, ""),
+                                                       ifelse(is_optional, "?", ""),
+                                                       sapply(col_spec, function(t) if (inherits(t, "sicher_type")) t$name else t$name)),
+                                               collapse = ", "))
 
   create_type(
     type_name,
@@ -392,8 +455,10 @@ create_dataframe_type <- function(col_spec) {
 #' @return A new sicher_type that checks for length 1
 #'
 #' @examples
+#' \dontrun{
 #' age %:% Scalar(Integer) %<-% 30L
 #' # age <- c(30L, 40L)  # Error: not scalar
+#' }
 #'
 #' @export
 Scalar <- function(type) {
@@ -416,8 +481,10 @@ Scalar <- function(type) {
 #' @return A readonly type modifier
 #'
 #' @examples
+#' \dontrun{
 #' PI %:% Readonly(Double) %<-% 3.14159
 #' # PI <- 3.0  # Error: cannot reassign readonly
+#' }
 #'
 #' @export
 Readonly <- function(type) {
@@ -438,8 +505,10 @@ Readonly <- function(type) {
 #' @return A union type that includes Null
 #'
 #' @examples
+#' \dontrun{
 #' middle_name %:% Optional(String) %<-% NULL
 #' middle_name <- "Marie"  # Also OK
+#' }
 #'
 #' @export
 Optional <- function(type) {
@@ -482,29 +551,22 @@ create_union <- function(type1, type2) {
   )
 }
 
-#' Union Type Operator for sicher_type
+#' Union Type Operator
 #'
 #' @description
-#' S3 method for the `|` operator to create union types.
+#' S3 methods for the `|` operator to create union types.
 #'
-#' @param type1 First type (sicher_type object)
-#' @param type2 Second type (sicher_type object)
+#' @param type1 First type (sicher_type or sicher_union object)
+#' @param type2 Second type (sicher_type or sicher_union object)
 #'
 #' @return A union type (sicher_union object)
 #'
+#' @name union-operator
+#' @aliases |.sicher_type |.sicher_union
 #' @export
 `|.sicher_type` <- function(type1, type2) create_union(type1, type2)
 
-#' Union Type Operator for sicher_union
-#'
-#' @description
-#' S3 method for the `|` operator to extend union types.
-#'
-#' @param type1 First type (sicher_union object)
-#' @param type2 Second type
-#'
-#' @return A union type (sicher_union object)
-#'
+#' @rdname union-operator
 #' @export
 `|.sicher_union` <- function(type1, type2) create_union(type1, type2)
 
@@ -554,6 +616,48 @@ type_error <- function(context, expected, got, value = NULL, details = NULL) {
   base_msg
 }
 
+#' Type Checking Function
+#'
+#' @description
+#' Validates that a value conforms to a specified type. This is the core
+#' validation function used internally by the type system, but can also be
+#' called directly for manual type checking.
+#'
+#' @param value The value to check
+#' @param type A sicher_type, sicher_union, or sicher_readonly object
+#' @param context Optional character string describing where the check is occurring
+#'   (used in error messages)
+#'
+#' @return Returns `TRUE` invisibly if the value matches the type, otherwise
+#'   throws an error with a descriptive message.
+#'
+#' @details
+#' This function:
+#' \itemize{
+#'   \item Checks if a value matches a type specification
+#'   \item Handles union types (checks if value matches any type in the union)
+#'   \item Handles readonly types (strips the readonly modifier before checking)
+#'   \item Provides detailed error messages when checks fail
+#' }
+#'
+#' @seealso
+#' \code{\link{create_type}} for creating custom types
+#'
+#' @examples
+#' \dontrun{
+#' # Direct type checking
+#' check_type(5L, Integer)  # Returns TRUE
+#' check_type("hello", Integer)  # Throws error
+#'
+#' # With context for better error messages
+#' check_type(5L, String, context = "user_name")
+#'
+#' # With union types
+#' check_type(5L, Integer | String)  # Returns TRUE
+#' check_type(5.5, Integer | String)  # Throws error
+#' }
+#'
+#' @export
 check_type <- function(value, type, context = NULL) {
   if (inherits(type, "sicher_readonly")) {
     type <- type$base_type
@@ -569,11 +673,13 @@ check_type <- function(value, type, context = NULL) {
       }
       return(TRUE)
     }
+
     if (inherits(type, "sicher_type")) {
       if (identical(type, Null) || identical(type, Any)) {
         return(TRUE)
       }
     }
+
     stop(type_error(context, type$name, "null", value), call. = FALSE)
   }
 
@@ -640,17 +746,20 @@ create_typed_binding <- function(var_name, value, type, envir) {
 
 #' Type annotation operator
 #'
-#' Creates a typed variable annotation used together with `%<-%`.
+#' @description
+#' Creates a typed variable annotation used together with `\%<-\%`.
 #'
-#' @param name Variable name.
+#' @param name Variable name (unevaluated).
 #' @param type Type specification (e.g., Integer, String, Double).
 #'
 #' @return A typed annotation object.
 #'
 #' @examples
+#' \dontrun{
 #' x %:% Integer %<-% 5L
 #' name %:% String %<-% "Alice"
 #' id %:% (Integer | String) %<-% 42L
+#' }
 #'
 #' @export
 `%:%` <- function(name, type) {
@@ -662,18 +771,21 @@ create_typed_binding <- function(var_name, value, type, envir) {
 
 #' Type-checked assignment operator
 #'
-#' Completes the typed assignment started with `%:%`.
+#' @description
+#' Completes the typed assignment started with `\%:\%`.
 #'
-#' @param typed_annotation Result of `%:%`.
+#' @param typed_annotation Result of `\%:\%`.
 #' @param value Value to assign.
 #'
 #' @return Invisibly returns the assigned value.
 #'
 #' @examples
+#' \dontrun{
 #' x %:% Integer %<-% 5L
 #' y %:% Double %<-% 3.14
 #' name %:% String %<-% "Bob"
 #' flag %:% Bool %<-% TRUE
+#' }
 #'
 #' @export
 `%<-%` <- function(typed_annotation, value) {

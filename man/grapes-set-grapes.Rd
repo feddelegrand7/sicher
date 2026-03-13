@@ -7,7 +7,7 @@
 typed_annotation \%<-\% value
 }
 \arguments{
-\item{typed_annotation}{Result of `%:%`.}
+\item{typed_annotation}{Result of `\%:\%`.}
 
 \item{value}{Value to assign.}
 }
@@ -15,12 +15,14 @@ typed_annotation \%<-\% value
 Invisibly returns the assigned value.
 }
 \description{
-Completes the typed assignment started with `%:%`.
+Completes the typed assignment started with `\%:\%`.
 }
 \examples{
+\dontrun{
 x \%:\% Integer \%<-\% 5L
 y \%:\% Double \%<-\% 3.14
 name \%:\% String \%<-\% "Bob"
 flag \%:\% Bool \%<-\% TRUE
+}
 
 }

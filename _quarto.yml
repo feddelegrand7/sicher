@@ -13,6 +13,9 @@ website:
         text: Features
       - href: api.qmd
         text: API Reference
+    right:
+      - icon: github
+        href: https://github.com/feddelegrand7/sicher
 
 format:
   html:
