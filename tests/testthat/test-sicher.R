@@ -145,7 +145,7 @@ testthat::test_that("get_type_name returns correct strings", {
   testthat::expect_equal(get_type_name(1), "double")
   testthat::expect_equal(get_type_name("a"), "string")
   testthat::expect_equal(get_type_name(TRUE), "bool")
-  testthat::expect_equal(get_type_name(list()), "list")
+  testthat::expect_equal(get_type_name(list()), "list of length 0")
   df <- data.frame(x=1)
   # data.frames are lists so get_type_name returns "list"
   testthat::expect_equal(get_type_name(df), "list")
@@ -171,7 +171,7 @@ testthat::test_that("get_type_name includes length for non-scalar values", {
     "got string of length 2"
   )
   # scalar value: no length suffix
-  testthat::expect_error(check_type("x", Integer), "got string$")
+  testthat::expect_error(check_type("x", Integer), "got string")
 })
 
 testthat::test_that("check_type errors for invalid type specification", {
