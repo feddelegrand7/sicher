@@ -279,6 +279,86 @@ testthat::test_that("check_type handles Any and Null properly", {
   testthat::expect_true(check_type(NULL, Null))
 })
 
+# typed_function
+
+testthat::test_that("typed_function validates params and return type", {
+  add <- typed_function(
+    function(x, y) x + y,
+    params  = list(x = Numeric, y = Numeric),
+    .return = Numeric
+  )
+  testthat::expect_equal(add(1, 2), 3)
+  testthat::expect_error(add("a", 2), "Type error")
+  testthat::expect_error(add(1, TRUE), "Type error")
+})
+
+testthat::test_that("typed_function checks return type", {
+  bad_return <- typed_function(
+    function(x) as.character(x),
+    params  = list(x = Numeric),
+    .return = Numeric
+  )
+  testthat::expect_error(bad_return(1), "Type error")
+})
+
+testthat::test_that("typed_function works without .return", {
+  f <- typed_function(
+    function(x) x * 2,
+    params = list(x = Numeric)
+  )
+  testthat::expect_equal(f(5), 10)
+  testthat::expect_error(f("bad"), "Type error")
+})
+
+testthat::test_that("typed_function works with Optional params", {
+  greet <- typed_function(
+    function(name, title = NULL) {
+      if (is.null(title)) paste("Hello,", name) else paste("Hello,", title, name)
+    },
+    params = list(name = String, title = Optional(String))
+  )
+  testthat::expect_equal(greet("Alice"), "Hello, Alice")
+  testthat::expect_equal(greet("Alice", title = "Dr."), "Hello, Dr. Alice")
+  testthat::expect_error(greet("Alice", title = 42), "Type error")
+})
+
+testthat::test_that("typed_function works with union param types", {
+  f <- typed_function(
+    function(id) paste("ID:", id),
+    params  = list(id = String | Numeric),
+    .return = String
+  )
+  testthat::expect_match(f("abc"), "ID: abc")
+  testthat::expect_match(f(123),   "ID: 123")
+  testthat::expect_error(f(TRUE), "Type error")
+})
+
+testthat::test_that("typed_function construction errors", {
+  testthat::expect_error(typed_function(42),                               "must be a function")
+  testthat::expect_error(typed_function(function(x) x, params = "x"),     "named list")
+  testthat::expect_error(typed_function(function(x) x, params = list(5)), "named list")
+  testthat::expect_error(typed_function(function(x) x, params = list(x = 5)), "sicher_type")
+  testthat::expect_error(typed_function(function(x) x, .return = "bad"),  "sicher_type")
+})
+
+testthat::test_that("typed_function print method", {
+  f <- typed_function(
+    function(x, y) x + y,
+    params  = list(x = Numeric, y = String),
+    .return = Numeric
+  )
+  testthat::expect_s3_class(f, "sicher_typed_function")
+  testthat::expect_output(print(f), "typed_function")
+  testthat::expect_output(print(f), "x: numeric")
+  testthat::expect_output(print(f), "y: string")
+  testthat::expect_output(print(f), ": numeric")
+})
+
+testthat::test_that("typed_function with no params or return type passes through", {
+  f <- typed_function(function(x) x + 1)
+  testthat::expect_equal(f(5), 6)
+})
+
 
 
 
