@@ -231,6 +231,36 @@ add("a", 2)   # Error: Type error in 'x'
 ```
 
 ``` r
+Num_not_inf <- create_type(
+  name = "Num_not_inf", 
+  checker = function(x) {
+    is.numeric(x) && !is.infinite(x)
+  }
+)
+
+
+divide <- function(a, b) {
+  return(a / b)
+}
+
+divide_safe <- typed_function(
+  fn = divide, 
+  params = list(
+    a = Num_not_inf, 
+    b = Num_not_inf
+  ), 
+  .return = Num_not_inf
+)
+
+
+divide_safe(10, 2) # works normally
+#> [1] 5
+divide_safe(10, 0) # fails as 10/0 returns Inf
+#> Error: Type error in '<return value>': Expected Num_not_inf, got double
+#> Received: Inf
+```
+
+``` r
 # Optional parameter
 greet <- typed_function(
   function(name, title = NULL) {
