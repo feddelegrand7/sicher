@@ -3,6 +3,10 @@
 
 # sicher 🔐
 
+<!-- badges: start -->
+
+<!-- badges: end -->
+
 **sicher** (German for *safe* or *certain*) is an R package that brings
 runtime type safety to R programming — inspired by TypeScript for
 JavaScript. Declare types for your variables and have them enforced
@@ -73,7 +77,7 @@ df   %:% DataFrame %<-% data.frame(a = 1:3)
 ``` r
 single %:% Scalar(Numeric) %<-% 42
 single <- c(1, 2, 3)   # Error: length > 1
-#> Error: Type error in 'single': Expected scalar<numeric>, got numeric
+#> Error: Type error in 'single': Expected scalar<numeric>, got double
 #>   Received: [1, 2, 3]
 ```
 
@@ -115,7 +119,7 @@ Append `[n]` to any type to require an exact vector length:
 coords %:% Numeric[3] %<-% c(1, 2, 3)
 coords <- c(4, 5, 6)   # OK — same length
 coords <- c(1, 2)      # Error: wrong length
-#> Error: Type error in 'coords': Expected numeric[3], got numeric
+#> Error: Type error in 'coords': Expected numeric[3], got double
 #>   Received: [1, 2]
 ```
 
@@ -133,8 +137,7 @@ Person <- create_list_type(list(
 person %:% Person %<-% list(name = "Alice", age = 30, email = "alice@example.com")
 
 person <- list(name = "Bob")   # Error: missing required field 'age'
-#> Error: Type error in 'person': Expected {name: string, age: numeric, email?: string | null}, got list
-#>   Details: Missing required fields: age
+#> Error in type$check(value): object 'context' not found
 ```
 
 ### 🗄️ Data Frame Schemas
@@ -160,7 +163,8 @@ users <- data.frame(
   username = c("alice", "bob"),
   active   = c(TRUE, FALSE)
 )
-#> Error: Type error in 'users': Expected data.frame{...}, got data.frame
+#> Error: Type error in 'id': Expected integer, got string
+#>   Received: [1, 2]
 ```
 
 ### 📦 Homogeneous Lists with `ListOf()`
@@ -186,6 +190,7 @@ todos <- list(
   list(wrong = "shape")   # Error: element does not match TodoItem
 )
 #> Error: Type error in 'todos': Expected list<{id: numeric, title: string, completed: bool}>, got list
+#>   Received: [list(id = 1, title = "Buy milk", completed = FALSE), list(wrong = "shape")]
 ```
 
 ### 🛠️ Custom Types
@@ -216,11 +221,10 @@ calculate_mean_payroll(c(1800, 2300, 4000))   # Works fine
 
 calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
 #> Error: Type error in 'salaries': Expected numeric, got string
-#>   Received: [1800, 2300, 4000, ...]
+#>   Received: [1800, 2300, 4000]
 ```
 
 ## 📚 Learn More
 
-Full documentation and worked examples are available at the package
-website.
-
+Full documentation and worked examples are available at the [package
+website](https://feddelegrand7.github.io/sicher/).

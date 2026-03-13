@@ -211,5 +211,5 @@ calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
 
 ## 📚 Learn More
 
-Full documentation and worked examples are available at the package website.
+Full documentation and worked examples are available at the [package website](https://feddelegrand7.github.io/sicher/).
 
