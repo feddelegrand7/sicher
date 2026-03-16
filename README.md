@@ -296,6 +296,54 @@ describe(TRUE)    # Error: Type error in 'id'
 #> Received: TRUE
 ```
 
+You can also define an object to expect as a return value:
+
+``` r
+Person <- create_list_type(
+  type_spec = list(
+    name = String, 
+    age = Numeric
+  )
+)
+
+get_person_info_as_list <- function(name, age) {
+  return(list(
+    name = name, 
+    age = age
+  ))
+}
+
+get_person_info_as_message <- function(name, age) {
+  return(
+    paste("Hi my name is ", name, " I'm ", age, " years old")
+  )
+}
+
+get_person_info_as_list_safe <- typed_function(
+  fn = get_person_info_as_list, 
+  params = list(name = String, age = Numeric), 
+  .return = Person
+)
+
+get_person_info_as_list_safe(name = "Omar", age = 30) # works fine
+#> $name
+#> [1] "Omar"
+#> 
+#> $age
+#> [1] 30
+
+get_person_info_as_message_safe <- typed_function(
+  fn = get_person_info_as_message, 
+  params = list(name = String, age = Numeric), 
+  .return = Person
+)
+
+# Should fail as the function does not return a Person list anymore
+get_person_info_as_message_safe(name = "Omar", age = 30) 
+#> Error: Type error in '<return value>': Expected {name: string, age: numeric}, got string
+#> Received: Hi my name is  Omar  I'm  30  years old
+```
+
 ## 🌍 Function usage
 
 ``` r
