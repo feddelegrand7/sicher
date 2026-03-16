@@ -2,8 +2,11 @@ Package: sicher
 Type: Package
 Title: Runtime Type Checking for R
 Version: 0.1.0
-Author: Mohamed El Fodil Ihaddaden 
-Maintainer: Mohamed El Fodil Ihaddaden <ihaddaden.fodeil@gmail.com>
+Authors@R: 
+    person(given = c("Mohamed", "El", "Fodil"),
+           family = "Ihaddaden",
+           role = c("aut", "cre"),
+           email = "ihaddaden.fodeil@gmail.com")
 Description: Provides a lightweight runtime type system for 'R' that enables
     developers to declare and enforce variable types during execution.
     Inspired by 'TypeScript', the package introduces intuitive syntax for

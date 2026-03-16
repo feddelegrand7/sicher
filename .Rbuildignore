@@ -10,3 +10,4 @@
 ^styles\.css$
 ^\.quarto$
 ^cran-comments\.md$
+^CRAN-SUBMISSION$
