@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# sicher 🔐
+# sicher <a><img src='man/figures/sicher_logo.png' align="right" height="200" /></a>
 
 <!-- badges: start -->
 

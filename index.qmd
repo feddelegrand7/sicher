@@ -3,6 +3,9 @@ title: ""
 subtitle: ""
 ---
 
+
+<a><img src='man/figures/sicher_logo.png' align="right" height="400" width="400"/></a>
+
 ## What is sicher?
 
 **sicher** is an R package that brings type safety to R programming, similar to TypeScript for JavaScript. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.
