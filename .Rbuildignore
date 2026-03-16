@@ -9,3 +9,4 @@
 ^index\.qmd$
 ^styles\.css$
 ^\.quarto$
+^cran-comments\.md$
