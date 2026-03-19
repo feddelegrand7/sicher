@@ -1,4 +1,3 @@
-
 testthat::test_that("create_type returns a proper object and prints", {
   t <- create_type("t", is.numeric)
   testthat::expect_s3_class(t, "sicher_type")
@@ -357,6 +356,136 @@ testthat::test_that("typed_function print method", {
 testthat::test_that("typed_function with no params or return type passes through", {
   f <- typed_function(function(x) x + 1)
   testthat::expect_equal(f(5), 6)
+})
+
+# infer_type tests
+
+testthat::test_that("infer_type infers primitive types", {
+  testthat::expect_equal(infer_type(42L)$name, Integer$name)
+  testthat::expect_equal(infer_type(3.14)$name, Double$name)
+  testthat::expect_equal(infer_type("abc")$name, String$name)
+  testthat::expect_equal(infer_type(TRUE)$name, Bool$name)
+  testthat::expect_equal(infer_type(NULL)$name, Null$name)
+  testthat::expect_equal(infer_type(function(x) x+1)$name, Function$name)
+})
+
+testthat::test_that("infer_type infers vector types without length constraints by default", {
+  testthat::expect_equal(infer_type(c(1L,2L,3L))$name, Integer$name)
+  testthat::expect_equal(infer_type(c(1,2,3))$name, Double$name)
+  testthat::expect_equal(infer_type(c("a","b"))$name, String$name)
+  testthat::expect_equal(infer_type(c(TRUE, FALSE))$name, Bool$name)
+})
+
+testthat::test_that("infer_type infers named and unnamed lists", {
+  # Named list
+  l <- list(a=1L, b="x")
+  t <- infer_type(l)
+  testthat::expect_true(inherits(t, "sicher_type"))
+  testthat::expect_true(grepl("a", t$name) && grepl("b", t$name))
+  # Unnamed homogeneous list
+  l2 <- list(1L, 2L, 3L)
+  t2 <- infer_type(l2)
+  testthat::expect_true(inherits(t2, "sicher_type"))
+  testthat::expect_true(grepl("list<integer>", t2$name))
+  # Unnamed heterogeneous list
+  l3 <- list(1L, "a")
+  t3 <- infer_type(l3)
+  testthat::expect_equal(t3$name, List$name)
+})
+
+testthat::test_that("infer_type infers optional fields in lists", {
+  l <- list(a=NULL, b=1)
+  t <- infer_type(l)
+  testthat::expect_true(grepl("Optional", t$name) || grepl("null", t$name))
+})
+
+testthat::test_that("infer_type infers data.frame types", {
+  df <- data.frame(x=1:3, y=c("a","b","c"), stringsAsFactors=FALSE)
+  t <- infer_type(df)
+  testthat::expect_true(inherits(t, "sicher_type"))
+  testthat::expect_true(grepl("data.frame", t$name))
+  testthat::expect_true(grepl("x", t$name) && grepl("y", t$name))
+  testthat::expect_false(grepl("\\[3\\]", t$name))
+})
+
+testthat::test_that("infer_type strict mode infers scalar and fixed-size constraints", {
+  testthat::expect_equal(infer_type(42L, strict = TRUE)$name, Scalar(Integer)$name)
+  testthat::expect_equal(infer_type(3.14, strict = TRUE)$name, Scalar(Double)$name)
+  testthat::expect_equal(infer_type(c(1L, 2L, 3L), strict = TRUE)$name, Integer[3]$name)
+  testthat::expect_equal(infer_type(c("a", "b"), strict = TRUE)$name, String[2]$name)
+
+  list_type <- infer_type(list(a = 1L, b = "x"), strict = TRUE)
+  testthat::expect_true(grepl("scalar<integer>", list_type$name))
+  testthat::expect_true(grepl("scalar<string>", list_type$name))
+
+  df_type <- infer_type(
+    data.frame(x = 1:3, y = c("a", "b", "c"), stringsAsFactors = FALSE),
+    strict = TRUE
+  )
+  testthat::expect_true(grepl("\\[3\\]", df_type$name))
+})
+
+testthat::test_that("infer_type propagates non-strict mode through nested structures", {
+  nested <- list(
+    user = list(
+      id = 1L,
+      tags = c("admin", "staff")
+    ),
+    metrics = data.frame(score = 1:3)
+  )
+
+  nested_type <- infer_type(nested)
+
+  testthat::expect_true(grepl("user", nested_type$name))
+  testthat::expect_true(grepl("metrics", nested_type$name))
+  testthat::expect_false(grepl("scalar<integer>", nested_type$name))
+  testthat::expect_false(grepl("\\[2\\]", nested_type$name))
+  testthat::expect_false(grepl("\\[3\\]", nested_type$name))
+})
+
+testthat::test_that("infer_type propagates strict mode through nested structures", {
+  nested <- list(
+    user = list(
+      id = 1L,
+      tags = c("admin", "staff")
+    ),
+    metrics = data.frame(score = 1:3)
+  )
+
+  nested_type <- infer_type(nested, strict = TRUE)
+
+  testthat::expect_true(grepl("scalar<integer>", nested_type$name))
+  testthat::expect_true(grepl("string\\[2\\]", nested_type$name))
+  testthat::expect_true(grepl("integer\\[3\\]", nested_type$name))
+})
+
+testthat::test_that("infer_type handles empty containers consistently", {
+  testthat::expect_equal(infer_type(list())$name, List$name)
+  testthat::expect_equal(infer_type(list(), strict = TRUE)$name, List$name)
+
+  empty_df <- data.frame()
+  default_df_type <- infer_type(empty_df)
+  strict_df_type <- infer_type(empty_df, strict = TRUE)
+
+  testthat::expect_true(inherits(default_df_type, "sicher_type"))
+  testthat::expect_true(inherits(strict_df_type, "sicher_type"))
+  testthat::expect_equal(default_df_type$name, strict_df_type$name)
+  testthat::expect_match(default_df_type$name, "data.frame")
+})
+
+testthat::test_that("infer_type distinguishes homogeneous lists across modes", {
+  values <- list(c(1L, 2L), c(3L, 4L))
+
+  default_type <- infer_type(values)
+  strict_type <- infer_type(values, strict = TRUE)
+
+  testthat::expect_match(default_type$name, "list<integer>")
+  testthat::expect_match(strict_type$name, "list<integer\\[2\\]>")
+})
+
+testthat::test_that("infer_type validates strict argument", {
+  testthat::expect_error(infer_type(1, strict = NA), "`strict` must be either TRUE or FALSE")
+  testthat::expect_error(infer_type(1, strict = c(TRUE, FALSE)), "`strict` must be either TRUE or FALSE")
 })
 
 

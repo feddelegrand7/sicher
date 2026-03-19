@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# sicher <a><img src='man/figures/sicher_logo.png' align="right" height="200" /></a>
+# sicher <a><img src="man/figures/sicher_logo.png" align="right" height="200"/></a>
 
 <!-- badges: start -->
 
@@ -359,6 +359,60 @@ calculate_mean_payroll(c(1800, 2300, 4000))   # Works fine
 calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
 #> Error: Type error in 'salaries': Expected numeric, got string of length 3
 #> Received: [1800, 2300, 4000]
+```
+
+## 🔍 Type inference
+
+You can automatically infer the type for an R object using
+`infer_type()`:
+
+``` r
+# Primitives
+infer_type(42L)                # Integer
+#> <type: integer >
+infer_type(3.14)               # Double
+#> <type: double >
+infer_type("abc")              # String
+#> <type: string >
+infer_type(TRUE)               # Bool
+#> <type: bool >
+infer_type(NULL)               # Null
+#> <type: null >
+infer_type(function(x) x + 1)  # Function
+#> <type: Function >
+
+# Default mode infers types, not observed lengths
+infer_type(c(1L, 2L, 3L))      # Integer
+#> <type: integer >
+infer_type(c(1, 2, 3))         # Double
+#> <type: double >
+infer_type(c("a", "b"))        # String
+#> <type: string >
+infer_type(c(TRUE, FALSE))     # Bool
+#> <type: bool >
+
+# Named and unnamed lists
+infer_type(list(a = 1L, b = "x")) # create_list_type(list(a = Integer, b = String))
+#> <type: {a: integer, b: string} >
+infer_type(list(1L, 2L, 3L))   # ListOf(Integer)
+#> <type: list<integer> >
+infer_type(list(1L, "a"))      # List
+#> <type: list >
+infer_type(list(a = NULL, b = 1)) # create_list_type(list(a = Optional(Any), b = Double))
+#> <type: {a?: any | null, b: double} >
+
+# Data frames
+infer_type(data.frame(x = 1:3, y = c("a", "b", "c"), stringsAsFactors = FALSE))
+#> <type: data.frame{x: integer, y: string} >
+# create_dataframe_type(list(x = Integer, y = String))
+
+# Use strict = TRUE to also infer Scalar() and [n] size constraints
+infer_type(42L, strict = TRUE)           # Scalar(Integer)
+#> <type: scalar<integer> >
+infer_type(c("a", "b"), strict = TRUE) # String[2]
+#> <type: string[2] >
+infer_type(data.frame(x = 1:3), strict = TRUE)
+#> <type: data.frame{x: integer[3]} >
 ```
 
 ## 📚 Learn More
