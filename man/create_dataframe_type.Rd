@@ -25,11 +25,9 @@ PersonDF <- create_dataframe_type(list(
   height = Optional(Numeric)
 ))
 
-\dontrun{
 df \%:\% PersonDF \%<-\% data.frame(
   name = c("Alice", "Bob"),
   age = c(25, 30)
 )
-}
 
 }

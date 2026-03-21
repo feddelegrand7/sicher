@@ -18,10 +18,8 @@ A new sicher_type that checks for the specified length
 Creates a type that checks for a specific vector length.
 }
 \examples{
-\dontrun{
 vec \%:\% Numeric[3] \%<-\% c(1, 2, 3)
 # vec <- c(1, 2)  # Error: wrong length
 # vec <- c("a", "b", "c")  # Error: wrong type
-}
 
 }

@@ -25,12 +25,10 @@ Record <- create_list_type(list(id = Numeric, name = String))
 
 # Now require a list of records
 Records <- ListOf(Record)
-\dontrun{
 records \%:\% Records \%<-\% list(
   list(id = 1, name = "a"),
   list(id = 2, name = "b")
 )
-}
 
 # fixed-size list of ten records
 TenRecs <- Records[10]

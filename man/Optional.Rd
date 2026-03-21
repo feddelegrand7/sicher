@@ -16,9 +16,7 @@ A union type that includes Null
 Creates a type that accepts NULL values in addition to the base type.
 }
 \examples{
-\dontrun{
 middle_name \%:\% Optional(String) \%<-\% NULL
 middle_name <- "Marie"  # Also OK
-}
 
 }

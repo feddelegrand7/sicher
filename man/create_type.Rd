@@ -44,10 +44,8 @@ Positive <- create_type("positive", function(x) {
 })
 
 # Use it in type annotations
-\dontrun{
 age \%:\% Positive \%<-\% 25
-age <- -5  # Error: Type error
-}
+# age <- -5  # Error: Type error
 
 # Create a custom email type
 Email <- create_type("email", function(x) {
@@ -56,19 +54,15 @@ Email <- create_type("email", function(x) {
     grepl("^[^@]+@[^@]+\\\\.[^@]+$", x)
 })
 
-\dontrun{
 user_email \%:\% Email \%<-\% "user@example.com"
-}
 
 # Create a type for even integers
 EvenInt <- create_type("even_int", function(x) {
   is.integer(x) && all(x \%\% 2 == 0)
 })
 
-\dontrun{
 value \%:\% EvenInt \%<-\% 4L
-value <- 5L  # Error: Type error
-}
+# value <- 5L  # Error: Type error
 
 # Create a type that checks data frame structure
 PersonDF <- create_type("person_df", function(x) {

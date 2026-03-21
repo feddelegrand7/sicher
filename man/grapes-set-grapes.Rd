@@ -18,11 +18,9 @@ Invisibly returns the assigned value.
 Completes the typed assignment started with `\%:\%`.
 }
 \examples{
-\dontrun{
 x \%:\% Integer \%<-\% 5L
 y \%:\% Double \%<-\% 3.14
 name \%:\% String \%<-\% "Bob"
 flag \%:\% Bool \%<-\% TRUE
-}
 
 }

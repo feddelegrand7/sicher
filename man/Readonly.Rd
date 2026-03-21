@@ -16,9 +16,7 @@ A readonly type modifier
 Creates a type that prevents reassignment after initial value is set.
 }
 \examples{
-\dontrun{
 PI \%:\% Readonly(Double) \%<-\% 3.14159
 # PI <- 3.0  # Error: cannot reassign readonly
-}
 
 }

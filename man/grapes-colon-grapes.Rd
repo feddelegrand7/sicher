@@ -18,10 +18,8 @@ A typed annotation object.
 Creates a typed variable annotation used together with `\%<-\%`.
 }
 \examples{
-\dontrun{
 x \%:\% Integer \%<-\% 5L
 name \%:\% String \%<-\% "Alice"
 id \%:\% (Integer | String) \%<-\% 42L
-}
 
 }
