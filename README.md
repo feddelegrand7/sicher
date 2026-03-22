@@ -419,3 +419,10 @@ infer_type(data.frame(x = 1:3), strict = TRUE)
 
 Full documentation and worked examples are available at the [package
 website](https://feddelegrand7.github.io/sicher/).
+
+## Code of Conduct
+
+Please note that the sicher project is released with a [Contributor Code
+of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
+By contributing to this project, you agree to abide by its terms.
