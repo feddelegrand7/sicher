@@ -8,7 +8,7 @@
 <!-- badges: end -->
 
 **sicher** (German for *safe* or *certain*) is an R package that brings
-runtime type safety to R programming — inspired by TypeScript for
+runtime type safety to R programming, inspired by TypeScript for
 JavaScript. Declare types for your variables and have them enforced
 automatically on every assignment, catching type errors early and making
 your code more robust and self-documenting. 🛡️
