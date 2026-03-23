@@ -21,6 +21,12 @@ knitr::opts_chunk$set(
 
 **sicher** (German for *safe* or *certain*) is an R package that brings runtime type safety to R programming, inspired by TypeScript for JavaScript. Declare types for your variables and have them enforced automatically on every assignment, catching type errors early and making your code more robust and self-documenting. 🛡️
 
+**sicher** implements runtime type safety in R by attaching types to variables via active bindings rather than traditional attributes or classes. When a variable is declared with a type (e.g., `x %:% Numeric %<-% 5`), it is replaced by an active binding that wraps the value inside a closure with a private environment storing both the value and its associated type. 
+
+Every read and write to the variable is intercepted: reads return the stored value, while writes trigger validation through the type’s checker function before updating. This design provides strong guarantees that values cannot violate their declared types, enabling expressive and composable type definitions (including unions, structured lists, and data frame schemas). 
+
+
+
 ## 📦 Installation
 
 Install the development version from GitHub:
