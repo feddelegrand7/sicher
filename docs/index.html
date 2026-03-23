@@ -199,6 +199,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="what-is-sicher" class="level2">
 <h2 class="anchored" data-anchor-id="what-is-sicher">What is sicher?</h2>
 <p><strong>sicher</strong> is an R package that brings type safety to R programming, similar to TypeScript for JavaScript. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.</p>
+<p><strong>sicher</strong> implements runtime type safety in R by attaching types to variables via active bindings rather than traditional attributes or classes. When a variable is declared with a type (e.g., <code>x %:% Numeric %&lt;-% 5</code>), it is replaced by an active binding that wraps the value inside a closure with a private environment storing both the value and its associated type.</p>
+<p>Every read and write to the variable is intercepted: reads return the stored value, while writes trigger validation through the type’s checker function before updating. This design provides strong guarantees that values cannot violate their declared types, enabling expressive and composable type definitions (including unions, structured lists, and data frame schemas).</p>
 <section id="key-features" class="level3">
 <h3 class="anchored" data-anchor-id="key-features">Key Features</h3>
 <ul>
