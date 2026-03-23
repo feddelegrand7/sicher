@@ -2,32 +2,22 @@
 title: "API Reference"
 ---
 
-
 ```{r, echo=FALSE}
 library(sicher)
 ```
-
 
 ## Core Functions
 
 ### `typed_function(fn, params, .return)`
 
-Wraps a function with runtime type checks for its parameters and, optionally,
-its return value.
+Wraps a function with runtime type checks for its parameters and, optionally, its return value.
 
-**Parameters:**
-- `fn`: The function to wrap. Its formals are preserved so callers use the
-  same signature.
-- `params`: A named list mapping parameter names to their types
-  (e.g. `list(x = Numeric, y = String)`). Only listed parameters are checked.
-  Defaults to an empty list (no parameter checking).
-- `.return`: Optional return type. When `NULL` (the default), the return value
-  is not checked. Accepts any `sicher_type` or `sicher_union`.
+**Parameters:** - `fn`: The function to wrap. Its formals are preserved so callers use the same signature. - `params`: A named list mapping parameter names to their types (e.g. `list(x = Numeric, y = String)`). Only listed parameters are checked. Defaults to an empty list (no parameter checking). - `.return`: Optional return type. When `NULL` (the default), the return value is not checked. Accepts any `sicher_type` or `sicher_union`.
 
-**Returns:** A function with S3 class `"sicher_typed_function"` that validates
-types on every call and delegates argument passing to `fn` unchanged.
+**Returns:** A function with S3 class `"sicher_typed_function"` that validates types on every call and delegates argument passing to `fn` unchanged.
 
 **Example:**
+
 ```{r}
 add <- typed_function(
   function(x, y) x + y,
@@ -48,11 +38,10 @@ greet <- typed_function(
 
 Creates a new type with a name and validation function.
 
-**Parameters:**
-- `name`: Character string for error messages
-- `checker`: Function that returns TRUE/FALSE for validation
+**Parameters:** - `name`: Character string for error messages - `checker`: Function that returns TRUE/FALSE for validation
 
 **Example:**
+
 ```{r}
 Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
 ```
@@ -61,10 +50,10 @@ Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
 
 Creates a type for lists with specific field requirements.
 
-**Parameters:**
-- `type_spec`: Named list where names are field names and values are types
+**Parameters:** - `type_spec`: Named list where names are field names and values are types
 
 **Example:**
+
 ```{r}
 Person <- create_list_type(list(name = String, age = Numeric))
 ```
@@ -73,10 +62,10 @@ Person <- create_list_type(list(name = String, age = Numeric))
 
 Creates a type for data frames with column specifications.
 
-**Parameters:**
-- `col_spec`: Named list where names are column names and values are types
+**Parameters:** - `col_spec`: Named list where names are column names and values are types
 
 **Example:**
+
 ```{r}
 Table <- create_dataframe_type(list(id = Integer, name = String))
 ```
@@ -85,10 +74,10 @@ Table <- create_dataframe_type(list(id = Integer, name = String))
 
 Creates a type for homogeneous lists.
 
-**Parameters:**
-- `element_type`: Type that each list element must satisfy
+**Parameters:** - `element_type`: Type that each list element must satisfy
 
 **Example:**
+
 ```{r}
 Numbers <- ListOf(Numeric)
 ```
@@ -100,6 +89,7 @@ Numbers <- ListOf(Numeric)
 Requires exactly one element (length 1).
 
 **Example:**
+
 ```{r}
 SingleValue <- Scalar(Numeric)
 ```
@@ -109,6 +99,7 @@ SingleValue <- Scalar(Numeric)
 Prevents reassignment after initial value.
 
 **Example:**
+
 ```{r}
 Constant <- Readonly(String)
 ```
@@ -118,6 +109,7 @@ Constant <- Readonly(String)
 Allows NULL in addition to the base type.
 
 **Example:**
+
 ```{r}
 MaybeString <- Optional(String)
 ```
@@ -129,7 +121,8 @@ MaybeString <- Optional(String)
 Type annotation operator.
 
 **Usage:**
-```r
+
+``` r
 variable %:% Type
 ```
 
@@ -138,7 +131,8 @@ variable %:% Type
 Typed assignment operator.
 
 **Usage:**
-```r
+
+``` r
 variable %:% Type %<-% value
 ```
 
@@ -147,7 +141,8 @@ variable %:% Type %<-% value
 Union operator for combining types.
 
 **Example:**
-```r
+
+``` r
 StringOrNumber <- (String | Numeric)
 ```
 
@@ -156,7 +151,8 @@ StringOrNumber <- (String | Numeric)
 Size constraint operator.
 
 **Example:**
-```r
+
+``` r
 ThreeNumbers <- Numeric[3]
 ```
 
@@ -164,16 +160,16 @@ ThreeNumbers <- Numeric[3]
 
 ### Primitive Types
 
-- `Integer`: Integer vectors
-- `Double`: Double-precision numeric vectors
-- `Numeric`: Any numeric vectors
-- `String`: Character vectors
-- `Bool`: Logical vectors
-- `List`: List objects
-- `Any`: Accepts any value
-- `Null`: Only NULL values
-- `Function`: Function objects
-- `DataFrame`: Data frame objects
+-   `Integer`: Integer vectors
+-   `Double`: Double-precision numeric vectors
+-   `Numeric`: Any numeric vectors
+-   `String`: Character vectors
+-   `Bool`: Logical vectors
+-   `List`: List objects
+-   `Any`: Accepts any value
+-   `Null`: Only NULL values
+-   `Function`: Function objects
+-   `DataFrame`: Data frame objects
 
 ## Error Handling
 
@@ -183,8 +179,38 @@ Type errors provide detailed context:
 x %:% Numeric %<-% "text"
 ```
 
-Error messages include:
-- Expected type
-- Actual type
-- Variable name (when available)
-- Value preview (for debugging)
+Error messages include: - Expected type - Actual type - Variable name (when available) - Value preview (for debugging)
+
+
+## Global Options
+
+The behavior of **sicher** can be controlled globally using R’s `options()` mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.
+
+```{r, error=TRUE}
+my_var_x %:% Numeric %<-% 10   # validated and bound with type enforcement
+
+my_var_x <- "string" # trigger an error
+```
+
+
+```{r}
+options(sicher.mode = "off")
+my_var_y %:% Numeric %<-% 10 
+my_var_y <- "string" # nothing happens
+```
+
+It can also be temporarily scoped:
+```{r}
+withr::with_options(
+  list(sicher.mode = "off"),
+  {
+    my_var_y %:% Numeric %<-% 10
+    my_var_y <- "string"
+  }
+)
+```
+
+```{r, echo=FALSE}
+options(sicher.mode = "on")
+```
+

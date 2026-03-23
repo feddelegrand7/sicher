@@ -186,6 +186,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">Basic Usage</a></li>
   </ul></li>
   <li><a href="#error-examples" id="toc-error-examples" class="nav-link" data-scroll-target="#error-examples">Error Examples</a></li>
+  <li><a href="#global-options" id="toc-global-options" class="nav-link" data-scroll-target="#global-options">Global Options</a>
+  <ul class="collapse">
+  <li><a href="#sicher.mode" id="toc-sicher.mode" class="nav-link" data-scroll-target="#sicher.mode"><code>sicher.mode</code></a></li>
+  <li><a href="#how-to-set-options" id="toc-how-to-set-options" class="nav-link" data-scroll-target="#how-to-set-options">How to set options</a></li>
+  <li><a href="#when-to-use-each-mode" id="toc-when-to-use-each-mode" class="nav-link" data-scroll-target="#when-to-use-each-mode">When to use each mode</a></li>
+  <li><a href="#example" id="toc-example" class="nav-link" data-scroll-target="#example">Example</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -576,8 +583,88 @@ Received: list with fields: [name]</code></pre>
 Received: [1, 2]</code></pre>
 </div>
 </div>
+</section>
+<section id="global-options" class="level2">
+<h2 class="anchored" data-anchor-id="global-options">Global Options</h2>
+<p>The behavior of <strong>sicher</strong> can be controlled globally using R’s <code>options()</code> mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.</p>
+<section id="sicher.mode" class="level3">
+<h3 class="anchored" data-anchor-id="sicher.mode"><code>sicher.mode</code></h3>
+<p>Controls how typed assignments (<code>%:%</code> and <code>%&lt;-%</code>) behave.</p>
+<section id="values" class="level4">
+<h4 class="anchored" data-anchor-id="values">Values</h4>
+<ul>
+<li><strong><code>"on"</code></strong> <em>(default)</em><br>
+Enables full runtime type enforcement.
+<ul>
+<li>Typed variables are implemented as active bindings<br>
+</li>
+<li>All assignments are validated against their declared type<br>
+</li>
+<li>Type violations result in immediate errors</li>
+</ul></li>
+<li><strong><code>"off"</code></strong><br>
+Disables the type system entirely.
+<ul>
+<li>Typed annotations are ignored<br>
+</li>
+<li>Assignments behave like standard R assignments (<code>&lt;-</code>)<br>
+</li>
+<li>No validation is performed<br>
+</li>
+<li>No active bindings are created</li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="how-to-set-options" class="level3">
+<h3 class="anchored" data-anchor-id="how-to-set-options">How to set options</h3>
+<p>You can configure the mode globally, for example, disabling strict type checking with:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Or enable strict typing with:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>) <span class="co"># this is the default</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="when-to-use-each-mode" class="level3">
+<h3 class="anchored" data-anchor-id="when-to-use-each-mode">When to use each mode</h3>
+<ul>
+<li><strong><code>"on"</code></strong> <em>(default)</em> <strong>(strict mode)</strong> Use in situations where correctness and safety are important:
+<ul>
+<li>Package development</li>
+<li>Data validation pipelines</li>
+<li>Production systems where type guarantees are desired</li>
+<li>APIs or functions expecting structured inputs In this mode, sicher actively enforces types at runtime and prevents invalid assignments.</li>
+</ul></li>
+<li><strong><code>"off"</code></strong> <strong>(disabled mode)</strong> Use when you want to bypass the type system entirely:
+<ul>
+<li>Performance-sensitive code where validation overhead is not desired</li>
+<li>Debugging or testing environments where strict typing is temporarily unnecessary</li>
+<li>Running code in environments where active bindings may interfere with other tools or workflows</li>
+<li>Interoperability with code that assumes standard R assignment semantics In this mode, typed annotations are effectively ignored, and variables behave like regular R objects.</li>
+</ul></li>
+</ul>
+</section>
+<section id="example" class="level3">
+<h3 class="anchored" data-anchor-id="example">Example</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'my_var_x': Expected numeric, got string
+Received: string</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

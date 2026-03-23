@@ -1022,6 +1022,16 @@ typed_function <- function(fn, params = list(), .return = NULL) {
     )
   }
 
+  # Global switch
+  if (identical(getOption("sicher.mode"), "off")) {
+    assign(
+      typed_annotation$var_name,
+      value,
+      envir = parent.frame()
+    )
+    return(invisible(value))
+  }
+
   create_typed_binding(
     typed_annotation$var_name,
     value,

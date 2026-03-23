@@ -335,3 +335,92 @@ user %:% User %<-% list(name = "Alice")  # Missing age
 Table <- create_dataframe_type(list(id = Integer, name = String))
 df %:% Table %<-% data.frame(id = c("1", "2"), name = c("A", "B"))  # id should be integer
 ```
+
+
+
+## Global Options
+
+The behavior of **sicher** can be controlled globally using R’s `options()` mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.
+
+### `sicher.mode`
+
+Controls how typed assignments (`%:%` and `%<-%`) behave.
+
+#### Values
+
+- **`"on"`** *(default)*  
+  Enables full runtime type enforcement.  
+  - Typed variables are implemented as active bindings  
+  - All assignments are validated against their declared type  
+  - Type violations result in immediate errors  
+
+- **`"off"`**  
+  Disables the type system entirely.  
+  - Typed annotations are ignored  
+  - Assignments behave like standard R assignments (`<-`)  
+  - No validation is performed  
+  - No active bindings are created  
+
+### How to set options
+
+You can configure the mode globally, for example, disabling strict type checking with: 
+
+```{r, eval=FALSE}
+options(sicher.mode = "off")
+```
+
+Or enable strict typing with: 
+
+```{r, eval=FALSE}
+options(sicher.mode = "on") # this is the default
+```
+
+### When to use each mode
+
+- **`"on"`** *(default)* **(strict mode)**
+  Use in situations where correctness and safety are important:
+  - Package development
+  - Data validation pipelines
+  - Production systems where type guarantees are desired
+  - APIs or functions expecting structured inputs
+In this mode, sicher actively enforces types at runtime and prevents invalid assignments.
+
+- **`"off"`** **(disabled mode)**
+  Use when you want to bypass the type system entirely:
+  - Performance-sensitive code where validation overhead is not desired
+  - Debugging or testing environments where strict typing is temporarily unnecessary
+  - Running code in environments where active bindings may interfere with other tools or workflows
+  - Interoperability with code that assumes standard R assignment semantics
+In this mode, typed annotations are effectively ignored, and variables behave like regular R objects.
+
+
+### Example
+
+```{r, error=TRUE}
+my_var_x %:% Numeric %<-% 10   # validated and bound with type enforcement
+
+my_var_x <- "string" # trigger an error
+```
+
+
+```{r}
+options(sicher.mode = "off")
+my_var_y %:% Numeric %<-% 10 
+my_var_y <- "string" # nothing happens
+```
+
+It can also be temporarily scoped:
+```{r}
+withr::with_options(
+  list(sicher.mode = "off"),
+  {
+    my_var_y %:% Numeric %<-% 10
+    my_var_y <- "string"
+  }
+)
+```
+
+```{r, echo=FALSE}
+options(sicher.mode = "on")
+```
+

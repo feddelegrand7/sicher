@@ -250,5 +250,19 @@
     "title": "sicher 0.1.0",
     "section": "",
     "text": "sicher 0.1.0\n\nInitial CRAN submission."
+  },
+  {
+    "objectID": "index.html#global-options",
+    "href": "index.html#global-options",
+    "title": "sicher: Type Safety for R",
+    "section": "Global Options",
+    "text": "Global Options\nThe behavior of sicher can be controlled globally using R’s options() mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.\n\nsicher.mode\nControls how typed assignments (%:% and %&lt;-%) behave.\n\nValues\n\n\"on\" (default)\nEnables full runtime type enforcement.\n\nTyped variables are implemented as active bindings\n\nAll assignments are validated against their declared type\n\nType violations result in immediate errors\n\n\"off\"\nDisables the type system entirely.\n\nTyped annotations are ignored\n\nAssignments behave like standard R assignments (&lt;-)\n\nNo validation is performed\n\nNo active bindings are created\n\n\n\n\n\nHow to set options\nYou can configure the mode globally, for example, disabling strict type checking with:\n\noptions(sicher.mode = \"off\")\n\nOr enable strict typing with:\n\noptions(sicher.mode = \"on\") # this is the default\n\n\n\nWhen to use each mode\n\n\"on\" (default) (strict mode) Use in situations where correctness and safety are important:\n\nPackage development\nData validation pipelines\nProduction systems where type guarantees are desired\nAPIs or functions expecting structured inputs In this mode, sicher actively enforces types at runtime and prevents invalid assignments.\n\n\"off\" (disabled mode) Use when you want to bypass the type system entirely:\n\nPerformance-sensitive code where validation overhead is not desired\nDebugging or testing environments where strict typing is temporarily unnecessary\nRunning code in environments where active bindings may interfere with other tools or workflows\nInteroperability with code that assumes standard R assignment semantics In this mode, typed annotations are effectively ignored, and variables behave like regular R objects.\n\n\n\n\nExample\n\nmy_var_x %:% Numeric %&lt;-% 10   # validated and bound with type enforcement\n\nmy_var_x &lt;- \"string\" # trigger an error\n\nError: Type error in 'my_var_x': Expected numeric, got string\nReceived: string\n\n\n\noptions(sicher.mode = \"off\")\nmy_var_y %:% Numeric %&lt;-% 10 \nmy_var_y &lt;- \"string\" # nothing happens"
+  },
+  {
+    "objectID": "api.html#global-options",
+    "href": "api.html#global-options",
+    "title": "API Reference",
+    "section": "Global Options",
+    "text": "Global Options\nThe behavior of sicher can be controlled globally using R’s options() mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.\n\nmy_var_x %:% Numeric %&lt;-% 10   # validated and bound with type enforcement\n\nmy_var_x &lt;- \"string\" # trigger an error\n\nError: Type error in 'my_var_x': Expected numeric, got string\nReceived: string\n\n\n\noptions(sicher.mode = \"off\")\nmy_var_y %:% Numeric %&lt;-% 10 \nmy_var_y &lt;- \"string\" # nothing happens\n\nIt can also be temporarily scoped:\n\nwithr::with_options(\n  list(sicher.mode = \"off\"),\n  {\n    my_var_y %:% Numeric %&lt;-% 10\n    my_var_y &lt;- \"string\"\n  }\n)"
   }
 ]
