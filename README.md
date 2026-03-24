@@ -1,3 +1,4 @@
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 # sicher <a><img src="man/figures/sicher_logo.png" align="right" height="200"/></a>
@@ -6,11 +7,25 @@
 
 <!-- badges: end -->
 
-**sicher** (German for *safe* or *certain*) is an R package that brings runtime type safety to R programming, inspired by TypeScript for JavaScript. Declare types for your variables and have them enforced automatically on every assignment, catching type errors early and making your code more robust and self-documenting. 🛡️
+**sicher** (German for *safe* or *certain*) is an R package that brings
+runtime type safety to R programming, inspired by TypeScript for
+JavaScript. Declare types for your variables and have them enforced
+automatically on every assignment, catching type errors early and making
+your code more robust and self-documenting. 🛡️
 
-**sicher** implements runtime type safety in R by attaching types to variables via active bindings rather than traditional attributes or classes. When a variable is declared with a type (e.g., `x %:% Numeric %<-% 5`), it is replaced by an active binding that wraps the value inside a closure with a private environment storing both the value and its associated type.
+**sicher** implements runtime type safety in R by attaching types to
+variables via active bindings rather than traditional attributes or
+classes. When a variable is declared with a type (e.g.,
+`x %:% Numeric %<-% 5`), it is replaced by an active binding that wraps
+the value inside a closure with a private environment storing both the
+value and its associated type.
 
-Every read and write to the variable is intercepted: reads return the stored value, while writes trigger validation through the type’s checker function before updating. This design provides strong guarantees that values cannot violate their declared types, enabling expressive and composable type definitions (including unions, structured lists, and data frame schemas).
+Every read and write to the variable is intercepted: reads return the
+stored value, while writes trigger validation through the type’s checker
+function before updating. This design provides strong guarantees that
+values cannot violate their declared types, enabling expressive and
+composable type definitions (including unions, structured lists, and
+data frame schemas).
 
 ## 📦 Installation
 
@@ -196,7 +211,8 @@ todos <- list(
 
 ### 🛠️ Custom Types
 
-Use `create_type()` to define your own validator with any predicate function:
+Use `create_type()` to define your own validator with any predicate
+function:
 
 ``` r
 Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
@@ -209,7 +225,9 @@ value <- -1   # Error
 
 ## 🔤 Typed Functions
 
-Use `typed_function()` to wrap any function with runtime type checks on its parameters and, optionally, its return value — a typed function signature for R:
+Use `typed_function()` to wrap any function with runtime type checks on
+its parameters and, optionally, its return value — a typed function
+signature for R:
 
 ``` r
 # Basic typed function — checks params and return type
@@ -359,7 +377,8 @@ calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
 
 ## 🔍 Type inference
 
-You can automatically infer the type for an R object using `infer_type()`:
+You can automatically infer the type for an R object using
+`infer_type()`:
 
 ``` r
 # Primitives
@@ -412,7 +431,9 @@ infer_type(data.frame(x = 1:3), strict = TRUE)
 
 ## Global Options
 
-The behavior of **sicher** can be controlled globally using R’s `options()` mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.
+The behavior of **sicher** can be controlled globally using R’s
+`options()` mechanism. These options allow you to switch between strict
+type enforcement and a fully disabled mode depending on your use case.
 
 ### `sicher.mode`
 
@@ -420,21 +441,22 @@ Controls how typed assignments (`%:%` and `%<-%`) behave.
 
 #### Values
 
--   **`"on"`** *(default)*\
-    Enables full runtime type enforcement.
-    -   Typed variables are implemented as active bindings\
-    -   All assignments are validated against their declared type\
-    -   Type violations result in immediate errors
--   **`"off"`**\
-    Disables the type system entirely.
-    -   Typed annotations are ignored\
-    -   Assignments behave like standard R assignments (`<-`)\
-    -   No validation is performed\
-    -   No active bindings are created
+- **`"on"`** *(default)*  
+  Enables full runtime type enforcement.
+  - Typed variables are implemented as active bindings  
+  - All assignments are validated against their declared type  
+  - Type violations result in immediate errors
+- **`"off"`**  
+  Disables the type system entirely.
+  - Typed annotations are ignored  
+  - Assignments behave like standard R assignments (`<-`)  
+  - No validation is performed  
+  - No active bindings are created
 
 ### How to set options
 
-You can configure the mode globally, for example, disabling strict type checking with:
+You can configure the mode globally, for example, disabling strict type
+checking with:
 
 ``` r
 options(sicher.mode = "off")
@@ -448,37 +470,60 @@ options(sicher.mode = "on") # this is the default
 
 ### When to use each mode
 
--   **`"on"`** *(default)* **(strict mode)** Use in situations where correctness and safety are important:
-    -   Package development
-    -   Data validation pipelines
-    -   Production systems where type guarantees are desired
-    -   APIs or functions expecting structured inputs In this mode, sicher actively enforces types at runtime and prevents invalid assignments.
--   **`"off"`** **(disabled mode)** Use when you want to bypass the type system entirely:
-    -   Performance-sensitive code where validation overhead is not desired
-    -   Debugging or testing environments where strict typing is temporarily unnecessary
-    -   Running code in environments where active bindings may interfere with other tools or workflows
-    -   Interoperability with code that assumes standard R assignment semantics In this mode, typed annotations are effectively ignored, and variables behave like regular R objects.
+- **`"on"`** *(default)* **(strict mode)** Use in situations where
+  correctness and safety are important:
+  - Package development
+  - Data validation pipelines
+  - Production systems where type guarantees are desired
+  - APIs or functions expecting structured inputs In this mode, sicher
+    actively enforces types at runtime and prevents invalid assignments.
+- **`"off"`** **(disabled mode)** Use when you want to bypass the type
+  system entirely:
+  - Performance-sensitive code where validation overhead is not desired
+  - Debugging or testing environments where strict typing is temporarily
+    unnecessary
+  - Running code in environments where active bindings may interfere
+    with other tools or workflows
+  - Interoperability with code that assumes standard R assignment
+    semantics In this mode, typed annotations are effectively ignored,
+    and variables behave like regular R objects.
 
 ### Example
 
 ``` r
-x %:% Numeric %<-% 10   # validated and bound with type enforcement
+my_var_x %:% Numeric %<-% 10   # validated and bound with type enforcement
 
-x <- "string" # trigger an error
-#> Error: Type error in 'x': Expected numeric, got string
+my_var_x <- "string" # trigger an error
+#> Error: Type error in 'my_var_x': Expected numeric, got string
 #> Received: string
 ```
 
 ``` r
 options(sicher.mode = "off")
-my_var %:% Numeric %<-% 10 
-my_var <- "string" # nothing happens
+my_var_y %:% Numeric %<-% 10 
+my_var_y <- "string" # nothing happens
+```
+
+It can also be temporarily scoped:
+
+``` r
+withr::with_options(
+  list(sicher.mode = "off"),
+  {
+    my_var_y %:% Numeric %<-% 10
+    my_var_y <- "string"
+  }
+)
 ```
 
 ## 📚 Learn More
 
-Full documentation and worked examples are available at the [package website](https://feddelegrand7.github.io/sicher/).
+Full documentation and worked examples are available at the [package
+website](https://feddelegrand7.github.io/sicher/).
 
 ## Code of Conduct
 
-Please note that the sicher project is released with a [Contributor Code of Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
+Please note that the sicher project is released with a [Contributor Code
+of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
+By contributing to this project, you agree to abide by its terms.

@@ -489,5 +489,302 @@ testthat::test_that("infer_type validates strict argument", {
 })
 
 
+testthat::test_that("create_type keeps checker function", {
+  checker <- function(x) is.numeric(x) && all(x >= 0)
+  t <- create_type("non_negative", checker)
 
+  testthat::expect_identical(t$check, checker)
+})
+
+testthat::test_that("integer and double built-ins distinguish storage modes", {
+  testthat::expect_false(Integer$check(1.5))
+  testthat::expect_false(Double$check(1L))
+})
+
+testthat::test_that("function and data frame built-ins accept matching values", {
+  testthat::expect_true(Function$check(function(x) x))
+  testthat::expect_true(DataFrame$check(data.frame(x = 1)))
+})
+
+testthat::test_that("size operator encodes length in type names", {
+  testthat::expect_equal(String[3]$name, "string[3]")
+})
+
+testthat::test_that("size operator works with Any", {
+  any_two <- Any[2]
+
+  testthat::expect_true(any_two$check(list(1, "a")))
+  testthat::expect_false(any_two$check(1))
+})
+
+testthat::test_that("create_list_type rejects blank field names", {
+  spec <- list(String)
+  names(spec) <- ""
+
+  testthat::expect_error(create_list_type(spec), "must be named")
+})
+
+testthat::test_that("create_list_type marks optional fields in name", {
+  person <- create_list_type(list(name = String, nickname = Optional(String)))
+
+  testthat::expect_match(person$name, "nickname\\?: string \\| null")
+})
+
+testthat::test_that("create_list_type accepts explicit NULL for optional field", {
+  person <- create_list_type(list(name = String, nickname = Optional(String)))
+
+  testthat::expect_true(person$check(list(name = "Ada", nickname = NULL)))
+})
+
+testthat::test_that("create_list_type surfaces field context on mismatch", {
+  person <- create_list_type(list(name = String))
+
+  testthat::expect_error(person$check(list(name = 1)), "Type error in 'name'")
+})
+
+testthat::test_that("nested list types propagate inner errors", {
+  schema <- create_list_type(list(meta = create_list_type(list(flag = Bool))))
+
+  testthat::expect_error(schema$check(list(meta = list(flag = "yes"))), "Type error in 'flag'")
+})
+
+testthat::test_that("create_dataframe_type rejects blank column names", {
+  spec <- list(Numeric)
+  names(spec) <- ""
+
+  testthat::expect_error(create_dataframe_type(spec), "must be named")
+})
+
+testthat::test_that("create_dataframe_type marks optional columns in name", {
+  schema <- create_dataframe_type(list(a = Numeric, b = Optional(String)))
+
+  testthat::expect_match(schema$name, "b\\?: string \\| null")
+})
+
+testthat::test_that("create_dataframe_type surfaces column context on mismatch", {
+  schema <- create_dataframe_type(list(a = Numeric))
+
+  testthat::expect_error(schema$check(data.frame(a = "x", stringsAsFactors = FALSE)), "Type error in 'a'")
+})
+
+testthat::test_that("create_dataframe_type check returns FALSE for non data frames", {
+  schema <- create_dataframe_type(list(a = Numeric))
+
+  testthat::expect_false(schema$check(list(a = 1)))
+})
+
+testthat::test_that("Scalar names wrap inner type name", {
+  testthat::expect_equal(Scalar(String)$name, "scalar<string>")
+})
+
+testthat::test_that("Readonly unwraps nested readonly modifiers", {
+  ro <- Readonly(Readonly(String))
+
+  testthat::expect_s3_class(ro, "sicher_readonly")
+  testthat::expect_identical(ro$base_type, String)
+})
+
+testthat::test_that("Optional adds null to union name", {
+  testthat::expect_equal(Optional(String)$name, "string | null")
+})
+
+testthat::test_that("create_union accepts NULL as left operand", {
+  u <- create_union(NULL, String)
+
+  testthat::expect_true(check_type(NULL, u))
+  testthat::expect_true(check_type("ok", u))
+})
+
+testthat::test_that("create_union concatenates nested union names", {
+  u <- create_union(String | Numeric, Bool | Null)
+
+  testthat::expect_equal(u$name, "string | numeric | bool | null")
+})
+
+testthat::test_that("check_type accepts readonly type specifications", {
+  testthat::expect_true(check_type(5, Readonly(Numeric)))
+})
+
+testthat::test_that("check_type includes context in scalar mismatch", {
+  testthat::expect_error(check_type(c(1, 2), Scalar(Numeric), context = "score"), "Type error in 'score'")
+})
+
+testthat::test_that("check_type rejects NULL for non-null unions", {
+  testthat::expect_error(check_type(NULL, String | Numeric), "Expected string \\| numeric, got null")
+})
+
+testthat::test_that("type_error previews named list fields", {
+  err <- type_error("cfg", "schema", "list", list(a = 1, b = 2))
+
+  testthat::expect_match(err, "list with fields: \\[a, b\\]")
+})
+
+testthat::test_that("type_error previews unnamed list lengths", {
+  err <- type_error(NULL, "schema", "list", list(1, 2, 3))
+
+  testthat::expect_match(err, "list of length 3")
+})
+
+testthat::test_that("type_error previews data frame columns", {
+  err <- type_error(NULL, "schema", "data.frame", data.frame(a = 1, b = 2))
+
+  testthat::expect_match(err, "columns: \\[a, b\\]")
+})
+
+testthat::test_that("type_error previews short atomic vectors", {
+  err <- type_error(NULL, "nums", "bool", c(1, 2, 3))
+
+  testthat::expect_match(err, "Received: \\[1, 2, 3\\]")
+})
+
+testthat::test_that("get_type_name reports functions", {
+  testthat::expect_equal(get_type_name(function(x) x), "function")
+})
+
+testthat::test_that("get_type_name reports empty logical vectors", {
+  testthat::expect_equal(get_type_name(logical()), "bool(0)")
+})
+
+testthat::test_that("get_type_name prioritizes list labeling over S3 classes", {
+  obj <- structure(list(), class = c("custom_obj", "list"))
+
+  testthat::expect_equal(get_type_name(obj), "list(0)")
+})
+
+testthat::test_that("type annotation captures symbol names", {
+  ann <- some_value %:% Numeric
+
+  testthat::expect_equal(ann$var_name, "some_value")
+})
+
+testthat::test_that("disabled mode bypasses type checking", {
+  old <- options(sicher.mode = "off")
+  on.exit(options(old), add = TRUE)
+
+  local({
+    off_mode_value %:% Numeric %<-% "text"
+    testthat::expect_equal(off_mode_value, "text")
+  })
+})
+
+testthat::test_that("disabled mode uses regular bindings", {
+  old <- options(sicher.mode = "off")
+  on.exit(options(old), add = TRUE)
+
+  local({
+    off_binding %:% Numeric %<-% 1
+    testthat::expect_false(bindingIsActive("off_binding", environment()))
+  })
+})
+
+testthat::test_that("typed assignment replaces existing plain bindings", {
+  local({
+    rebound <- 1
+    rebound %:% Numeric %<-% 2
+
+    testthat::expect_equal(rebound, 2)
+    testthat::expect_true(bindingIsActive("rebound", environment()))
+  })
+})
+
+testthat::test_that("typed assignment creates mutable active bindings", {
+  local({
+    mutable %:% Numeric %<-% 1
+    mutable <- 3
+
+    testthat::expect_equal(mutable, 3)
+  })
+})
+
+testthat::test_that("readonly bindings remain readable", {
+  local({
+    ro_value %:% Readonly(String) %<-% "hello"
+
+    testthat::expect_equal(ro_value, "hello")
+  })
+})
+
+testthat::test_that("typed_function preserves formals", {
+  f <- typed_function(function(x, y = 1) x + y, params = list(x = Numeric))
+
+  testthat::expect_identical(names(formals(f)), c("x", "y"))
+  testthat::expect_identical(formals(f)$y, 1)
+})
+
+testthat::test_that("typed_function keeps unchecked defaults", {
+  f <- typed_function(function(x, y = "ok") paste(x, y), params = list(x = String))
+
+  testthat::expect_equal(f("hi"), "hi ok")
+})
+
+testthat::test_that("typed_function does not validate omitted annotated defaults", {
+  f <- typed_function(function(x = "bad") x, params = list(x = Numeric))
+
+  testthat::expect_equal(f(), "bad")
+})
+
+testthat::test_that("typed_function accepts readonly parameter specifications", {
+  f <- typed_function(function(x) x + 1, params = list(x = Readonly(Numeric)))
+
+  testthat::expect_equal(f(2), 3)
+})
+
+testthat::test_that("typed_function accepts union return types", {
+  f <- typed_function(function(flag) if (flag) 1 else "one", .return = Numeric | String)
+
+  testthat::expect_equal(f(TRUE), 1)
+  testthat::expect_equal(f(FALSE), "one")
+})
+
+testthat::test_that("typed_function forwards dots", {
+  f <- typed_function(function(...) length(list(...)))
+
+  testthat::expect_equal(f(1, "a", TRUE), 3)
+})
+
+testthat::test_that("typed_function print is compact without annotations", {
+  f <- typed_function(function() 1)
+
+  testthat::expect_output(print(f), "<typed_function \\(\\)>")
+})
+
+testthat::test_that("infer_type falls back to Any for unsupported classes", {
+  testthat::expect_equal(infer_type(factor("a"))$name, Any$name)
+})
+
+testthat::test_that("infer_type treats partially named lists as generic lists", {
+  x <- structure(list(1L, "a"), names = c("id", ""))
+
+  testthat::expect_equal(infer_type(x)$name, List$name)
+})
+
+testthat::test_that("infer_type treats mixed NULL lists as generic lists", {
+  x <- list(NULL, 1L)
+
+  testthat::expect_equal(infer_type(x)$name, List$name)
+})
+
+testthat::test_that("infer_type strict homogeneous lists keep fixed sizes", {
+  x <- list(c(1L, 2L), c(3L, 4L))
+
+  testthat::expect_equal(infer_type(x, strict = TRUE)$name, ListOf(Integer[2])$name)
+})
+
+testthat::test_that("infer_type non-strict homogeneous lists omit fixed sizes", {
+  x <- list(c(1L, 2L), c(3L, 4L))
+
+  testthat::expect_equal(infer_type(x)$name, ListOf(Integer)$name)
+})
+
+testthat::test_that("infer_type empty data frames map to DataFrame in strict mode", {
+  testthat::expect_equal(infer_type(data.frame(), strict = TRUE)$name, DataFrame$name)
+})
+
+testthat::test_that("infer_type functions ignore strict mode", {
+  testthat::expect_equal(infer_type(function(x) x, strict = TRUE)$name, Function$name)
+})
+
+testthat::test_that("infer_type strict logical vectors keep length", {
+  testthat::expect_equal(infer_type(c(TRUE, FALSE), strict = TRUE)$name, Bool[2]$name)
+})
 
