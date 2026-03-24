@@ -125,6 +125,24 @@ id <- TRUE  # Error: not string or numeric
 #> Received: TRUE
 ```
 
+### 🏷️ Enum Types
+
+Restrict a value to an explicit set of allowed values with `Enum()`:
+
+``` r
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+status <- "published"   # OK
+status <- "deleted"     # Error: not one of the allowed enum values
+#> Error: Type error in 'status': Expected enum["draft", "published", "archived"], got string
+#> Received: deleted
+
+priority %:% Enum(1, 2, 3) %<-% 2
+priority <- 3            # OK
+priority <- 5            # Error
+#> Error: Type error in 'priority': Expected enum[1, 2, 3], got double
+#> Received: 5
+```
+
 ### 📏 Size-constrained Vectors
 
 Append `[n]` to any type to require an exact vector length:
@@ -222,6 +240,10 @@ value <- -1   # Error
 #> Error: Type error in 'value': Expected positive, got double
 #> Received: -1
 ```
+
+Use `Enum()` when the allowed set is fixed and finite. Reach for
+`create_type()` when the rule is more general than membership in a
+predefined list.
 
 ## 🔤 Typed Functions
 

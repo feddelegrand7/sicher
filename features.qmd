@@ -97,6 +97,25 @@ id <- 456  # Also OK
 id <- TRUE
 ```
 
+### Enum Types
+
+Restrict values to a predefined finite set:
+
+```{r}
+# Status can only be one of these strings
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+status <- "published"
+
+# Numeric enums also work
+priority %:% Enum(1, 2, 3) %<-% 2
+```
+
+```{r}
+#| error: true
+
+status <- "deleted"
+```
+
 ### Structured List Types
 
 Define object-like structures for lists:
@@ -293,6 +312,8 @@ value %:% Positive %<-% 5
 
 value <- -1
 ```
+
+Use `Enum(...)` when you only need membership in a known set of values. Use `create_type()` when the rule depends on arbitrary logic.
 
 ### Type Composition
 

@@ -115,6 +115,20 @@ id <- 456   # Also OK
 id <- TRUE  # Error: not string or numeric
 ```
 
+### 🏷️ Enum Types
+
+Restrict a value to an explicit set of allowed values with `Enum()`:
+
+```{r, error = TRUE}
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+status <- "published"   # OK
+status <- "deleted"     # Error: not one of the allowed enum values
+
+priority %:% Enum(1, 2, 3) %<-% 2
+priority <- 3            # OK
+priority <- 5            # Error
+```
+
 ### 📏 Size-constrained Vectors
 
 Append `[n]` to any type to require an exact vector length:
@@ -200,6 +214,8 @@ Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
 value %:% Positive %<-% 5
 value <- -1   # Error
 ```
+
+Use `Enum()` when the allowed set is fixed and finite. Reach for `create_type()` when the rule is more general than membership in a predefined list.
 
 ## 🔤 Typed Functions
 

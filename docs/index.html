@@ -177,6 +177,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#type-system-overview" id="toc-type-system-overview" class="nav-link" data-scroll-target="#type-system-overview">Type System Overview</a>
   <ul class="collapse">
   <li><a href="#built-in-types" id="toc-built-in-types" class="nav-link" data-scroll-target="#built-in-types">Built-in Types</a></li>
+  <li><a href="#enum-types" id="toc-enum-types" class="nav-link" data-scroll-target="#enum-types">Enum Types</a></li>
   <li><a href="#type-modifiers" id="toc-type-modifiers" class="nav-link" data-scroll-target="#type-modifiers">Type Modifiers</a></li>
   <li><a href="#advanced-types" id="toc-advanced-types" class="nav-link" data-scroll-target="#advanced-types">Advanced Types</a></li>
   </ul></li>
@@ -214,6 +215,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Runtime Type Checking</strong>: Catch type errors during development</li>
 <li><strong>Intuitive Syntax</strong>: Use familiar operators like <code>%:%</code> and <code>%&lt;-%</code></li>
 <li><strong>Rich Type System</strong>: Support for primitives, lists, data frames, unions, and more</li>
+<li><strong>Enum Types</strong>: Restrict variables to a fixed set of allowed values with <code>Enum(...)</code></li>
 <li><strong>Typed Functions</strong>: Enforce parameter and return types on any function with <code>typed_function()</code></li>
 <li><strong>Zero Runtime Overhead</strong>: Types are checked only during assignment</li>
 <li><strong>Gradual Adoption</strong>: Add types incrementally to existing code</li>
@@ -491,6 +493,14 @@ Received: [10, 5]</code></pre>
 <li><strong>Special</strong>: <code>Any</code>, <code>Null</code></li>
 </ul>
 </section>
+<section id="enum-types" class="level3">
+<h3 class="anchored" data-anchor-id="enum-types">Enum Types</h3>
+<p>Use <code>Enum(...)</code> when a value must belong to a closed set:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>status <span class="sc">%:%</span> <span class="fu">Enum</span>(<span class="st">"draft"</span>, <span class="st">"published"</span>, <span class="st">"archived"</span>) <span class="sc">%&lt;-%</span> <span class="st">"draft"</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>priority <span class="sc">%:%</span> <span class="fu">Enum</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>) <span class="sc">%&lt;-%</span> <span class="dv">2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
 <section id="type-modifiers" class="level3">
 <h3 class="anchored" data-anchor-id="type-modifiers">Type Modifiers</h3>
 <ul>
@@ -503,6 +513,7 @@ Received: [10, 5]</code></pre>
 <h3 class="anchored" data-anchor-id="advanced-types">Advanced Types</h3>
 <ul>
 <li><strong>Unions</strong>: <code>TypeA | TypeB</code></li>
+<li><strong>Enums</strong>: <code>Enum("a", "b")</code> or <code>Enum(c("a", "b"))</code></li>
 <li><strong>Size constraints</strong>: <code>Numeric[3]</code> (exactly 3 elements)</li>
 <li><strong>List types</strong>: Structured lists with field specifications</li>
 <li><strong>Data frame types</strong>: Column type specifications</li>
@@ -517,39 +528,42 @@ Received: [10, 5]</code></pre>
 <h3 class="anchored" data-anchor-id="installation">Installation</h3>
 <p>Currently, install from Github with:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"feddelegrand7/sicher"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"feddelegrand7/sicher"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="basic-usage" class="level3">
 <h3 class="anchored" data-anchor-id="basic-usage">Basic Usage</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Annotate variables with types</span></span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>name <span class="sc">%:%</span> String <span class="sc">%&lt;-%</span> <span class="st">"Alice"</span></span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>age <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">30</span></span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create custom types</span></span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>PositiveNumber <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"positive number"</span>, </span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) <span class="fu">is.numeric</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(x <span class="sc">&gt;</span> <span class="dv">0</span>))</span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>value <span class="sc">%:%</span> PositiveNumber <span class="sc">%&lt;-%</span> <span class="dv">42</span></span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Use type modifiers</span></span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>single_value <span class="sc">%:%</span> <span class="fu">Scalar</span>(String) <span class="sc">%&lt;-%</span> <span class="st">"hello"</span></span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>constant <span class="sc">%:%</span> <span class="fu">Readonly</span>(Numeric) <span class="sc">%&lt;-%</span> <span class="fl">3.14</span></span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>maybe_value <span class="sc">%:%</span> <span class="fu">Optional</span>(String) <span class="sc">%&lt;-%</span> <span class="cn">NULL</span></span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Create structured types</span></span>
-<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>Person <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
-<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> String,</span>
-<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> Numeric,</span>
-<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="fu">Optional</span>(String)</span>
-<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>person <span class="sc">%:%</span> Person <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
-<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Bob"</span>,</span>
-<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> <span class="dv">25</span>,</span>
-<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="st">"bob@example.com"</span></span>
-<span id="cb35-27"><a href="#cb35-27" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Annotate variables with types</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>name <span class="sc">%:%</span> String <span class="sc">%&lt;-%</span> <span class="st">"Alice"</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>age <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">30</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create custom types</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>PositiveNumber <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"positive number"</span>, </span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) <span class="fu">is.numeric</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(x <span class="sc">&gt;</span> <span class="dv">0</span>))</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>value <span class="sc">%:%</span> PositiveNumber <span class="sc">%&lt;-%</span> <span class="dv">42</span></span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Use type modifiers</span></span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>single_value <span class="sc">%:%</span> <span class="fu">Scalar</span>(String) <span class="sc">%&lt;-%</span> <span class="st">"hello"</span></span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>constant <span class="sc">%:%</span> <span class="fu">Readonly</span>(Numeric) <span class="sc">%&lt;-%</span> <span class="fl">3.14</span></span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>maybe_value <span class="sc">%:%</span> <span class="fu">Optional</span>(String) <span class="sc">%&lt;-%</span> <span class="cn">NULL</span></span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 3b. Restrict values with enums</span></span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>status <span class="sc">%:%</span> <span class="fu">Enum</span>(<span class="st">"draft"</span>, <span class="st">"published"</span>, <span class="st">"archived"</span>) <span class="sc">%&lt;-%</span> <span class="st">"draft"</span></span>
+<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Create structured types</span></span>
+<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>Person <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> String,</span>
+<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> Numeric,</span>
+<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="fu">Optional</span>(String)</span>
+<span id="cb36-24"><a href="#cb36-24" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb36-25"><a href="#cb36-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-26"><a href="#cb36-26" aria-hidden="true" tabindex="-1"></a>person <span class="sc">%:%</span> Person <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb36-27"><a href="#cb36-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Bob"</span>,</span>
+<span id="cb36-28"><a href="#cb36-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> <span class="dv">25</span>,</span>
+<span id="cb36-29"><a href="#cb36-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="st">"bob@example.com"</span></span>
+<span id="cb36-30"><a href="#cb36-30" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -557,17 +571,17 @@ Received: [10, 5]</code></pre>
 <h2 class="anchored" data-anchor-id="error-examples">Error Examples</h2>
 <p>See how sicher catches type errors:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong type assignment</span></span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong type assignment</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: text</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required fields</span></span>
-<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>User <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
-<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>user <span class="sc">%:%</span> User <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)  <span class="co"># Missing age</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required fields</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>User <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>user <span class="sc">%:%</span> User <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)  <span class="co"># Missing age</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error: Expected {name: string, age: numeric}, got list
 Details: Missing required field(s): age (expected fields: name, age)
@@ -575,9 +589,9 @@ Received: list with fields: [name]</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong data frame column types</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>Table <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Integer, <span class="at">name =</span> String))</span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%:%</span> Table <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(<span class="at">id =</span> <span class="fu">c</span>(<span class="st">"1"</span>, <span class="st">"2"</span>), <span class="at">name =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>))  <span class="co"># id should be integer</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong data frame column types</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>Table <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Integer, <span class="at">name =</span> String))</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%:%</span> Table <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(<span class="at">id =</span> <span class="fu">c</span>(<span class="st">"1"</span>, <span class="st">"2"</span>), <span class="at">name =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>))  <span class="co"># id should be integer</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'id': Expected integer, got string of length 2
 Received: [1, 2]</code></pre>
@@ -620,11 +634,11 @@ Disables the type system entirely.
 <h3 class="anchored" data-anchor-id="how-to-set-options">How to set options</h3>
 <p>You can configure the mode globally, for example, disabling strict type checking with:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Or enable strict typing with:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>) <span class="co"># this is the default</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>) <span class="co"># this is the default</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="when-to-use-each-mode" class="level3">
@@ -649,18 +663,28 @@ Disables the type system entirely.
 <section id="example" class="level3">
 <h3 class="anchored" data-anchor-id="example">Example</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
-<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'my_var_x': Expected numeric, got string
 Received: string</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>It can also be temporarily scoped:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>),</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>  {</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 
 

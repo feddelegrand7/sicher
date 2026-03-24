@@ -18,6 +18,7 @@ Every read and write to the variable is intercepted: reads return the stored val
 -   **Runtime Type Checking**: Catch type errors during development
 -   **Intuitive Syntax**: Use familiar operators like `%:%` and `%<-%`
 -   **Rich Type System**: Support for primitives, lists, data frames, unions, and more
+-   **Enum Types**: Restrict variables to a fixed set of allowed values with `Enum(...)`
 -   **Typed Functions**: Enforce parameter and return types on any function with `typed_function()`
 -   **Zero Runtime Overhead**: Types are checked only during assignment
 -   **Gradual Adoption**: Add types incrementally to existing code
@@ -250,6 +251,15 @@ validated_sales %:% SalesData %<-% sales_df
 -   **Containers**: `List`, `DataFrame`, `Function`
 -   **Special**: `Any`, `Null`
 
+### Enum Types
+
+Use `Enum(...)` when a value must belong to a closed set:
+
+```{r}
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+priority %:% Enum(1, 2, 3) %<-% 2
+```
+
 ### Type Modifiers
 
 -   **Scalar**: Single element only
@@ -259,6 +269,7 @@ validated_sales %:% SalesData %<-% sales_df
 ### Advanced Types
 
 -   **Unions**: `TypeA | TypeB`
+-   **Enums**: `Enum("a", "b")` or `Enum(c("a", "b"))`
 -   **Size constraints**: `Numeric[3]` (exactly 3 elements)
 -   **List types**: Structured lists with field specifications
 -   **Data frame types**: Column type specifications
@@ -294,6 +305,9 @@ value %:% PositiveNumber %<-% 42
 single_value %:% Scalar(String) %<-% "hello"
 constant %:% Readonly(Numeric) %<-% 3.14
 maybe_value %:% Optional(String) %<-% NULL
+
+# 3b. Restrict values with enums
+status %:% Enum("draft", "published", "archived") %<-% "draft"
 
 # 4. Create structured types
 Person <- create_list_type(list(

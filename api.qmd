@@ -70,6 +70,19 @@ Creates a type for data frames with column specifications.
 Table <- create_dataframe_type(list(id = Integer, name = String))
 ```
 
+### `Enum(...)`
+
+Creates a type that only accepts values from a fixed set.
+
+**Parameters:** - `...`: Allowed scalar values, or a single atomic vector containing the allowed values
+
+**Example:**
+
+```{r}
+Status <- Enum("draft", "published", "archived")
+Priority <- Enum(1, 2, 3)
+```
+
 ### `ListOf(element_type)`
 
 Creates a type for homogeneous lists.
@@ -170,6 +183,19 @@ ThreeNumbers <- Numeric[3]
 -   `Null`: Only NULL values
 -   `Function`: Function objects
 -   `DataFrame`: Data frame objects
+
+## Enum Types
+
+`Enum(...)` builds a regular `sicher_type`, so it works anywhere another type works:
+
+```{r}
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+review <- typed_function(
+  function(state) paste("State:", state),
+  params = list(state = Enum("draft", "published", "archived")),
+  .return = String
+)
+```
 
 ## Error Handling
 

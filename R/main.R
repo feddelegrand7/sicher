@@ -223,6 +223,98 @@ Function <- create_type("Function", is.function)
 #' @export
 DataFrame <- create_type("data.frame", is.data.frame)
 
+format_enum_value <- function(value) {
+  if (is.character(value)) {
+    return(encodeString(value, quote = '"'))
+  }
+
+  if (length(value) == 1) {
+    return(as.character(value))
+  }
+
+  deparse(value)[1]
+}
+
+enum_value_matches <- function(value, allowed) {
+  if (is.numeric(value) && is.numeric(allowed)) {
+    return(identical(as.numeric(value), as.numeric(allowed)))
+  }
+
+  identical(value, allowed)
+}
+
+#' Enum Type Factory
+#'
+#' @description
+#' Creates an enumeration type using regular function call syntax. The resulting type only
+#' accepts atomic vectors whose elements all belong to the declared set of
+#' allowed values.
+#'
+#' @param ... Allowed scalar values or a single atomic vector of allowed values.
+#'
+#' @return A new sicher_type that checks all values belong to the enum.
+#'
+#' @examples
+#' status %:% Enum(1, 2, 3) %<-% 2
+#' colors %:% Enum("red", "green", "blue") %<-% c("red", "blue")
+#'
+#' @export
+Enum <- function(...) {
+  allowed_args <- list(...)
+
+  if (length(allowed_args) == 0) {
+    stop(
+      "Enum() requires at least one allowed value, e.g. Enum(1, 2, 3) or Enum(c('a', 'b'))",
+      call. = FALSE
+    )
+  }
+
+  if (length(allowed_args) == 1 && is.atomic(allowed_args[[1]]) && is.null(dim(allowed_args[[1]]))) {
+    allowed_values <- as.list(unname(allowed_args[[1]]))
+  } else {
+    are_scalar_atomic <- vapply(
+      allowed_args,
+      function(value) is.atomic(value) && is.null(dim(value)) && length(value) == 1,
+      logical(1)
+    )
+
+    if (!all(are_scalar_atomic)) {
+      stop(
+        "Enum() values must be scalar atomic values or a single atomic vector of allowed values.",
+        call. = FALSE
+      )
+    }
+
+    allowed_values <- unname(allowed_args)
+  }
+
+  if (length(allowed_values) == 0) {
+    stop(
+      "Enum() requires at least one allowed value.",
+      call. = FALSE
+    )
+  }
+
+  type_name <- glue::glue(
+    "enum[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
+  )
+
+  create_type(
+    type_name,
+    function(x) {
+      if (!is.atomic(x) || !is.null(dim(x))) {
+        return(FALSE)
+      }
+
+      all(vapply(as.list(x), function(value) {
+        any(vapply(allowed_values, function(allowed) {
+          enum_value_matches(value, allowed)
+        }, logical(1)))
+      }, logical(1)))
+    }
+  )
+}
+
 # =============================================================================
 # Vector Size Types
 # =============================================================================
