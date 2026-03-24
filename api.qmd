@@ -78,9 +78,30 @@ Creates a type that only accepts values from a fixed set.
 
 **Example:**
 
-```{r}
-Status <- Enum("draft", "published", "archived")
-Priority <- Enum(1, 2, 3)
+```{r, error=TRUE}
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+priority %:% Enum(1, 2, 3) %<-% c(1, 2)
+
+status <- "published"
+status <- "Ho!"
+
+priority <- c(3, 2, 1)
+priority <- c(3, 2, 1, 100000)
+
+```
+
+`Enum(...)` builds a regular `sicher_type`, so it works anywhere another type works:
+
+```{r, error=TRUE}
+status %:% Enum("draft", "published", "archived") %<-% "draft"
+review <- typed_function(
+  function(state) paste("State:", state),
+  params = list(state = Enum("draft", "published", "archived")),
+  .return = String
+)
+
+review("published")
+review("hola")
 ```
 
 ### `ListOf(element_type)`
@@ -183,19 +204,6 @@ ThreeNumbers <- Numeric[3]
 -   `Null`: Only NULL values
 -   `Function`: Function objects
 -   `DataFrame`: Data frame objects
-
-## Enum Types
-
-`Enum(...)` builds a regular `sicher_type`, so it works anywhere another type works:
-
-```{r}
-status %:% Enum("draft", "published", "archived") %<-% "draft"
-review <- typed_function(
-  function(state) paste("State:", state),
-  params = list(state = Enum("draft", "published", "archived")),
-  .return = String
-)
-```
 
 ## Error Handling
 
