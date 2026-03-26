@@ -17,6 +17,6 @@ Creates a type that prevents reassignment after initial value is set.
 }
 \examples{
 PI \%:\% Readonly(Double) \%<-\% 3.14159
-# PI <- 3.0  # Error: cannot reassign readonly
+try(PI <- 3.0)  # Error: cannot reassign readonly
 
 }

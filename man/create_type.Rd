@@ -45,7 +45,7 @@ Positive <- create_type("positive", function(x) {
 
 # Use it in type annotations
 age \%:\% Positive \%<-\% 25
-# age <- -5  # Error: Type error
+try(age <- -5)  # Error: Type error
 
 # Create a custom email type
 Email <- create_type("email", function(x) {
@@ -62,7 +62,7 @@ EvenInt <- create_type("even_int", function(x) {
 })
 
 value \%:\% EvenInt \%<-\% 4L
-# value <- 5L  # Error: Type error
+try(value <- 5L)  # Error: Type error
 
 # Create a type that checks data frame structure
 PersonDF <- create_type("person_df", function(x) {

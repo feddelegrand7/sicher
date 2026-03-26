@@ -20,5 +20,5 @@ allowed values.
 \examples{
 status \%:\% Enum(1, 2, 3) \%<-\% 2
 colors \%:\% Enum("red", "green", "blue") \%<-\% c("red", "blue")
-
+try(colors <- c("yellow", "red"))
 }

@@ -19,7 +19,7 @@ Creates a type that checks for a specific vector length.
 }
 \examples{
 vec \%:\% Numeric[3] \%<-\% c(1, 2, 3)
-# vec <- c(1, 2)  # Error: wrong length
-# vec <- c("a", "b", "c")  # Error: wrong type
+try(vec <- c(1, 2)) # Error: wrong length
+try(vec <- c("a", "b", "c"))  # Error: wrong type
 
 }

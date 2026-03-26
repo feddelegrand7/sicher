@@ -41,7 +41,7 @@
 #'
 #' # Use it in type annotations
 #' age %:% Positive %<-% 25
-#' # age <- -5  # Error: Type error
+#' try(age <- -5)  # Error: Type error
 #'
 #' # Create a custom email type
 #' Email <- create_type("email", function(x) {
@@ -58,7 +58,7 @@
 #' })
 #'
 #' value %:% EvenInt %<-% 4L
-#' # value <- 5L  # Error: Type error
+#' try(value <- 5L)  # Error: Type error
 #'
 #' # Create a type that checks data frame structure
 #' PersonDF <- create_type("person_df", function(x) {
@@ -257,7 +257,7 @@ enum_value_matches <- function(value, allowed) {
 #' @examples
 #' status %:% Enum(1, 2, 3) %<-% 2
 #' colors %:% Enum("red", "green", "blue") %<-% c("red", "blue")
-#'
+#' try(colors <- c("yellow", "red"))
 #' @export
 Enum <- function(...) {
   allowed_args <- list(...)
@@ -331,8 +331,8 @@ Enum <- function(...) {
 #'
 #' @examples
 #' vec %:% Numeric[3] %<-% c(1, 2, 3)
-#' # vec <- c(1, 2)  # Error: wrong length
-#' # vec <- c("a", "b", "c")  # Error: wrong type
+#' try(vec <- c(1, 2)) # Error: wrong length
+#' try(vec <- c("a", "b", "c"))  # Error: wrong type
 #'
 #' @export
 `[.sicher_type` <- function(type, size) {
@@ -583,7 +583,7 @@ create_dataframe_type <- function(col_spec) {
 #'
 #' @examples
 #' age %:% Scalar(Integer) %<-% 30L
-#' # age <- c(30L, 40L)  # Error: not scalar
+#' try(age <- c(30L, 40L))  # Error: not scalar
 #'
 #' @export
 Scalar <- function(type) {
@@ -610,7 +610,7 @@ Scalar <- function(type) {
 #'
 #' @examples
 #' PI %:% Readonly(Double) %<-% 3.14159
-#' # PI <- 3.0  # Error: cannot reassign readonly
+#' try(PI <- 3.0)  # Error: cannot reassign readonly
 #'
 #' @export
 Readonly <- function(type) {
@@ -794,14 +794,14 @@ type_error <- function(context = NULL, expected, got,
 #' @examples
 #' # Direct type checking
 #' check_type(5L, Integer)  # Returns TRUE
-#' # check_type("hello", Integer)  # Throws error
+#' try(check_type("hello", Integer))  # Throws error
 #'
 #' # With context for better error messages
-#' # check_type(5L, String, context = "user_name")
+#' try(check_type(5L, String, context = "user_name"))
 #'
 #' # With union types
 #' check_type(5L, Integer | String)  # Returns TRUE
-#' # check_type(5.5, Integer | String)  # Throws error
+#' try(check_type(5.5, Integer | String))  # Throws error
 #'
 #' @export
 check_type <- function(value, type, context = NULL) {
@@ -948,7 +948,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #'   .return = Numeric
 #' )
 #' add(1, 2)     # Returns 3
-#' # add("a", 2)   # Error: Type error in 'x': Expected numeric, got string
+#' try(add("a", 2))   # Error: Type error in 'x': Expected numeric, got string
 #'
 #' # Optional parameter
 #' greet <- typed_function(
@@ -960,7 +960,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' )
 #' greet("Alice")                   # "Hello, Alice"
 #' greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
-#' # greet("Alice", title = 42)       # Error: Type error in 'title'
+#' try(greet("Alice", title = 42))  # Error: Type error in 'title'
 #'
 #' # Union type in params
 #' describe <- typed_function(
@@ -970,7 +970,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' )
 #' describe("abc")  # "ID: abc"
 #' describe(123)    # "ID: 123"
-#' # describe(TRUE)   # Error: Type error in 'id'
+#' try(describe(TRUE)) # Error: Type error in 'id'
 #'
 #' @export
 typed_function <- function(fn, params = list(), .return = NULL) {

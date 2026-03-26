@@ -17,6 +17,6 @@ Creates a type that only accepts single values (vectors of length 1).
 }
 \examples{
 age \%:\% Scalar(Integer) \%<-\% 30L
-# age <- c(30L, 40L)  # Error: not scalar
+try(age <- c(30L, 40L))  # Error: not scalar
 
 }

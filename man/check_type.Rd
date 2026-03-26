@@ -35,14 +35,14 @@ This function:
 \examples{
 # Direct type checking
 check_type(5L, Integer)  # Returns TRUE
-# check_type("hello", Integer)  # Throws error
+try(check_type("hello", Integer))  # Throws error
 
 # With context for better error messages
-# check_type(5L, String, context = "user_name")
+try(check_type(5L, String, context = "user_name"))
 
 # With union types
 check_type(5L, Integer | String)  # Returns TRUE
-# check_type(5.5, Integer | String)  # Throws error
+try(check_type(5.5, Integer | String))  # Throws error
 
 }
 \seealso{

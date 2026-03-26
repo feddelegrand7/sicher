@@ -50,7 +50,7 @@ add <- typed_function(
   .return = Numeric
 )
 add(1, 2)     # Returns 3
-# add("a", 2)   # Error: Type error in 'x': Expected numeric, got string
+try(add("a", 2))   # Error: Type error in 'x': Expected numeric, got string
 
 # Optional parameter
 greet <- typed_function(
@@ -62,7 +62,7 @@ greet <- typed_function(
 )
 greet("Alice")                   # "Hello, Alice"
 greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
-# greet("Alice", title = 42)       # Error: Type error in 'title'
+try(greet("Alice", title = 42))  # Error: Type error in 'title'
 
 # Union type in params
 describe <- typed_function(
@@ -72,6 +72,6 @@ describe <- typed_function(
 )
 describe("abc")  # "ID: abc"
 describe(123)    # "ID: 123"
-# describe(TRUE)   # Error: Type error in 'id'
+try(describe(TRUE)) # Error: Type error in 'id'
 
 }
