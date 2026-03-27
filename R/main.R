@@ -243,6 +243,10 @@ enum_value_matches <- function(value, allowed) {
   identical(value, allowed)
 }
 
+literal_value_matches <- function(value, allowed) {
+  identical(value, allowed)
+}
+
 #' Enum Type Factory
 #'
 #' @description
@@ -310,6 +314,67 @@ Enum <- function(...) {
         any(vapply(allowed_values, function(allowed) {
           enum_value_matches(value, allowed)
         }, logical(1)))
+      }, logical(1)))
+    }
+  )
+}
+
+#' Literal Type Factory
+#'
+#' @description
+#' Creates a literal type inspired by TypeScript literal unions. The resulting
+#' type only accepts scalar atomic values that exactly match one of the declared
+#' literals, including the underlying R storage mode. For example, `200` and
+#' `200L` are treated as different literals.
+#'
+#' @param ... Allowed scalar atomic literal values.
+#'
+#' @return A new sicher_type that checks the value is exactly one of the declared literals.
+#'
+#' @examples
+#' direction %:% Literal("left", "right") %<-% "left"
+#' direction <- "right"
+#' direction <- "left"
+#' try(direction <- c("right", "left"))
+#' status_code %:% Literal(200, 404) %<-% 200
+#' try(status_code <- 500)
+#' @export
+Literal <- function(...) {
+  allowed_values <- unname(list(...))
+
+  if (length(allowed_values) == 0) {
+    stop(
+      "Literal() requires at least one allowed value, e.g. Literal('left', 'right') or Literal(200, 404)",
+      call. = FALSE
+    )
+  }
+
+  are_scalar_atomic <- vapply(
+    allowed_values,
+    function(value) is.atomic(value) && is.null(dim(value)) && length(value) == 1,
+    logical(1)
+  )
+
+  if (!all(are_scalar_atomic)) {
+    stop(
+      "Literal() values must be scalar atomic values.",
+      call. = FALSE
+    )
+  }
+
+  type_name <- glue::glue(
+    "literal[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
+  )
+
+  create_type(
+    type_name,
+    function(x) {
+      if (!is.atomic(x) || !is.null(dim(x)) || length(x) != 1) {
+        return(FALSE)
+      }
+
+      any(vapply(allowed_values, function(allowed) {
+        literal_value_matches(x, allowed)
       }, logical(1)))
     }
   )

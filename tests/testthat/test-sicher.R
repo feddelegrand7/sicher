@@ -876,6 +876,45 @@ testthat::test_that("Enum supports logical allowed values", {
   testthat::expect_false(toggle$check(c(TRUE, 1)))
 })
 
+testthat::test_that("Literal creates scalar exact-match types", {
+  direction <- Literal("left", "right")
+
+  testthat::expect_equal(direction$name, "literal[\"left\", \"right\"]")
+  testthat::expect_true(direction$check("left"))
+  testthat::expect_false(direction$check("up"))
+  testthat::expect_false(direction$check(c("left", "right")))
+})
+
+testthat::test_that("Literal distinguishes double and integer values", {
+  status_double <- Literal(200, 404)
+  status_integer <- Literal(200L, 404L)
+
+  testthat::expect_true(status_double$check(200))
+  testthat::expect_false(status_double$check(200L))
+  testthat::expect_true(status_integer$check(200L))
+  testthat::expect_false(status_integer$check(200))
+})
+
+testthat::test_that("Literal works with typed assignments and logical values", {
+  local({
+    direction %:% Literal("left", "right") %<-% "left"
+    testthat::expect_equal(direction, "left")
+    direction <- "right"
+    testthat::expect_equal(direction, "right")
+    testthat::expect_error(direction <- "up", "Expected literal\\[\"left\", \"right\"\\]")
+  })
+
+  toggle <- Literal(TRUE, FALSE)
+  testthat::expect_true(toggle$check(TRUE))
+  testthat::expect_false(toggle$check(1))
+})
+
+testthat::test_that("Literal rejects malformed declarations", {
+  testthat::expect_error(Literal(), "requires at least one allowed value")
+  testthat::expect_error(Literal(c("left", "right")), "scalar atomic values")
+  testthat::expect_error(Literal(list("left")), "scalar atomic values")
+})
+
 testthat::test_that("create_list_type rejects blank field names", {
   spec <- list(String)
   names(spec) <- ""
