@@ -104,6 +104,37 @@ review("published")
 review("hola")
 ```
 
+### `Literal(...)`
+
+Creates a type that only accepts exact scalar atomic literals, inspired by TypeScript literal types.
+
+**Parameters:** - `...`: Allowed scalar atomic literal values
+
+**Example:**
+
+```{r, error=TRUE}
+direction %:% Literal("left", "right") %<-% "left"
+direction <- "right"
+direction <- c("left", "right")
+
+status_code %:% Literal(200, 404) %<-% 200
+status_code <- 404
+status_code <- 200L
+```
+
+`Literal(...)` is stricter than `Enum(...)`: it accepts only length-1 atomic values and compares them exactly, so `200` and `200L` are different literals.
+
+```{r, error=TRUE}
+move <- typed_function(
+  function(direction) paste("Moving", direction),
+  params = list(direction = Literal("left", "right")),
+  .return = String
+)
+
+move("left")
+move("up")
+```
+
 ### `ListOf(element_type)`
 
 Creates a type for homogeneous lists.

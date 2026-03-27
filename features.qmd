@@ -116,6 +116,31 @@ priority %:% Enum(1, 2, 3) %<-% 2
 status <- "deleted"
 ```
 
+### Literal Types
+
+Use `Literal()` for exact scalar values, inspired by TypeScript literal types:
+
+```{r}
+# Direction can only be one exact string literal at a time
+direction %:% Literal("left", "right") %<-% "left"
+direction <- "right"
+
+# Status codes can be exact numeric literals
+status_code %:% Literal(200, 404) %<-% 200
+```
+
+```{r}
+#| error: true
+
+direction <- c("left", "right")
+```
+
+```{r}
+#| error: true
+
+status_code <- 200L  # integer is distinct from the double literal 200
+```
+
 ### Structured List Types
 
 Define object-like structures for lists:
@@ -246,8 +271,7 @@ company %:% Company %<-% list(
 
 ### Typed Functions
 
-Use `typed_function()` to wrap any function with runtime type checks on its
-parameters and, optionally, its return value:
+Use `typed_function()` to wrap any function with runtime type checks on its parameters and, optionally, its return value:
 
 ```{r}
 #| error: true
@@ -313,7 +337,7 @@ value %:% Positive %<-% 5
 value <- -1
 ```
 
-Use `Enum(...)` when you only need membership in a known set of values. Use `create_type()` when the rule depends on arbitrary logic.
+Use `Literal(...)` when exact scalar values are part of the type, `Enum(...)` when you need membership in a known finite set, and `create_type()` when the rule depends on arbitrary logic.
 
 ### Type Composition
 
@@ -369,5 +393,3 @@ p %:% PersonType %<-% list(name = "Alice")
 # Wrong vector length
 vec %:% Numeric[3] %<-% c(1, 2)
 ```
-
-

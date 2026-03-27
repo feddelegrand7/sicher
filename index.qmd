@@ -19,6 +19,7 @@ Every read and write to the variable is intercepted: reads return the stored val
 -   **Intuitive Syntax**: Use familiar operators like `%:%` and `%<-%`
 -   **Rich Type System**: Support for primitives, lists, data frames, unions, and more
 -   **Enum Types**: Restrict variables to a fixed set of allowed values with `Enum(...)`
+-   **Literal Types**: Model exact TypeScript-style scalar literals with `Literal(...)`
 -   **Typed Functions**: Enforce parameter and return types on any function with `typed_function()`
 -   **Zero Runtime Overhead**: Types are checked only during assignment
 -   **Gradual Adoption**: Add types incrementally to existing code
@@ -260,6 +261,15 @@ status %:% Enum("draft", "published", "archived") %<-% "draft"
 priority %:% Enum(1, 2, 3) %<-% 2
 ```
 
+### Literal Types
+
+Use `Literal(...)` when you want TypeScript-style exact scalar values:
+
+```{r}
+direction %:% Literal("left", "right") %<-% "left"
+http_status %:% Literal(200, 404) %<-% 200
+```
+
 ### Type Modifiers
 
 -   **Scalar**: Single element only
@@ -269,6 +279,7 @@ priority %:% Enum(1, 2, 3) %<-% 2
 ### Advanced Types
 
 -   **Unions**: `TypeA | TypeB`
+-   **Literals**: `Literal("left", "right")` or `Literal(200, 404)`
 -   **Enums**: `Enum("a", "b")` or `Enum(c("a", "b"))`
 -   **Size constraints**: `Numeric[3]` (exactly 3 elements)
 -   **List types**: Structured lists with field specifications
@@ -308,6 +319,9 @@ maybe_value %:% Optional(String) %<-% NULL
 
 # 3b. Restrict values with enums
 status %:% Enum("draft", "published", "archived") %<-% "draft"
+
+# 3c. TypeScript-style literal values
+direction %:% Literal("left", "right") %<-% "left"
 
 # 4. Create structured types
 Person <- create_list_type(list(

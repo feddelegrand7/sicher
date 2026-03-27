@@ -143,6 +143,23 @@ priority <- 5            # Error
 #> Received: 5
 ```
 
+### 🔒 Literal Types
+
+Use `Literal()` when the value itself is part of the type, similar to
+TypeScript literal types:
+
+``` r
+direction %:% Literal("left", "right") %<-% "left"
+#> Error in Literal("left", "right"): could not find function "Literal"
+direction <- "right"                 # OK
+direction <- c("left", "right")    # Error: Literal only accepts scalar values
+
+status_code %:% Literal(200, 404) %<-% 200
+#> Error in Literal(200, 404): could not find function "Literal"
+status_code <- 404                    # OK
+status_code <- 200L                   # Error: 200L is an integer, not the double literal 200
+```
+
 ### 📏 Size-constrained Vectors
 
 Append `[n]` to any type to require an exact vector length:
@@ -241,9 +258,10 @@ value <- -1   # Error
 #> Received: -1
 ```
 
-Use `Enum()` when the allowed set is fixed and finite. Reach for
-`create_type()` when the rule is more general than membership in a
-predefined list.
+Use `Literal()` for TypeScript-style exact scalar values, `Enum()` for
+membership in a finite set that may also allow vectors of allowed
+values, and `create_type()` when the rule is more general than
+membership in a predefined list.
 
 ## 🔤 Typed Functions
 

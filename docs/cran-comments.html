@@ -131,9 +131,18 @@ ul.task-list li input[type="checkbox"] {
 
 <p>── R CMD check results ───────────────────────── sicher 0.1.0 ──── Duration: 7.3s</p>
 <p>❯ checking for future file timestamps … NOTE unable to verify current time</p>
-<p>0 errors ✔ | 0 warnings ✔ | 1 note ✖ - I got rid of all the and provided executable examples as requested by the CRAN</p>
+<p>0 errors ✔ | 0 warnings ✔ | 1 note ✖</p>
+<ul>
+<li>Fixed the following issues:</li>
+</ul>
+<section id="comments-from-benjamin-altmann" class="level4">
+<h4 class="anchored" data-anchor-id="comments-from-benjamin-altmann">Comments from Benjamin Altmann</h4>
+<p>Please omit the redundant “for R” at the end your title in the description.</p>
+<p>Some code lines in examples are commented out. Please never do that. Ideally find toy examples that can be regularly executed and checked. Lengthy examples (&gt; 5 sec), can be wrapped in . -&gt; check_type.Rd I believe you want to show an error message? In that case, please wrap the example in try(). That way the error is thrown but the execution not halted.</p>
+<p>Please fix and resubmit.</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

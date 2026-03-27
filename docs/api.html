@@ -167,6 +167,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#create_list_typetype_spec" id="toc-create_list_typetype_spec" class="nav-link" data-scroll-target="#create_list_typetype_spec"><code>create_list_type(type_spec)</code></a></li>
   <li><a href="#create_dataframe_typecol_spec" id="toc-create_dataframe_typecol_spec" class="nav-link" data-scroll-target="#create_dataframe_typecol_spec"><code>create_dataframe_type(col_spec)</code></a></li>
   <li><a href="#enum..." id="toc-enum..." class="nav-link" data-scroll-target="#enum..."><code>Enum(...)</code></a></li>
+  <li><a href="#literal..." id="toc-literal..." class="nav-link" data-scroll-target="#literal..."><code>Literal(...)</code></a></li>
   <li><a href="#listofelement_type" id="toc-listofelement_type" class="nav-link" data-scroll-target="#listofelement_type"><code>ListOf(element_type)</code></a></li>
   </ul></li>
   <li><a href="#type-modifiers" id="toc-type-modifiers" class="nav-link" data-scroll-target="#type-modifiers">Type Modifiers</a>
@@ -306,13 +307,53 @@ Received: hola</code></pre>
 </div>
 </div>
 </section>
+<section id="literal..." class="level3">
+<h3 class="anchored" data-anchor-id="literal..."><code>Literal(...)</code></h3>
+<p>Creates a type that only accepts exact scalar atomic literals, inspired by TypeScript literal types.</p>
+<p><strong>Parameters:</strong> - <code>...</code>: Allowed scalar atomic literal values</p>
+<p><strong>Example:</strong></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>direction <span class="sc">%:%</span> <span class="fu">Literal</span>(<span class="st">"left"</span>, <span class="st">"right"</span>) <span class="sc">%&lt;-%</span> <span class="st">"left"</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>direction <span class="ot">&lt;-</span> <span class="st">"right"</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>direction <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"left"</span>, <span class="st">"right"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'direction': Expected literal["left", "right"], got string of length 2
+Received: [left, right]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>status_code <span class="sc">%:%</span> <span class="fu">Literal</span>(<span class="dv">200</span>, <span class="dv">404</span>) <span class="sc">%&lt;-%</span> <span class="dv">200</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>status_code <span class="ot">&lt;-</span> <span class="dv">404</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>status_code <span class="ot">&lt;-</span> <span class="dv">200</span>L</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'status_code': Expected literal[200, 404], got integer
+Received: 200</code></pre>
+</div>
+</div>
+<p><code>Literal(...)</code> is stricter than <code>Enum(...)</code>: it accepts only length-1 atomic values and compares them exactly, so <code>200</code> and <code>200L</code> are different literals.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>move <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(direction) <span class="fu">paste</span>(<span class="st">"Moving"</span>, direction),</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">params =</span> <span class="fu">list</span>(<span class="at">direction =</span> <span class="fu">Literal</span>(<span class="st">"left"</span>, <span class="st">"right"</span>)),</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">.return =</span> String</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">move</span>(<span class="st">"left"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Moving left"</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">move</span>(<span class="st">"up"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'direction': Expected literal["left", "right"], got string
+Received: up</code></pre>
+</div>
+</div>
+</section>
 <section id="listofelement_type" class="level3">
 <h3 class="anchored" data-anchor-id="listofelement_type"><code>ListOf(element_type)</code></h3>
 <p>Creates a type for homogeneous lists.</p>
 <p><strong>Parameters:</strong> - <code>element_type</code>: Type that each list element must satisfy</p>
 <p><strong>Example:</strong></p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>Numbers <span class="ot">&lt;-</span> <span class="fu">ListOf</span>(Numeric)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>Numbers <span class="ot">&lt;-</span> <span class="fu">ListOf</span>(Numeric)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -323,7 +364,7 @@ Received: hola</code></pre>
 <p>Requires exactly one element (length 1).</p>
 <p><strong>Example:</strong></p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>SingleValue <span class="ot">&lt;-</span> <span class="fu">Scalar</span>(Numeric)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>SingleValue <span class="ot">&lt;-</span> <span class="fu">Scalar</span>(Numeric)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="readonlytype" class="level3">
@@ -331,7 +372,7 @@ Received: hola</code></pre>
 <p>Prevents reassignment after initial value.</p>
 <p><strong>Example:</strong></p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>Constant <span class="ot">&lt;-</span> <span class="fu">Readonly</span>(String)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>Constant <span class="ot">&lt;-</span> <span class="fu">Readonly</span>(String)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="optionaltype" class="level3">
@@ -339,7 +380,7 @@ Received: hola</code></pre>
 <p>Allows NULL in addition to the base type.</p>
 <p><strong>Example:</strong></p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>MaybeString <span class="ot">&lt;-</span> <span class="fu">Optional</span>(String)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>MaybeString <span class="ot">&lt;-</span> <span class="fu">Optional</span>(String)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -349,25 +390,25 @@ Received: hola</code></pre>
 <h3 class="anchored" data-anchor-id="section"><code>%:%</code></h3>
 <p>Type annotation operator.</p>
 <p><strong>Usage:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>variable <span class="sc">%:%</span> Type</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>variable <span class="sc">%:%</span> Type</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="section-1" class="level3">
 <h3 class="anchored" data-anchor-id="section-1"><code>%&lt;-%</code></h3>
 <p>Typed assignment operator.</p>
 <p><strong>Usage:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>variable <span class="sc">%:%</span> Type <span class="sc">%&lt;-%</span> value</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>variable <span class="sc">%:%</span> Type <span class="sc">%&lt;-%</span> value</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="section-2" class="level3">
 <h3 class="anchored" data-anchor-id="section-2"><code>|</code></h3>
 <p>Union operator for combining types.</p>
 <p><strong>Example:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>StringOrNumber <span class="ot">&lt;-</span> (String <span class="sc">|</span> Numeric)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>StringOrNumber <span class="ot">&lt;-</span> (String <span class="sc">|</span> Numeric)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="size" class="level3">
 <h3 class="anchored" data-anchor-id="size"><code>[size]</code></h3>
 <p>Size constraint operator.</p>
 <p><strong>Example:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>ThreeNumbers <span class="ot">&lt;-</span> Numeric[<span class="dv">3</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>ThreeNumbers <span class="ot">&lt;-</span> Numeric[<span class="dv">3</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="built-in-types" class="level2">
@@ -392,7 +433,7 @@ Received: hola</code></pre>
 <h2 class="anchored" data-anchor-id="error-handling">Error Handling</h2>
 <p>Type errors provide detailed context:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: text</code></pre>
@@ -404,28 +445,28 @@ Received: text</code></pre>
 <h2 class="anchored" data-anchor-id="global-options">Global Options</h2>
 <p>The behavior of <strong>sicher</strong> can be controlled globally using R’s <code>options()</code> mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'my_var_x': Expected numeric, got string
 Received: string</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>It can also be temporarily scoped:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>),</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  {</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span></span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>),</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  {</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 
 
