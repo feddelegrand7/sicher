@@ -1186,3 +1186,165 @@ testthat::test_that("infer_type strict logical vectors keep length", {
   testthat::expect_equal(infer_type(c(TRUE, FALSE), strict = TRUE)$name, Bool[2]$name)
 })
 
+testthat::test_that("extend merges base and extra fields", {
+  person <- create_list_type(list(
+    name = String,
+    age = Numeric
+  ))
+
+  employee <- extend(person, list(
+    role = String,
+    department = Optional(String)
+  ))
+
+  testthat::expect_true(employee$check(list(
+    name = "Alice",
+    age = 30,
+    role = "Engineer"
+  )))
+
+  testthat::expect_true(employee$check(list(
+    name = "Alice",
+    age = 30,
+    role = "Engineer",
+    department = "R&D"
+  )))
+
+  testthat::expect_error(
+    employee$check(list(name = "Alice", role = "Engineer")),
+    "Missing required field\\(s\\): age"
+  )
+
+  testthat::expect_error(
+    employee$check(list(name = "Alice", age = 30)),
+    "Missing required field\\(s\\): role"
+  )
+})
+
+testthat::test_that("extend does not mutate the base type", {
+  person <- create_list_type(list(
+    name = String,
+    age = Numeric
+  ))
+
+  employee <- extend(person, list(role = String))
+
+  testthat::expect_true(person$check(list(name = "Alice", age = 30)))
+  testthat::expect_error(
+    person$check(list(name = "Alice", age = 30, role = "Engineer")),
+    "Unexpected field: 'role'"
+  )
+
+  testthat::expect_true(employee$check(list(
+    name = "Alice",
+    age = 30,
+    role = "Engineer"
+  )))
+})
+
+testthat::test_that("extend warns on overrides and the extra field takes precedence", {
+  base <- create_list_type(list(
+    id = Numeric,
+    active = Bool
+  ))
+
+  derived <- testthat::expect_warning(
+    extend(base, list(id = String)),
+    "being overridden: id"
+  )
+
+  testthat::expect_true(derived$check(list(id = "abc", active = TRUE)))
+  testthat::expect_error(
+    derived$check(list(id = 123, active = TRUE)),
+    "Expected string"
+  )
+})
+
+testthat::test_that("extend can be chained across multiple levels", {
+  person <- create_list_type(list(
+    name = String,
+    age = Numeric
+  ))
+
+  employee <- extend(person, list(
+    badge = String | Numeric,
+    department = Optional(String)
+  ))
+
+  manager <- extend(employee, list(
+    reports = Numeric
+  ))
+
+  testthat::expect_true(manager$check(list(
+    name = "Bob",
+    age = 45,
+    badge = "A-12",
+    reports = 6
+  )))
+
+  testthat::expect_true(manager$check(list(
+    name = "Bob",
+    age = 45,
+    badge = 12,
+    department = "Sales",
+    reports = 6
+  )))
+
+  testthat::expect_error(
+    manager$check(list(name = "Bob", age = 45, badge = TRUE, reports = 6)),
+    "Expected string \\\\| numeric"
+  )
+})
+
+testthat::test_that("extend validates the base argument", {
+  custom_type <- create_type("custom", function(x) TRUE)
+
+  testthat::expect_error(
+    extend(list(name = String), list(role = String)),
+    "`base` must be a sicher_type produced by create_list_type\\(\\)"
+  )
+
+  testthat::expect_error(
+    extend(String, list(role = String)),
+    "does not carry a field specification"
+  )
+
+  testthat::expect_error(
+    extend(custom_type, list(role = String)),
+    "does not carry a field specification"
+  )
+})
+
+testthat::test_that("extend validates the extra argument structure", {
+  base <- create_list_type(list(name = String))
+
+  testthat::expect_error(
+    extend(base, "bad"),
+    "`extra` must be a fully named list of fields"
+  )
+
+  testthat::expect_error(
+    extend(base, list(String)),
+    "`extra` must be a fully named list of fields"
+  )
+
+  unnamed_extra <- structure(list(String, Numeric), names = c("role", ""))
+  testthat::expect_error(
+    extend(base, unnamed_extra),
+    "`extra` must be a fully named list of fields"
+  )
+})
+
+testthat::test_that("extend validates field types in extra", {
+  base <- create_list_type(list(name = String))
+
+  testthat::expect_error(
+    extend(base, list(role = "String")),
+    "Field 'role' in `extra` must be a sicher_type or sicher_union"
+  )
+
+  testthat::expect_true(extend(base, list(role = String | Numeric))$check(list(
+    name = "Alice",
+    role = 1
+  )))
+})
