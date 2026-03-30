@@ -193,6 +193,33 @@ person <- list(name = "Bob")   # Error: missing required field 'age'
 #> Received: list with fields: [name]
 ```
 
+Use `extend()` when a new schema should reuse an existing list type
+instead of redefining every field:
+
+``` r
+Employee <- extend(Person, list(
+  role       = String,
+  department = Optional(String)
+))
+
+employee %:% Employee %<-% list(
+  name = "Alice",
+  age = 30,
+  role = "Engineer"
+)
+
+employee <- list(
+  name = "Alice",
+  age = 30,
+  role = "Engineer",
+  department = "Platform"
+)
+```
+
+If `extra` reuses a field name from the base type, the new field
+definition overrides the old one and `extend()` emits a warning so the
+change is explicit.
+
 ### 🗄️ Data Frame Schemas
 
 Validate column names and types with `create_dataframe_type()`:

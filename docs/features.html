@@ -169,6 +169,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#enum-types" id="toc-enum-types" class="nav-link" data-scroll-target="#enum-types">Enum Types</a></li>
   <li><a href="#literal-types" id="toc-literal-types" class="nav-link" data-scroll-target="#literal-types">Literal Types</a></li>
   <li><a href="#structured-list-types" id="toc-structured-list-types" class="nav-link" data-scroll-target="#structured-list-types">Structured List Types</a></li>
+  <li><a href="#schema-extension-with-extend" id="toc-schema-extension-with-extend" class="nav-link" data-scroll-target="#schema-extension-with-extend">Schema Extension with <code>extend()</code></a></li>
   <li><a href="#data-frame-types" id="toc-data-frame-types" class="nav-link" data-scroll-target="#data-frame-types">Data Frame Types</a></li>
   <li><a href="#homogeneous-list-types" id="toc-homogeneous-list-types" class="nav-link" data-scroll-target="#homogeneous-list-types">Homogeneous List Types</a></li>
   <li><a href="#combining-features" id="toc-combining-features" class="nav-link" data-scroll-target="#combining-features">Combining Features</a></li>
@@ -391,39 +392,93 @@ Received: list with fields: [name, age, email, extra]</code></pre>
 </div>
 </div>
 </section>
+<section id="schema-extension-with-extend" class="level3">
+<h3 class="anchored" data-anchor-id="schema-extension-with-extend">Schema Extension with <code>extend()</code></h3>
+<p>Reuse a structured list type and add fields on top of it:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>Employee <span class="ot">&lt;-</span> <span class="fu">extend</span>(Person, <span class="fu">list</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">role =</span> String,</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">department =</span> <span class="fu">Optional</span>(String)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>employee <span class="sc">%:%</span> Employee <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Alice"</span>,</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> <span class="dv">30</span>,</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">role =</span> <span class="st">"Engineer"</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>employee</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$name
+[1] "Alice"
+
+$age
+[1] 30
+
+$role
+[1] "Engineer"</code></pre>
+</div>
+</div>
+<p><code>extend()</code> preserves all required base fields, carries optional fields forward, and adds the new ones from <code>extra</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>Manager <span class="ot">&lt;-</span> <span class="fu">extend</span>(Employee, <span class="fu">list</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">reports =</span> Numeric,</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">badge =</span> String <span class="sc">|</span> Numeric</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>manager <span class="sc">%:%</span> Manager <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Bob"</span>,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> <span class="dv">45</span>,</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">role =</span> <span class="st">"VP Engineering"</span>,</span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">reports =</span> <span class="dv">6</span>,</span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">badge =</span> <span class="st">"A-12"</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>If you intentionally redefine a field, <code>extend()</code> warns and the new type takes precedence:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>DetailedPerson <span class="ot">&lt;-</span> <span class="fu">suppressWarnings</span>(<span class="fu">extend</span>(Person, <span class="fu">list</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> Integer</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>)))</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>DetailedPerson</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: {name: string, email?: string | null, age: integer} &gt;</code></pre>
+</div>
+</div>
+</section>
 <section id="data-frame-types" class="level3">
 <h3 class="anchored" data-anchor-id="data-frame-types">Data Frame Types</h3>
 <p>Define schemas for data frames:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define a user table schema</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>UserTable <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> Integer,</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> String,</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> Bool,</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">last_login =</span> <span class="fu">Optional</span>(String)</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid data frame</span></span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>users <span class="sc">%:%</span> UserTable <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(</span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>,</span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> <span class="fu">c</span>(<span class="st">"alice"</span>, <span class="st">"bob"</span>, <span class="st">"charlie"</span>),</span>
-<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>, <span class="cn">TRUE</span>)</span>
-<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required column fails</span></span>
-<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>users <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> <span class="fu">c</span>(<span class="st">"alice"</span>, <span class="st">"bob"</span>),</span>
-<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>)</span>
-<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define a user table schema</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>UserTable <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> Integer,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> String,</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> Bool,</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">last_login =</span> <span class="fu">Optional</span>(String)</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid data frame</span></span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>users <span class="sc">%:%</span> UserTable <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(</span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>,</span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> <span class="fu">c</span>(<span class="st">"alice"</span>, <span class="st">"bob"</span>, <span class="st">"charlie"</span>),</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>, <span class="cn">TRUE</span>)</span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required column fails</span></span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>users <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> <span class="fu">c</span>(<span class="st">"alice"</span>, <span class="st">"bob"</span>),</span>
+<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>)</span>
+<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error: Expected data.frame{id: integer, username: string, active: bool, last_login?: string | null}, got data.frame[2 x 2]
 Details: Missing required column(s): id (expected columns: id, username, active)</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>users <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> <span class="fu">c</span>(<span class="st">"alice"</span>, <span class="st">"bob"</span>),</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>)  <span class="co"># Should be logical</span></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>users <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">username =</span> <span class="fu">c</span>(<span class="st">"alice"</span>, <span class="st">"bob"</span>),</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>)  <span class="co"># Should be logical</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'active': Expected bool, got string of length 2
 Received: [yes, no]</code></pre>
@@ -434,27 +489,27 @@ Received: [yes, no]</code></pre>
 <h3 class="anchored" data-anchor-id="homogeneous-list-types">Homogeneous List Types</h3>
 <p>For lists of similar items (like API responses):</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define item structure</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>TodoItem <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">userId =</span> Numeric,</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> Numeric,</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> String,</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">completed =</span> Bool</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="co"># List of todo items</span></span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>TodoList <span class="ot">&lt;-</span> <span class="fu">ListOf</span>(TodoItem)</span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid list</span></span>
-<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>todos <span class="sc">%:%</span> TodoList <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
-<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">userId =</span> <span class="dv">1</span>, <span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Task 1"</span>, <span class="at">completed =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">userId =</span> <span class="dv">1</span>, <span class="at">id =</span> <span class="dv">2</span>, <span class="at">title =</span> <span class="st">"Task 2"</span>, <span class="at">completed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>todos <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">userId =</span> <span class="dv">1</span>, <span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Task 1"</span>, <span class="at">completed =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">wrong =</span> <span class="st">"structure"</span>)</span>
-<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define item structure</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>TodoItem <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">userId =</span> Numeric,</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> Numeric,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> String,</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">completed =</span> Bool</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a><span class="co"># List of todo items</span></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>TodoList <span class="ot">&lt;-</span> <span class="fu">ListOf</span>(TodoItem)</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid list</span></span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>todos <span class="sc">%:%</span> TodoList <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">userId =</span> <span class="dv">1</span>, <span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Task 1"</span>, <span class="at">completed =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">userId =</span> <span class="dv">1</span>, <span class="at">id =</span> <span class="dv">2</span>, <span class="at">title =</span> <span class="st">"Task 2"</span>, <span class="at">completed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>todos <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">userId =</span> <span class="dv">1</span>, <span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Task 1"</span>, <span class="at">completed =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">wrong =</span> <span class="st">"structure"</span>)</span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'todos': Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list of length 2
 Received: list of length 2</code></pre>
@@ -465,25 +520,25 @@ Received: list of length 2</code></pre>
 <h3 class="anchored" data-anchor-id="combining-features">Combining Features</h3>
 <p>All features can be combined:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Complex nested structure</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>Company <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> String,</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">employees =</span> <span class="fu">ListOf</span>(<span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> String,</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">salary =</span> Numeric,</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">department =</span> <span class="fu">Optional</span>(String)</span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>  ))),</span>
-<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">founded =</span> Numeric[<span class="dv">3</span>]  <span class="co"># [year, month, day]</span></span>
-<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>company <span class="sc">%:%</span> Company <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
-<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Tech Corp"</span>,</span>
-<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">employees =</span> <span class="fu">list</span>(</span>
-<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>, <span class="at">salary =</span> <span class="dv">75000</span>, <span class="at">department =</span> <span class="st">"Engineering"</span>),</span>
-<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Bob"</span>, <span class="at">salary =</span> <span class="dv">65000</span>)  <span class="co"># department optional</span></span>
-<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">founded =</span> <span class="fu">c</span>(<span class="dv">2020</span>, <span class="dv">1</span>, <span class="dv">15</span>)</span>
-<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Complex nested structure</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>Company <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> String,</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">employees =</span> <span class="fu">ListOf</span>(<span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> String,</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">salary =</span> Numeric,</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">department =</span> <span class="fu">Optional</span>(String)</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  ))),</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">founded =</span> Numeric[<span class="dv">3</span>]  <span class="co"># [year, month, day]</span></span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>company <span class="sc">%:%</span> Company <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Tech Corp"</span>,</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">employees =</span> <span class="fu">list</span>(</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>, <span class="at">salary =</span> <span class="dv">75000</span>, <span class="at">department =</span> <span class="st">"Engineering"</span>),</span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Bob"</span>, <span class="at">salary =</span> <span class="dv">65000</span>)  <span class="co"># department optional</span></span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">founded =</span> <span class="fu">c</span>(<span class="dv">2020</span>, <span class="dv">1</span>, <span class="dv">15</span>)</span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -493,64 +548,64 @@ Received: list of length 2</code></pre>
 <h3 class="anchored" data-anchor-id="typed-functions">Typed Functions</h3>
 <p>Use <code>typed_function()</code> to wrap any function with runtime type checks on its parameters and, optionally, its return value:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Basic typed function with parameter and return type checking</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>add <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x, y) x <span class="sc">+</span> y,</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">params  =</span> <span class="fu">list</span>(<span class="at">x =</span> Numeric, <span class="at">y =</span> Numeric),</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">.return =</span> Numeric</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="fu">add</span>(<span class="dv">1</span>, <span class="dv">2</span>)   <span class="co"># Returns 3</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Basic typed function with parameter and return type checking</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>add <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x, y) x <span class="sc">+</span> y,</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">params  =</span> <span class="fu">list</span>(<span class="at">x =</span> Numeric, <span class="at">y =</span> Numeric),</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">.return =</span> Numeric</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a><span class="fu">add</span>(<span class="dv">1</span>, <span class="dv">2</span>)   <span class="co"># Returns 3</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 3</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">add</span>(<span class="st">"a"</span>, <span class="dv">2</span>) <span class="co"># Error: Type error in 'x'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">add</span>(<span class="st">"a"</span>, <span class="dv">2</span>) <span class="co"># Error: Type error in 'x'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: a</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional parameter — title may be a String or NULL</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>greet <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(name, <span class="at">title =</span> <span class="cn">NULL</span>) {</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(title)) <span class="fu">paste</span>(<span class="st">"Hello,"</span>, name)</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="fu">paste</span>(<span class="st">"Hello,"</span>, title, name)</span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  },</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">params =</span> <span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">title =</span> <span class="fu">Optional</span>(String))</span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span>(<span class="st">"Alice"</span>)                 <span class="co"># "Hello, Alice"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional parameter — title may be a String or NULL</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>greet <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(name, <span class="at">title =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(title)) <span class="fu">paste</span>(<span class="st">"Hello,"</span>, name)</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="fu">paste</span>(<span class="st">"Hello,"</span>, title, name)</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  },</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">params =</span> <span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">title =</span> <span class="fu">Optional</span>(String))</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span>(<span class="st">"Alice"</span>)                 <span class="co"># "Hello, Alice"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "Hello, Alice"</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span>(<span class="st">"Alice"</span>, <span class="at">title =</span> <span class="st">"Dr."</span>)  <span class="co"># "Hello, Dr. Alice"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span>(<span class="st">"Alice"</span>, <span class="at">title =</span> <span class="st">"Dr."</span>)  <span class="co"># "Hello, Dr. Alice"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "Hello, Dr. Alice"</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span>(<span class="st">"Alice"</span>, <span class="at">title =</span> <span class="dv">42</span>)     <span class="co"># Error: Type error in 'title'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">greet</span>(<span class="st">"Alice"</span>, <span class="at">title =</span> <span class="dv">42</span>)     <span class="co"># Error: Type error in 'title'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'title': Expected string | null, got double
 Received: 42</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Union type in params — id can be String or Numeric</span></span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>describe <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(id) <span class="fu">paste</span>(<span class="st">"ID:"</span>, id),</span>
-<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">params  =</span> <span class="fu">list</span>(<span class="at">id =</span> String <span class="sc">|</span> Numeric),</span>
-<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">.return =</span> String</span>
-<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="st">"abc"</span>)  <span class="co"># "ID: abc"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Union type in params — id can be String or Numeric</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>describe <span class="ot">&lt;-</span> <span class="fu">typed_function</span>(</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(id) <span class="fu">paste</span>(<span class="st">"ID:"</span>, id),</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">params  =</span> <span class="fu">list</span>(<span class="at">id =</span> String <span class="sc">|</span> Numeric),</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">.return =</span> String</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="st">"abc"</span>)  <span class="co"># "ID: abc"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "ID: abc"</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="dv">123</span>)    <span class="co"># "ID: 123"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="dv">123</span>)    <span class="co"># "ID: 123"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "ID: 123"</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="cn">TRUE</span>)   <span class="co"># Error: Type error in 'id'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="cn">TRUE</span>)   <span class="co"># Error: Type error in 'id'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'id': Expected string | numeric, got bool
 Received: TRUE</code></pre>
@@ -561,49 +616,49 @@ Received: TRUE</code></pre>
 <h3 class="anchored" data-anchor-id="custom-types">Custom Types</h3>
 <p>Create your own types using <code>create_type()</code>:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Positive number type</span></span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>Positive <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"positive"</span>, <span class="cf">function</span>(x) {</span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.numeric</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(x <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
-<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>value <span class="sc">%:%</span> Positive <span class="sc">%&lt;-%</span> <span class="dv">5</span></span>
-<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>value <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Positive number type</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>Positive <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"positive"</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.numeric</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(x <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>value <span class="sc">%:%</span> Positive <span class="sc">%&lt;-%</span> <span class="dv">5</span></span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>value <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'value': Expected positive, got double
 Received: -1</code></pre>
 </div>
 </div>
-<p>Use <code>Literal(...)</code> when exact scalar values are part of the type, <code>Enum(...)</code> when you need membership in a known finite set, and <code>create_type()</code> when the rule depends on arbitrary logic.</p>
+<p>Use <code>Enum(...)</code> when you only need membership in a known set of values. Use <code>create_type()</code> when the rule depends on arbitrary logic.</p>
 </section>
 <section id="type-composition" class="level3">
 <h3 class="anchored" data-anchor-id="type-composition">Type Composition</h3>
 <p>Build complex types from simpler ones:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Email type</span></span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>Email <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"email"</span>, <span class="cf">function</span>(x) {</span>
-<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.character</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">length</span>(x) <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;&amp;</span></span>
-<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">grepl</span>(<span class="st">"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+</span><span class="sc">\\</span><span class="st">.[a-zA-Z]{2,}$"</span>, x)</span>
-<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Person with email</span></span>
-<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a>PersonWithEmail <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
-<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> String,</span>
-<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> Email,</span>
-<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> Numeric</span>
-<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb51-13"><a href="#cb51-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a>person <span class="sc">%:%</span> PersonWithEmail <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
-<span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Alice"</span>,</span>
-<span id="cb51-16"><a href="#cb51-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="st">"alice@example.com"</span>,</span>
-<span id="cb51-17"><a href="#cb51-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> <span class="dv">30</span></span>
-<span id="cb51-18"><a href="#cb51-18" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb51-19"><a href="#cb51-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb51-20"><a href="#cb51-20" aria-hidden="true" tabindex="-1"></a>person <span class="sc">%:%</span> PersonWithEmail <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
-<span id="cb51-21"><a href="#cb51-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">"Bob"</span>,</span>
-<span id="cb51-22"><a href="#cb51-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">email =</span> <span class="st">"invalid-email"</span>,</span>
-<span id="cb51-23"><a href="#cb51-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">age =</span> <span class="dv">25</span></span>
-<span id="cb51-24"><a href="#cb51-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Email type</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>Email <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"email"</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.character</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">length</span>(x) <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;&amp;</span></span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">grepl</span>(<span class="st">"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+</span><span class="sc">\\</span><span class="st">.[a-zA-Z]{2,}$"</span>, x)</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Person with email</span></span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>PersonWithEmail <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> String,</span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> Email,</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> Numeric</span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a>person <span class="sc">%:%</span> PersonWithEmail <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb56-15"><a href="#cb56-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Alice"</span>,</span>
+<span id="cb56-16"><a href="#cb56-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="st">"alice@example.com"</span>,</span>
+<span id="cb56-17"><a href="#cb56-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">age =</span> <span class="dv">30</span></span>
+<span id="cb56-18"><a href="#cb56-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb56-19"><a href="#cb56-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-20"><a href="#cb56-20" aria-hidden="true" tabindex="-1"></a>person <span class="sc">%:%</span> PersonWithEmail <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb56-21"><a href="#cb56-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">"Bob"</span>,</span>
+<span id="cb56-22"><a href="#cb56-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">email =</span> <span class="st">"invalid-email"</span>,</span>
+<span id="cb56-23"><a href="#cb56-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">age =</span> <span class="dv">25</span></span>
+<span id="cb56-24"><a href="#cb56-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'email': Expected email, got string
 Received: invalid-email</code></pre>
@@ -615,17 +670,17 @@ Received: invalid-email</code></pre>
 <h2 class="anchored" data-anchor-id="error-messages">Error Messages</h2>
 <p><code>sicher</code> provides clear, contextual error messages:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
-<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: not a number</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field</span></span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>PersonType <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
-<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>p <span class="sc">%:%</span> PersonType <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>PersonType <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>p <span class="sc">%:%</span> PersonType <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error: Expected {name: string, age: numeric}, got list
 Details: Missing required field(s): age (expected fields: name, age)
@@ -633,8 +688,8 @@ Received: list with fields: [name]</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'vec': Expected numeric[3], got double of length 2
 Received: [1, 2]</code></pre>

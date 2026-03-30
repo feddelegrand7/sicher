@@ -50,12 +50,40 @@ Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
 
 Creates a type for lists with specific field requirements.
 
-**Parameters:** - `type_spec`: Named list where names are field names and values are types
+**Parameters:** - `type_spec`: Named list where names are field names and values are `sicher_type` or `sicher_union` objects
+
+**Returns:** A `sicher_type` that validates list fields, rejects missing required fields, and rejects unknown fields. The original field specification is stored internally so it can be reused by `extend()`.
 
 **Example:**
 
 ```{r}
 Person <- create_list_type(list(name = String, age = Numeric))
+```
+
+### `extend(base, extra)`
+
+Creates a new structured list type by extending an existing one created with `create_list_type()`.
+
+**Parameters:** - `base`: A `sicher_type` returned by `create_list_type()`. Primitive types and arbitrary `create_type()` validators cannot be extended because they do not carry a field specification. - `extra`: Named list of additional fields to merge into the base schema. Values must be `sicher_type` or `sicher_union` objects.
+
+**Returns:** A new `sicher_type` created from the merged field specification. Fields declared in `extra` override fields with the same name in `base`; when that happens, `extend()` emits a warning.
+
+**Example:**
+
+```{r}
+Person <- create_list_type(list(
+  name = String,
+  age = Numeric
+))
+
+Employee <- extend(Person, list(
+  role = String,
+  department = Optional(String)
+))
+
+Manager <- extend(Employee, list(
+  reports = Numeric
+))
 ```
 
 ### `create_dataframe_type(col_spec)`

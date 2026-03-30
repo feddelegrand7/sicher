@@ -18,6 +18,7 @@ Every read and write to the variable is intercepted: reads return the stored val
 -   **Runtime Type Checking**: Catch type errors during development
 -   **Intuitive Syntax**: Use familiar operators like `%:%` and `%<-%`
 -   **Rich Type System**: Support for primitives, lists, data frames, unions, and more
+-   **Schema Extension**: Build larger structured list types from smaller reusable ones with `extend()`
 -   **Enum Types**: Restrict variables to a fixed set of allowed values with `Enum(...)`
 -   **Literal Types**: Model exact TypeScript-style scalar literals with `Literal(...)`
 -   **Typed Functions**: Enforce parameter and return types on any function with `typed_function()`
@@ -141,6 +142,17 @@ ToDo <- create_list_type(
 )
 
 ToDo
+```
+
+When an API response grows over time, you can extend the shared base schema instead of duplicating it:
+
+```{r}
+TimedToDo <- extend(ToDo, list(
+  createdAt = String,
+  tags = Optional(ListOf(String))
+))
+
+TimedToDo
 ```
 
 Then when fetching the data, you can safely check that the response corresponds to the expected object:
@@ -335,6 +347,24 @@ person %:% Person %<-% list(
   email = "bob@example.com"
 )
 ```
+
+`extend()` composes new structured list types from an existing one. This is useful when several objects share a common core shape:
+
+```{r}
+Employee <- extend(Person, list(
+  role = String,
+  manager = Optional(String)
+))
+
+employee %:% Employee %<-% list(
+  name = "Alice",
+  age = 30,
+  email = "alice@example.com",
+  role = "Engineer"
+)
+```
+
+If a field in `extra` has the same name as one in the base type, the new definition wins and `extend()` warns so the override is not silent.
 
 ## Error Examples
 
