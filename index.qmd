@@ -7,7 +7,7 @@ subtitle: ""
 
 ## What is sicher?
 
-**sicher** is an R package that brings type safety to R programming, using a Typescript similar syntax. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.
+**sicher** (German for *safe* or *certain* and pronounced *zeesher*) is an R package that brings type safety to R programming, using a Typescript similar syntax. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.
 
 **sicher** implements runtime type safety in R by attaching types to variables via active bindings rather than traditional attributes or classes. When a variable is declared with a type (e.g., `x %:% Numeric %<-% 5`), it is replaced by an active binding that wraps the value inside a closure with a private environment storing both the value and its associated type. 
 

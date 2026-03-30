@@ -7,11 +7,11 @@
 
 <!-- badges: end -->
 
-**sicher** (German for *safe* or *certain*) is an R package that brings
-runtime type safety to R programming, inspired by TypeScript for
-JavaScript. Declare types for your variables and have them enforced
-automatically on every assignment, catching type errors early and making
-your code more robust and self-documenting. 🛡️
+**sicher** (German for *safe* or *certain* and pronounced *zeesher*) is
+an R package that brings runtime type safety to R programming, inspired
+by TypeScript for JavaScript. Declare types for your variables and have
+them enforced automatically on every assignment, catching type errors
+early and making your code more robust and self-documenting. 🛡️
 
 **sicher** implements runtime type safety in R by attaching types to
 variables via active bindings rather than traditional attributes or
@@ -150,14 +150,16 @@ TypeScript literal types:
 
 ``` r
 direction %:% Literal("left", "right") %<-% "left"
-#> Error in Literal("left", "right"): could not find function "Literal"
 direction <- "right"                 # OK
 direction <- c("left", "right")    # Error: Literal only accepts scalar values
+#> Error: Type error in 'direction': Expected literal["left", "right"], got string of length 2
+#> Received: [left, right]
 
 status_code %:% Literal(200, 404) %<-% 200
-#> Error in Literal(200, 404): could not find function "Literal"
 status_code <- 404                    # OK
 status_code <- 200L                   # Error: 200L is an integer, not the double literal 200
+#> Error: Type error in 'status_code': Expected literal[200, 404], got integer
+#> Received: 200
 ```
 
 ### 📏 Size-constrained Vectors
