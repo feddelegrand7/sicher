@@ -448,6 +448,7 @@ Literal <- function(...) {
 #'
 #' @export
 create_list_type <- function(type_spec) {
+
   if (!is.list(type_spec) || is.null(names(type_spec))) {
     stop(glue::glue(
       "`type_spec` must be a named list mapping field names to types; ",
@@ -455,6 +456,7 @@ create_list_type <- function(type_spec) {
       "Example: create_list_type(list(name = String, age = Numeric))"
     ), call. = FALSE)
   }
+
   if (any(names(type_spec) == "")) {
     stop(
       "All elements in `type_spec` must be named. ",
@@ -463,7 +465,6 @@ create_list_type <- function(type_spec) {
     )
   }
 
-  # Validate that all values are sicher_type objects
   for (i in seq_along(type_spec)) {
     if (!inherits(type_spec[[i]], "sicher_type") &&
         !inherits(type_spec[[i]], "sicher_union")) {
@@ -475,31 +476,26 @@ create_list_type <- function(type_spec) {
     }
   }
 
-  field_names <- names(type_spec)
-
-  # Separate required and optional fields
-  is_optional <- sapply(type_spec, function(t) {
+  field_names  <- names(type_spec)
+  is_optional  <- sapply(type_spec, function(t) {
     if (inherits(t, "sicher_union")) {
-      # Check if Null is one of the types in the union
       any(sapply(t$types, function(ut) identical(ut, Null)))
     } else {
       FALSE
     }
   })
-
   required_fields <- field_names[!is_optional]
-  optional_fields <- field_names[is_optional]
-
-  type_labels <- sapply(type_spec, function(t) t$name)
-  field_parts <- glue::glue("{field_names}{ifelse(is_optional, '?', '')}: {type_labels}")
+  type_labels     <- sapply(type_spec, function(t) t$name)
+  field_parts     <- glue::glue(
+    "{field_names}{ifelse(is_optional, '?', '')}: {type_labels}"
+  )
   type_name <- glue::glue("{{{paste(field_parts, collapse = ', ')}}}")
 
-  create_type(
+  result <- create_type(
     type_name,
     function(x) {
       if (!is.list(x)) return(FALSE)
 
-      # Check that all required fields are present
       if (!all(required_fields %in% names(x))) {
         missing_fields <- setdiff(required_fields, names(x))
         details <- glue::glue(
@@ -509,7 +505,6 @@ create_list_type <- function(type_spec) {
         stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
       }
 
-      # Check that each present field has the correct type
       present_fields <- names(x)
       for (field in present_fields) {
         if (field %in% field_names) {
@@ -517,17 +512,126 @@ create_list_type <- function(type_spec) {
             return(FALSE)
           }
         } else {
-          # Extra fields are not allowed
           details <- glue::glue(
             "Unexpected field: '{field}' (valid fields: {paste(field_names, collapse = ', ')})"
           )
           stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
         }
       }
-
       TRUE
     }
   )
+
+  # Store the raw spec so extend() can retrieve it later.
+  attr(result, "sicher_spec") <- type_spec
+  result
+}
+
+#' Extend a structured list type with additional fields
+#'
+#' @description
+#' Creates a new list type by merging the field specification of an existing
+#' \code{create_list_type()} type with a set of additional fields.  Analogous
+#' to TypeScript interface extension (\code{interface Employee extends Person}).
+#'
+#' @param base A \code{sicher_type} produced by \code{create_list_type()}.
+#'   Must carry a \code{sicher_spec} attribute (all types built with the
+#'   patched \code{create_list_type()} above automatically do).
+#' @param extra A named list of additional fields in the same format accepted
+#'   by \code{create_list_type()} — names are field names, values are
+#'   \code{sicher_type} or \code{sicher_union} objects.
+#'
+#' @return A new \code{sicher_type} whose required and optional fields are the
+#'   union of \code{base}'s fields and \code{extra}'s fields.  Fields in
+#'   \code{extra} that share a name with a field in \code{base} \emph{override}
+#'   the base field's type (with a warning so the shadowing is never silent).
+#'
+#' @examples
+#' Person <- create_list_type(list(
+#'   name = String,
+#'   age  = Numeric
+#' ))
+#'
+#' # Basic extension
+#' Employee <- extend(Person, list(
+#'   role       = String,
+#'   department = Optional(String)
+#' ))
+#'
+#' emp %:% Employee %<-% list(name = "Alice", age = 30, role = "Engineer")
+#'
+#' # Multi-level extension
+#' Manager <- extend(Employee, list(
+#'   reports = Numeric   # number of direct reports
+#' ))
+#'
+#' mgr %:% Manager %<-% list(
+#'   name = "Bob", age = 45, role = "VP", reports = 12
+#' )
+#'
+#' # Field override (emits a warning)
+#' DetailedPerson <- extend(Person, list(
+#'   age = Integer   # narrows Numeric -> Integer
+#' ))
+#'
+#' @export
+extend <- function(base, extra) {
+  # ---- validate base --------------------------------------------------------
+  if (!inherits(base, "sicher_type")) {
+    stop(glue::glue(
+      "`base` must be a sicher_type produced by create_list_type(); ",
+      "got {class(base)[1]}"
+    ), call. = FALSE)
+  }
+
+  base_spec <- attr(base, "sicher_spec")
+
+  if (is.null(base_spec)) {
+    stop(
+      "`base` does not carry a field specification. ",
+      "Only types created with create_list_type() can be extended. ",
+      "Primitive types (String, Numeric, …) and custom create_type() types ",
+      "cannot be used as a base for extend().",
+      call. = FALSE
+    )
+  }
+
+  # ---- validate extra -------------------------------------------------------
+  if (!is.list(extra) || is.null(names(extra)) || any(names(extra) == "")) {
+    stop(
+      "`extra` must be a fully named list of fields, ",
+      "e.g. list(role = String, department = Optional(String))",
+      call. = FALSE
+    )
+  }
+
+  for (i in seq_along(extra)) {
+    if (!inherits(extra[[i]], "sicher_type") &&
+        !inherits(extra[[i]], "sicher_union")) {
+      stop(glue::glue(
+        "Field '{names(extra)[i]}' in `extra` must be a sicher_type or sicher_union; ",
+        "got {class(extra[[i]])[1]}"
+      ), call. = FALSE)
+    }
+  }
+
+  # ---- warn on overridden fields --------------------------------------------
+  overridden <- intersect(names(base_spec), names(extra))
+  if (length(overridden) > 0) {
+    warning(glue::glue(
+      "extend(): the following field(s) from the base type are being overridden: ",
+      "{paste(overridden, collapse = ', ')}. ",
+      "The extra type will take precedence."
+    ), call. = FALSE)
+  }
+
+  # ---- merge: base first, extra fields win on collision --------------------
+  merged_spec <- c(
+    base_spec[setdiff(names(base_spec), names(extra))],
+    extra
+  )
+
+  create_list_type(merged_spec)
 }
 
 #' Create a Data Frame Type with Column Specification
