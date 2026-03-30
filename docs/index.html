@@ -207,7 +207,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><a><img src="man/figures/sicher_logo.png" align="right" height="400" width="400"></a></p>
 <section id="what-is-sicher" class="level2">
 <h2 class="anchored" data-anchor-id="what-is-sicher">What is sicher?</h2>
-<p><strong>sicher</strong> is an R package that brings type safety to R programming, similar to TypeScript for JavaScript. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.</p>
+<p><strong>sicher</strong> is an R package that brings type safety to R programming, using a Typescript similar syntax. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.</p>
 <p><strong>sicher</strong> implements runtime type safety in R by attaching types to variables via active bindings rather than traditional attributes or classes. When a variable is declared with a type (e.g., <code>x %:% Numeric %&lt;-% 5</code>), it is replaced by an active binding that wraps the value inside a closure with a private environment storing both the value and its associated type.</p>
 <p>Every read and write to the variable is intercepted: reads return the stored value, while writes trigger validation through the type’s checker function before updating. This design provides strong guarantees that values cannot violate their declared types, enabling expressive and composable type definitions (including unions, structured lists, and data frame schemas).</p>
 <section id="key-features" class="level3">
@@ -252,7 +252,6 @@ Received: text</code></pre>
 <ul>
 <li><strong>Early error detection</strong> during development</li>
 <li><strong>Self-documenting code</strong> through type annotations</li>
-<li><strong>Better IDE support</strong> and code completion</li>
 <li><strong>Safer refactoring</strong> with type guarantees</li>
 </ul>
 </section>
