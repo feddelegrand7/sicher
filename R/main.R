@@ -538,7 +538,7 @@ create_list_type <- function(type_spec) {
 #'   Must carry a \code{sicher_spec} attribute (all types built with the
 #'   patched \code{create_list_type()} above automatically do).
 #' @param extra A named list of additional fields in the same format accepted
-#'   by \code{create_list_type()} — names are field names, values are
+#'   by \code{create_list_type()} -- names are field names, values are
 #'   \code{sicher_type} or \code{sicher_union} objects.
 #'
 #' @return A new \code{sicher_type} whose required and optional fields are the
@@ -590,7 +590,7 @@ extend <- function(base, extra) {
     stop(
       "`base` does not carry a field specification. ",
       "Only types created with create_list_type() can be extended. ",
-      "Primitive types (String, Numeric, …) and custom create_type() types ",
+      "Primitive types (String, Numeric, ...) and custom create_type() types ",
       "cannot be used as a base for extend().",
       call. = FALSE
     )

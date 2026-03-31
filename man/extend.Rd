@@ -12,7 +12,7 @@ Must carry a \code{sicher_spec} attribute (all types built with the
 patched \code{create_list_type()} above automatically do).}
 
 \item{extra}{A named list of additional fields in the same format accepted
-by \code{create_list_type()} — names are field names, values are
+by \code{create_list_type()} -- names are field names, values are
 \code{sicher_type} or \code{sicher_union} objects.}
 }
 \value{
