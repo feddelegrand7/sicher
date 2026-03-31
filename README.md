@@ -5,6 +5,9 @@
 
 <!-- badges: start -->
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/sicher)](https://CRAN.R-project.org/package=sicher)
+[![R-CMD-check](https://github.com/feddelegrand7/sicher/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/feddelegrand7/sicher/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 **sicher** (German for *safe* or *certain* and pronounced *zeesher*) is
