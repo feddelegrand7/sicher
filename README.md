@@ -29,7 +29,13 @@ data frame schemas).
 
 ## 📦 Installation
 
-Install the development version from GitHub:
+You can install the `sicher` package from `CRAN` with:
+
+``` r
+install.packages("sicher")
+```
+
+or install the development version from GitHub:
 
 ``` r
 # install.packages("devtools")
@@ -145,6 +151,9 @@ priority <- 5            # Error
 
 ### 🔒 Literal Types
 
+(**at the moment only available in the development version of the
+package**)
+
 Use `Literal()` when the value itself is part of the type, similar to
 TypeScript literal types:
 
@@ -193,8 +202,9 @@ person <- list(name = "Bob")   # Error: missing required field 'age'
 #> Received: list with fields: [name]
 ```
 
-Use `extend()` when a new schema should reuse an existing list type
-instead of redefining every field:
+Use `extend()` (**at the moment only available in the development
+version of the package**) when a new schema should reuse an existing
+list type instead of redefining every field:
 
 ``` r
 Employee <- extend(Person, list(
@@ -287,9 +297,10 @@ value <- -1   # Error
 #> Received: -1
 ```
 
-Use `Literal()` for TypeScript-style exact scalar values, `Enum()` for
-membership in a finite set that may also allow vectors of allowed
-values, and `create_type()` when the rule is more general than
+Use `Literal()` (**at the moment only available in the development
+version of the package**) for TypeScript-style exact scalar values,
+`Enum()` for membership in a finite set that may also allow vectors of
+allowed values, and `create_type()` when the rule is more general than
 membership in a predefined list.
 
 ## 🔤 Typed Functions
