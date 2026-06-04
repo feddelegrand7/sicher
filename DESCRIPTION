@@ -1,7 +1,7 @@
 Package: sicher
 Type: Package
 Title: Runtime Type Checking
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person(given = c("Mohamed", "El", "Fodil"),
            family = "Ihaddaden",
