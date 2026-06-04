@@ -207,6 +207,70 @@ Allows NULL in addition to the base type.
 MaybeString <- Optional(String)
 ```
 
+### `NonNA(type)`
+
+Rejects any value that contains at least one `NA`. The underlying type is validated first; `NonNA` adds an extra NA-free guarantee on top. Works with any `sicher_type` or `sicher_union`, including complex types produced by `create_list_type()`.
+
+`NULL` is not an `NA` — if the wrapped type already allows `NULL` (e.g. via `Optional`), `NULL` still passes `NonNA`.
+
+**Parameters:** `type` — A `sicher_type` or `sicher_union`.
+
+**Example:**
+
+```{r, error=TRUE}
+salary %:% NonNA(Numeric) %<-% c(1800, 2300, 4000)
+salary <- c(1800, NA, 4000)   # Error: value contains NA(s)
+
+# Compose with other modifiers
+label %:% NonNA(Scalar(String)) %<-% "active"
+```
+
+### `Between(min, max)`
+
+Creates a type that accepts numeric values within the closed interval `[min, max]`. All elements of a vector must satisfy the bounds; `NA` values are always rejected.
+
+**Parameters:** - `min` — Single non-NA numeric scalar lower bound (inclusive). - `max` — Single non-NA numeric scalar upper bound (inclusive).
+
+Accepts integer storage since `is.numeric(1L)` is `TRUE` in R.
+
+**Example:**
+
+```{r, error=TRUE}
+age   %:% Between(0, 150)   %<-% 30
+score %:% Between(0.0, 1.0) %<-% 0.95
+score <- 1.5   # Error: 1.5 is outside [0, 1]
+```
+
+### `Matches(pattern)`
+
+Creates a type that accepts only character vectors whose every element matches the given Perl-compatible regular expression. The regex is compiled eagerly at construction time. An empty `character(0)` passes vacuously; pair with `NonEmpty()` to also require at least one element.
+
+**Parameters:** `pattern` — A single non-NA character string (PCRE regex).
+
+**Example:**
+
+```{r, error=TRUE}
+email %:% Matches("^[^@]+@[^@]+\\.[^@]+$") %<-% "user@example.com"
+email <- "not-an-email"   # Error: does not match pattern
+
+# Combine with NonEmpty
+tags %:% NonEmpty(Matches("^[a-z]+$")) %<-% c("foo", "bar")
+```
+
+### `NonEmpty(type)`
+
+Creates a type that rejects zero-length values after validating the underlying type. For data frames, emptiness is defined as `nrow == 0`; for all other objects it is `length == 0`.
+
+**Parameters:** `type` — A `sicher_type` or `sicher_union`.
+
+**Example:**
+
+```{r, error=TRUE}
+tags  %:% NonEmpty(String)  %<-% c("r", "types")
+items %:% NonEmpty(List)    %<-% list(1, 2)
+tags  <- character(0)   # Error: length > 0
+```
+
 ## Operators
 
 ### `%:%`

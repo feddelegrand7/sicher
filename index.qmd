@@ -22,6 +22,7 @@ Every read and write to the variable is intercepted: reads return the stored val
 -   **Enum Types**: Restrict variables to a fixed set of allowed values with `Enum(...)`
 -   **Literal Types**: Model exact TypeScript-style scalar literals with `Literal(...)`
 -   **Typed Functions**: Enforce parameter and return types on any function with `typed_function()`
+-   **Constraint Modifiers**: `NonNA()`, `Between()`, `Matches()`, `NonEmpty()` for value-level constraints
 -   **Zero Runtime Overhead**: Types are checked only during assignment
 -   **Gradual Adoption**: Add types incrementally to existing code
 
@@ -286,6 +287,10 @@ http_status %:% Literal(200, 404) %<-% 200
 -   **Scalar**: Single element only
 -   **Readonly**: Cannot be reassigned
 -   **Optional**: Allows NULL values
+-   **NonNA**: Rejects any value containing `NA`
+-   **Between(min, max)**: Numeric closed-interval range constraint
+-   **Matches(pattern)**: Regex-constrained character vectors
+-   **NonEmpty**: Rejects zero-length vectors, lists, and zero-row data frames
 
 ### Advanced Types
 

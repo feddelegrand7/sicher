@@ -68,6 +68,107 @@ middle_name <- "Marie"  # Also OK
 middle_name <- 123 # This fails
 ```
 
+#### NonNA — reject NA values
+
+Prevents any `NA` from entering a typed variable. R's silent NA propagation is a frequent source of subtle bugs in data pipelines; `NonNA` blocks it at the boundary.
+
+```{r}
+#| error: true
+
+salary %:% NonNA(Numeric) %<-% c(1800, 2300, 4000)
+salary   # [1] 1800 2300 4000
+
+salary <- c(1800, NA, 4000)   # Error: value contains NA(s)
+```
+
+Composes with other modifiers — here combined with `Scalar` to require a single, non-NA string:
+
+```{r}
+#| error: true
+
+label %:% NonNA(Scalar(String)) %<-% "active"
+label <- NA_character_   # Error
+```
+
+#### Between — closed-interval numeric range
+
+Accepts numeric values within the closed interval `[min, max]`. Every element of a vector must satisfy the bounds, and `NA` values are always rejected.
+
+```{r}
+#| error: true
+
+# Scalar usage
+age %:% Between(0, 150) %<-% 30
+age <- 200   # Error: 200 is outside [0, 150]
+
+# Vector usage — all elements must be in range
+score %:% Between(0.0, 1.0) %<-% c(0.1, 0.95, 0.5)
+score <- c(0.1, 1.5)   # Error: 1.5 is outside [0, 1]
+```
+
+`Between` works with integer storage because `is.numeric(1L)` is `TRUE` in R:
+
+```{r}
+count %:% Between(0L, 100L) %<-% 42L
+```
+
+#### Matches — regex-constrained strings
+
+Validates every element of a character vector against a Perl-compatible regular expression. The regex is compiled eagerly at construction time, so invalid patterns are caught immediately rather than at first use.
+
+```{r}
+#| error: true
+
+email %:% Matches("^[^@]+@[^@]+\\.[^@]+$") %<-% "user@example.com"
+email <- "not-an-email"   # Error: does not match pattern
+```
+
+Applies element-wise to vectors:
+
+```{r}
+#| error: true
+
+codes %:% Matches("^[A-Z]{3}$") %<-% c("USD", "EUR", "GBP")
+codes <- c("USD", "us")   # Error: "us" does not match
+```
+
+An empty `character(0)` passes vacuously. Pair with `NonEmpty` when at least one element is required:
+
+```{r}
+#| error: true
+
+tags %:% NonEmpty(Matches("^[a-z]+$")) %<-% c("foo", "bar")
+tags <- character(0)   # Error: length > 0
+tags <- c("foo", "BAR")   # Error: "BAR" does not match
+```
+
+#### NonEmpty — reject empty vectors and lists
+
+Rejects zero-length vectors, character vectors, and lists. For data frames it checks `nrow > 0`. The underlying type is validated first; `NonEmpty` adds the non-emptiness guarantee on top.
+
+```{r}
+#| error: true
+
+tags %:% NonEmpty(String) %<-% c("r", "types")
+tags <- character(0)   # Error: length > 0
+
+items %:% NonEmpty(List) %<-% list(1, 2, 3)
+items <- list()   # Error: length > 0
+```
+
+For data frames, an empty-row frame is rejected while a zero-column frame never passes the schema check first:
+
+```{r}
+#| error: true
+
+Row <- create_dataframe_type(list(id = Integer, name = String))
+NonEmptyRow <- NonEmpty(Row)
+
+valid_df %:% NonEmptyRow %<-% data.frame(id = 1L, name = "Alice")
+
+valid_df <- data.frame(id = integer(0), name = character(0))  # Error: length > 0
+```
+
 ### Vector Size Types
 
 Specify exact vector lengths:
@@ -116,31 +217,6 @@ priority %:% Enum(1, 2, 3) %<-% 2
 status <- "deleted"
 ```
 
-### Literal Types
-
-Use `Literal()` for exact scalar values, inspired by TypeScript literal types:
-
-```{r}
-# Direction can only be one exact string literal at a time
-direction %:% Literal("left", "right") %<-% "left"
-direction <- "right"
-
-# Status codes can be exact numeric literals
-status_code %:% Literal(200, 404) %<-% 200
-```
-
-```{r}
-#| error: true
-
-direction <- c("left", "right")
-```
-
-```{r}
-#| error: true
-
-status_code <- 200L  # integer is distinct from the double literal 200
-```
-
 ### Structured List Types
 
 Define object-like structures for lists:
@@ -172,52 +248,6 @@ person <- list(
     email = "charlie@example.com",
     extra = "not allowed"
 )
-```
-
-### Schema Extension with `extend()`
-
-Reuse a structured list type and add fields on top of it:
-
-```{r}
-Employee <- extend(Person, list(
-  role = String,
-  department = Optional(String)
-))
-
-employee %:% Employee %<-% list(
-  name = "Alice",
-  age = 30,
-  role = "Engineer"
-)
-
-employee
-```
-
-`extend()` preserves all required base fields, carries optional fields forward, and adds the new ones from `extra`.
-
-```{r}
-Manager <- extend(Employee, list(
-  reports = Numeric,
-  badge = String | Numeric
-))
-
-manager %:% Manager %<-% list(
-  name = "Bob",
-  age = 45,
-  role = "VP Engineering",
-  reports = 6,
-  badge = "A-12"
-)
-```
-
-If you intentionally redefine a field, `extend()` warns and the new type takes precedence:
-
-```{r}
-DetailedPerson <- suppressWarnings(extend(Person, list(
-  age = Integer
-)))
-
-DetailedPerson
 ```
 
 ### Data Frame Types
@@ -423,6 +453,7 @@ person %:% PersonWithEmail %<-% list(
 `sicher` provides clear, contextual error messages:
 
 ```{r, error=TRUE}
+#| error: true
 
 # Type mismatch
 x %:% Numeric %<-% "not a number"

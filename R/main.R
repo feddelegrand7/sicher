@@ -768,6 +768,250 @@ Scalar <- function(type) {
   )
 }
 
+#' NonNA modifier — reject values containing NAs
+#'
+#' @description
+#' Creates a type that accepts only non-NA values of the underlying type.
+#' Any element equal to \code{NA} causes an immediate error, making silent NA
+#' propagation impossible in typed pipelines.
+#'
+#' @param type A \code{sicher_type} or \code{sicher_union} object.
+#'
+#' @return A new \code{sicher_type} that first validates the underlying type,
+#'   then rejects any value that contains at least one \code{NA}.
+#'
+#' @examples
+#' salary %:% NonNA(Numeric) %<-% c(1800, 2300, 4000)
+#' try(salary <- c(1800, NA, 4000))  # Error: value contains NA(s)
+#'
+#' # Composable with other modifiers
+#' tag %:% NonNA(Scalar(String)) %<-% "admin"
+#'
+#' @export
+NonNA <- function(type) {
+  if (!inherits(type, "sicher_type") && !inherits(type, "sicher_union")) {
+    stop(glue::glue(
+      "NonNA() requires a sicher_type or sicher_union argument ",
+      "(e.g. NonNA(Numeric), NonNA(String)); got {class(type)[1]}"
+    ), call. = FALSE)
+  }
+  base_name <- type$name
+  create_type(
+    glue::glue("non_na<{base_name}>"),
+    function(x) {
+      check_type(x, type)
+      if (anyNA(x)) {
+        stop(
+          glue::glue(
+            "Type error: expected non_na<{base_name}> (no NA values), ",
+            "but value contains NA(s)"
+          ),
+          call. = FALSE
+        )
+      }
+      TRUE
+    }
+  )
+}
+
+#' Between — closed-interval numeric range constraint
+#'
+#' @description
+#' Creates a type that accepts numeric values within the closed interval
+#' \code{[min, max]}. Every element of a vector must satisfy the bounds.
+#' NA values are always rejected.
+#'
+#' @param min A single non-NA numeric scalar giving the lower bound (inclusive).
+#' @param max A single non-NA numeric scalar giving the upper bound (inclusive).
+#'
+#' @return A new \code{sicher_type} that checks the value is numeric, NA-free,
+#'   and that all elements lie within \code{[min, max]}.
+#'
+#' @examples
+#' age   %:% Between(0, 150)   %<-% 30
+#' score %:% Between(0.0, 1.0) %<-% 0.95
+#' try(score <- 1.5)   # Error: 1.5 is outside [0, 1]
+#' try(score <- NA_real_)  # Error: value contains NA(s)
+#'
+#' # Works with integer storage (is.numeric(1L) is TRUE in R)
+#' count %:% Between(0L, 100L) %<-% 42L
+#'
+#' @export
+Between <- function(min, max) {
+  if (!is.numeric(min) || length(min) != 1 || is.na(min)) {
+    stop(
+      "`min` must be a single non-NA numeric scalar (e.g. Between(0, 100))",
+      call. = FALSE
+    )
+  }
+  if (!is.numeric(max) || length(max) != 1 || is.na(max)) {
+    stop(
+      "`max` must be a single non-NA numeric scalar (e.g. Between(0, 100))",
+      call. = FALSE
+    )
+  }
+  if (min > max) {
+    stop(glue::glue("`min` ({min}) must be <= `max` ({max})"), call. = FALSE)
+  }
+  type_name <- glue::glue("between[{min}, {max}]")
+  create_type(
+    type_name,
+    function(x) {
+      if (!is.numeric(x)) {
+        stop(type_error(NULL, type_name, get_type_name(x), x), call. = FALSE)
+      }
+      if (anyNA(x)) {
+        stop(
+          glue::glue(
+            "Type error: expected {type_name} (no NA values), ",
+            "but value contains NA(s)"
+          ),
+          call. = FALSE
+        )
+      }
+      out_of_range <- x[x < min | x > max]
+      if (length(out_of_range) > 0) {
+        preview <- paste(utils::head(out_of_range, 5), collapse = ", ")
+        if (length(out_of_range) > 5) preview <- paste0(preview, ", ...")
+        noun <- if (length(out_of_range) == 1) "value" else "values"
+        verb <- if (length(out_of_range) == 1) "is"    else "are"
+        stop(
+          glue::glue(
+            "Type error: expected {type_name}, ",
+            "but {noun} [{preview}] {verb} outside [{min}, {max}]"
+          ),
+          call. = FALSE
+        )
+      }
+      TRUE
+    }
+  )
+}
+
+#' Matches — regex-constrained string type
+#'
+#' @description
+#' Creates a type that accepts only character vectors whose every element
+#' matches the given Perl-compatible regular expression. NA elements are
+#' always rejected. An empty character vector \code{character(0)} passes
+#' vacuously; combine with \code{NonEmpty()} if you need at least one element.
+#'
+#' @param pattern A single non-NA character string used as a PCRE regex
+#'   (passed to \code{grepl(..., perl = TRUE)}).
+#'
+#' @return A new \code{sicher_type} that validates every element against
+#'   \code{pattern}.
+#'
+#' @examples
+#' email %:% Matches("^[^@]+@[^@]+\\.[^@]+$") %<-% "user@example.com"
+#' try(email <- "not-an-email")   # Error: does not match pattern
+#'
+#' hex %:% Matches("^#[0-9A-Fa-f]{6}$") %<-% "#FF5733"
+#'
+#' # Combine with NonEmpty to also require at least one element
+#' tags %:% NonEmpty(Matches("^[a-z]+$")) %<-% c("foo", "bar")
+#'
+#' @export
+Matches <- function(pattern) {
+  if (!is.character(pattern) || length(pattern) != 1 || is.na(pattern)) {
+    stop(
+      "`pattern` must be a single non-NA character string ",
+      "(e.g. Matches(\"^[A-Z]+$\"))",
+      call. = FALSE
+    )
+  }
+  tryCatch(
+    withCallingHandlers(
+      grepl(pattern, "", perl = TRUE),
+      warning = function(w) stop(conditionMessage(w), call. = FALSE)
+    ),
+    error = function(e) stop(
+      glue::glue("Invalid regex in Matches(): {conditionMessage(e)}"),
+      call. = FALSE
+    )
+  )
+  type_name <- glue::glue("matches(\"{pattern}\")")
+  create_type(
+    type_name,
+    function(x) {
+      if (!is.character(x)) {
+        stop(type_error(NULL, type_name, get_type_name(x), x), call. = FALSE)
+      }
+      if (anyNA(x)) {
+        stop(
+          glue::glue(
+            "Type error: expected {type_name}, but value contains NA(s)"
+          ),
+          call. = FALSE
+        )
+      }
+      failing <- x[!grepl(pattern, x, perl = TRUE)]
+      if (length(failing) > 0) {
+        quoted  <- encodeString(utils::head(failing, 3), quote = "\"")
+        preview <- paste(quoted, collapse = ", ")
+        if (length(failing) > 3) preview <- paste0(preview, ", ...")
+        noun <- if (length(failing) == 1) "value" else "values"
+        verb <- if (length(failing) == 1) "does"  else "do"
+        stop(
+          glue::glue(
+            "Type error: expected {type_name}, ",
+            "but {noun} [{preview}] {verb} not match the pattern"
+          ),
+          call. = FALSE
+        )
+      }
+      TRUE
+    }
+  )
+}
+
+#' NonEmpty modifier — require a non-empty value
+#'
+#' @description
+#' Creates a type that first validates the underlying type, then rejects
+#' empty values. For data frames "empty" means zero rows (\code{nrow == 0});
+#' for all other objects it means \code{length == 0}.
+#'
+#' @param type A \code{sicher_type} or \code{sicher_union} object.
+#'
+#' @return A new \code{sicher_type} that rejects zero-length (or zero-row)
+#'   values after the base type check passes.
+#'
+#' @examples
+#' tags %:% NonEmpty(String) %<-% c("r", "types")
+#' try(tags <- character(0))   # Error: value must be non-empty
+#'
+#' items %:% NonEmpty(List) %<-% list(1, 2)
+#' try(items <- list())        # Error: value must be non-empty
+#'
+#' @export
+NonEmpty <- function(type) {
+  if (!inherits(type, "sicher_type") && !inherits(type, "sicher_union")) {
+    stop(glue::glue(
+      "NonEmpty() requires a sicher_type or sicher_union argument ",
+      "(e.g. NonEmpty(String), NonEmpty(List)); got {class(type)[1]}"
+    ), call. = FALSE)
+  }
+  base_name <- type$name
+  create_type(
+    glue::glue("non_empty<{base_name}>"),
+    function(x) {
+      check_type(x, type)
+      n <- if (is.data.frame(x)) nrow(x) else length(x)
+      if (n == 0L) {
+        stop(
+          glue::glue(
+            "Type error: expected non_empty<{base_name}> (length > 0), ",
+            "but got an empty value"
+          ),
+          call. = FALSE
+        )
+      }
+      TRUE
+    }
+  )
+}
+
 #' Create a readonly type variant
 #'
 #' @description

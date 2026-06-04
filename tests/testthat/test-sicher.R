@@ -1348,3 +1348,238 @@ testthat::test_that("extend validates field types in extra", {
     role = 1
   )))
 })
+
+# =============================================================================
+# NonNA
+# =============================================================================
+
+testthat::test_that("NonNA rejects non-type arguments", {
+  testthat::expect_error(NonNA(5),       "requires a sicher_type")
+  testthat::expect_error(NonNA("Numeric"), "requires a sicher_type")
+})
+
+testthat::test_that("NonNA encodes base type name", {
+  testthat::expect_equal(NonNA(Numeric)$name, "non_na<numeric>")
+  testthat::expect_equal(NonNA(String)$name,  "non_na<string>")
+})
+
+testthat::test_that("NonNA accepts values with no NAs", {
+  t <- NonNA(Numeric)
+  testthat::expect_true(t$check(c(1, 2, 3)))
+  testthat::expect_true(t$check(42))
+})
+
+testthat::test_that("NonNA rejects vectors containing NA", {
+  testthat::expect_error(NonNA(Numeric)$check(c(1, NA, 3)), "contains NA")
+  testthat::expect_error(NonNA(String)$check(c("a", NA_character_)), "contains NA")
+})
+
+testthat::test_that("NonNA propagates the underlying type error first", {
+  testthat::expect_error(NonNA(Numeric)$check("text"), "Type error")
+  testthat::expect_error(NonNA(Numeric)$check(TRUE),   "Type error")
+})
+
+testthat::test_that("NonNA wraps union types", {
+  t <- NonNA(String | Numeric)
+  testthat::expect_true(t$check("ok"))
+  testthat::expect_true(t$check(99))
+  testthat::expect_error(t$check(c(1, NA)), "contains NA")
+})
+
+testthat::test_that("NonNA works via typed assignment", {
+  local({
+    salary %:% NonNA(Numeric) %<-% c(1800, 2300)
+    testthat::expect_equal(salary, c(1800, 2300))
+    testthat::expect_error(salary <- c(1800, NA), "contains NA")
+  })
+})
+
+testthat::test_that("NonNA allows NULL when wrapping Optional", {
+  t <- NonNA(Optional(String))
+  testthat::expect_true(t$check(NULL))
+  testthat::expect_true(t$check("hello"))
+  testthat::expect_error(t$check(NA_character_), "contains NA")
+})
+
+# =============================================================================
+# Between
+# =============================================================================
+
+testthat::test_that("Between rejects invalid bounds", {
+  testthat::expect_error(Between("a", 10),   "`min` must be a single non-NA numeric")
+  testthat::expect_error(Between(0, "b"),    "`max` must be a single non-NA numeric")
+  testthat::expect_error(Between(NA, 10),    "`min` must be a single non-NA numeric")
+  testthat::expect_error(Between(0, NA),     "`max` must be a single non-NA numeric")
+  testthat::expect_error(Between(c(0, 1), 10), "`min` must be a single non-NA numeric")
+  testthat::expect_error(Between(10, 0),     "`min`.*must be <= `max`")
+})
+
+testthat::test_that("Between encodes bounds in type name", {
+  testthat::expect_equal(Between(0, 100)$name,   "between[0, 100]")
+  testthat::expect_equal(Between(0.0, 1.0)$name, "between[0, 1]")
+})
+
+testthat::test_that("Between accepts in-range scalar values", {
+  t <- Between(0, 100)
+  testthat::expect_true(t$check(0))
+  testthat::expect_true(t$check(50))
+  testthat::expect_true(t$check(100))
+})
+
+testthat::test_that("Between accepts in-range vectors", {
+  t <- Between(1, 10)
+  testthat::expect_true(t$check(c(1, 5, 10)))
+})
+
+testthat::test_that("Between rejects out-of-range scalar values", {
+  testthat::expect_error(Between(0, 100)$check(-1),  "outside \\[0, 100\\]")
+  testthat::expect_error(Between(0, 100)$check(101), "outside \\[0, 100\\]")
+})
+
+testthat::test_that("Between rejects vectors with any out-of-range elements", {
+  testthat::expect_error(Between(0, 10)$check(c(5, 11)), "outside \\[0, 10\\]")
+})
+
+testthat::test_that("Between rejects NA values", {
+  testthat::expect_error(Between(0, 100)$check(NA_real_), "contains NA")
+  testthat::expect_error(Between(0, 100)$check(c(1, NA)), "contains NA")
+})
+
+testthat::test_that("Between rejects non-numeric input", {
+  testthat::expect_error(Between(0, 100)$check("50"),  "Type error")
+  testthat::expect_error(Between(0, 100)$check(TRUE),  "Type error")
+})
+
+testthat::test_that("Between accepts integer storage (is.numeric(1L) is TRUE)", {
+  t <- Between(0, 100)
+  testthat::expect_true(t$check(42L))
+})
+
+testthat::test_that("Between works via typed assignment", {
+  local({
+    score %:% Between(0.0, 1.0) %<-% 0.5
+    testthat::expect_equal(score, 0.5)
+    testthat::expect_error(score <- 1.5, "outside")
+  })
+})
+
+testthat::test_that("Between allows equal min and max (point interval)", {
+  t <- Between(5, 5)
+  testthat::expect_true(t$check(5))
+  testthat::expect_error(t$check(6), "outside")
+})
+
+# =============================================================================
+# Matches
+# =============================================================================
+
+testthat::test_that("Matches rejects invalid pattern arguments", {
+  testthat::expect_error(Matches(123),        "`pattern` must be a single non-NA")
+  testthat::expect_error(Matches(NA_character_), "`pattern` must be a single non-NA")
+  testthat::expect_error(Matches(c("a","b")), "`pattern` must be a single non-NA")
+  testthat::expect_error(Matches("[invalid"),  "Invalid regex")
+})
+
+testthat::test_that("Matches encodes pattern in type name", {
+  t <- Matches("^[a-z]+$")
+  testthat::expect_equal(t$name, "matches(\"^[a-z]+$\")")
+})
+
+testthat::test_that("Matches accepts strings that satisfy the pattern", {
+  t <- Matches("^[0-9]+$")
+  testthat::expect_true(t$check("123"))
+  testthat::expect_true(t$check(c("1", "42", "007")))
+})
+
+testthat::test_that("Matches rejects strings that do not satisfy the pattern", {
+  testthat::expect_error(Matches("^[0-9]+$")$check("abc"),      "does not match")
+  testthat::expect_error(Matches("^[0-9]+$")$check(c("1","x")), "does not match")
+})
+
+testthat::test_that("Matches rejects non-character input", {
+  testthat::expect_error(Matches("^.$")$check(1),    "Type error")
+  testthat::expect_error(Matches("^.$")$check(TRUE), "Type error")
+})
+
+testthat::test_that("Matches rejects NA elements", {
+  testthat::expect_error(Matches("^.$")$check(NA_character_), "contains NA")
+  testthat::expect_error(Matches("^.$")$check(c("a", NA)),    "contains NA")
+})
+
+testthat::test_that("Matches accepts empty character vector vacuously", {
+  testthat::expect_true(Matches("^.$")$check(character(0)))
+})
+
+testthat::test_that("Matches works via typed assignment", {
+  local({
+    code %:% Matches("^[A-Z]{3}$") %<-% "USD"
+    testthat::expect_equal(code, "USD")
+    testthat::expect_error(code <- "us",    "does not match")
+    testthat::expect_error(code <- "USDA",  "does not match")
+  })
+})
+
+testthat::test_that("Matches composes correctly with NonEmpty", {
+  t <- NonEmpty(Matches("^[a-z]+$"))
+  testthat::expect_true(t$check(c("foo", "bar")))
+  testthat::expect_error(t$check(character(0)), "length > 0")
+  testthat::expect_error(t$check(c("foo", "BAR")), "does not match")
+})
+
+# =============================================================================
+# NonEmpty
+# =============================================================================
+
+testthat::test_that("NonEmpty rejects non-type arguments", {
+  testthat::expect_error(NonEmpty(5),       "requires a sicher_type")
+  testthat::expect_error(NonEmpty("String"), "requires a sicher_type")
+})
+
+testthat::test_that("NonEmpty encodes base type name", {
+  testthat::expect_equal(NonEmpty(String)$name, "non_empty<string>")
+  testthat::expect_equal(NonEmpty(List)$name,   "non_empty<list>")
+})
+
+testthat::test_that("NonEmpty accepts non-empty vectors", {
+  testthat::expect_true(NonEmpty(String)$check(c("a", "b")))
+  testthat::expect_true(NonEmpty(Numeric)$check(c(1, 2, 3)))
+})
+
+testthat::test_that("NonEmpty rejects empty character vector", {
+  testthat::expect_error(NonEmpty(String)$check(character(0)), "length > 0")
+})
+
+testthat::test_that("NonEmpty rejects empty numeric vector", {
+  testthat::expect_error(NonEmpty(Numeric)$check(numeric(0)), "length > 0")
+})
+
+testthat::test_that("NonEmpty rejects empty list", {
+  testthat::expect_error(NonEmpty(List)$check(list()), "length > 0")
+})
+
+testthat::test_that("NonEmpty checks rows for data frames", {
+  schema <- create_dataframe_type(list(x = Numeric))
+  t      <- NonEmpty(schema)
+  testthat::expect_true(t$check(data.frame(x = 1:3)))
+  testthat::expect_error(t$check(data.frame(x = numeric(0))), "length > 0")
+})
+
+testthat::test_that("NonEmpty propagates underlying type error", {
+  testthat::expect_error(NonEmpty(String)$check(123),  "Type error")
+  testthat::expect_error(NonEmpty(String)$check(TRUE), "Type error")
+})
+
+testthat::test_that("NonEmpty wraps union types", {
+  t <- NonEmpty(String | Numeric)
+  testthat::expect_true(t$check("hello"))
+  testthat::expect_true(t$check(c(1, 2)))
+  testthat::expect_error(t$check(character(0)), "length > 0")
+})
+
+testthat::test_that("NonEmpty works via typed assignment", {
+  local({
+    tags %:% NonEmpty(String) %<-% c("r", "types")
+    testthat::expect_equal(tags, c("r", "types"))
+    testthat::expect_error(tags <- character(0), "length > 0")
+  })
+})

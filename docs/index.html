@@ -220,6 +220,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Enum Types</strong>: Restrict variables to a fixed set of allowed values with <code>Enum(...)</code></li>
 <li><strong>Literal Types</strong>: Model exact TypeScript-style scalar literals with <code>Literal(...)</code></li>
 <li><strong>Typed Functions</strong>: Enforce parameter and return types on any function with <code>typed_function()</code></li>
+<li><strong>Constraint Modifiers</strong>: <code>NonNA()</code>, <code>Between()</code>, <code>Matches()</code>, <code>NonEmpty()</code> for value-level constraints</li>
 <li><strong>Zero Runtime Overhead</strong>: Types are checked only during assignment</li>
 <li><strong>Gradual Adoption</strong>: Add types incrementally to existing code</li>
 </ul>
@@ -529,6 +530,10 @@ Received: [10, 5]</code></pre>
 <li><strong>Scalar</strong>: Single element only</li>
 <li><strong>Readonly</strong>: Cannot be reassigned</li>
 <li><strong>Optional</strong>: Allows NULL values</li>
+<li><strong>NonNA</strong>: Rejects any value containing <code>NA</code></li>
+<li><strong>Between(min, max)</strong>: Numeric closed-interval range constraint</li>
+<li><strong>Matches(pattern)</strong>: Regex-constrained character vectors</li>
+<li><strong>NonEmpty</strong>: Rejects zero-length vectors, lists, and zero-row data frames</li>
 </ul>
 </section>
 <section id="advanced-types" class="level3">

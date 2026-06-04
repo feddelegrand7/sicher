@@ -8,6 +8,7 @@
 [![CRAN
 status](https://www.r-pkg.org/badges/version/sicher)](https://CRAN.R-project.org/package=sicher)
 [![R-CMD-check](https://github.com/feddelegrand7/sicher/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/feddelegrand7/sicher/actions/workflows/R-CMD-check.yaml)
+
 <!-- badges: end -->
 
 **sicher** (German for *safe* or *certain* and pronounced *zeesher*) is
@@ -122,6 +123,70 @@ middle_name <- 123                            # Error: not string or null
 #> Received: 123
 ```
 
+#### 🚫 `NonNA()` — reject NA values
+
+Prevents any `NA` from entering a typed variable — a common source of
+silent bugs in data pipelines. The underlying type is validated first;
+`NonNA` adds an extra NA-free guarantee on top.
+
+``` r
+salary %:% NonNA(Numeric) %<-% c(1800, 2300, 4000)
+salary <- c(1800, NA, 4000)   # Error: value contains NA(s)
+#> Error: Type error: expected non_na<numeric> (no NA values), but value contains NA(s)
+```
+
+Composes freely with other modifiers:
+
+``` r
+clean_tag %:% NonNA(Scalar(String)) %<-% "admin"
+clean_tag <- NA_character_   # Error
+#> Error: Type error: expected non_na<scalar<string>> (no NA values), but value contains NA(s)
+```
+
+#### 📐 `Between(min, max)` — closed-interval range
+
+Accepts numeric values within the closed interval `[min, max]`. Every
+element of a vector must satisfy the bounds. `NA` values are always
+rejected.
+
+``` r
+age   %:% Between(0, 150)   %<-% 30
+score %:% Between(0.0, 1.0) %<-% 0.95
+score <- 1.5    # Error: 1.5 is outside [0, 1]
+#> Error: Type error: expected between[0, 1], but value [1.5] is outside [0, 1]
+score <- NA     # Error: value contains NA(s)
+#> Error: Type error: Expected between[0, 1], got bool
+#> Received: NA
+```
+
+#### 🔍 `Matches(pattern)` — regex-constrained strings
+
+Validates every element of a character vector against a Perl-compatible
+regex. The pattern is compiled eagerly at construction time, so typos in
+the regex are caught immediately. An empty `character(0)` passes
+vacuously; pair with `NonEmpty()` to also require at least one element.
+
+``` r
+email %:% Matches("^[^@]+@[^@]+\\.[^@]+$") %<-% "user@example.com"
+email <- "not-an-email"   # Error: does not match pattern
+#> Error: Type error: expected matches("^[^@]+@[^@]+\.[^@]+$"), but value ["not-an-email"] does not match the pattern
+
+hex_color %:% NonEmpty(Matches("^#[0-9A-Fa-f]{6}$")) %<-% c("#FF5733", "#1A2B3C")
+```
+
+#### 📭 `NonEmpty()` — reject empty vectors and lists
+
+Rejects zero-length vectors, strings, and lists. For data frames it
+checks `nrow > 0`. The base type is validated first, then the length is
+checked.
+
+``` r
+tags %:% NonEmpty(String) %<-% c("r", "types")
+tags <- character(0)   # Error: length > 0
+#> Error: Type error: expected non_empty<string> (length > 0), but got an empty value
+tags <- "r"            # OK — length 1 is fine
+```
+
 ### 🔀 Union Types
 
 Accept more than one type with `|`:
@@ -153,9 +218,6 @@ priority <- 5            # Error
 ```
 
 ### 🔒 Literal Types
-
-(**at the moment only available in the development version of the
-package**)
 
 Use `Literal()` when the value itself is part of the type, similar to
 TypeScript literal types:
@@ -205,9 +267,8 @@ person <- list(name = "Bob")   # Error: missing required field 'age'
 #> Received: list with fields: [name]
 ```
 
-Use `extend()` (**at the moment only available in the development
-version of the package**) when a new schema should reuse an existing
-list type instead of redefining every field:
+Use `extend()` when a new schema should reuse an existing list type
+instead of redefining every field:
 
 ``` r
 Employee <- extend(Person, list(
@@ -300,10 +361,9 @@ value <- -1   # Error
 #> Received: -1
 ```
 
-Use `Literal()` (**at the moment only available in the development
-version of the package**) for TypeScript-style exact scalar values,
-`Enum()` for membership in a finite set that may also allow vectors of
-allowed values, and `create_type()` when the rule is more general than
+Use `Literal()` for TypeScript-style exact scalar values, `Enum()` for
+membership in a finite set that may also allow vectors of allowed
+values, and `create_type()` when the rule is more general than
 membership in a predefined list.
 
 ## 🔤 Typed Functions
