@@ -403,14 +403,14 @@ Create your own types using `create_type()`:
 ```{r}
 #| error: true
 
-# Positive number type
-Positive <- create_type("positive", function(x) {
-  is.numeric(x) && all(x > 0)
+# Even number type
+Even <- create_type("even", function(x) {
+  is.numeric(x) && all(x %% 2 == 0)
 })
 
-value %:% Positive %<-% 5
+value %:% Even %<-% 4
 
-value <- -1
+value <- 3
 ```
 
 Use `Enum(...)` when you only need membership in a known set of values. Use `create_type()` when the rule depends on arbitrary logic.
@@ -448,11 +448,263 @@ person %:% PersonWithEmail %<-% list(
 )
 ```
 
+## More Built-in Types
+
+```{r}
+#| error: true
+
+start   %:% Date        %<-% as.Date("2024-01-01")
+created %:% DateTime    %<-% Sys.time()
+cache   %:% Environment %<-% new.env()
+
+price %:% Positive    %<-% 9.99
+count %:% NonNegative %<-% 0
+n     %:% Whole       %<-% 3      # 3 and 3L are fine, 3.5 is not
+n <- 2.5
+
+size  %:% Factor(c("S", "M", "L")) %<-% factor("M", levels = c("S", "M", "L"))
+m     %:% MatrixOf(Numeric, nrow = 2, ncol = 2) %<-% diag(2)
+model %:% InstanceOf("lm") %<-% lm(mpg ~ wt, data = mtcars)
+```
+
+## More Modifiers
+
+### MinLength, MaxLength and Unique
+
+Lengths are counted with `length()` (`nrow()` for data frames), like `NonEmpty()` and `[n]`.
+
+```{r}
+#| error: true
+
+top3 %:% MaxLength(Numeric, 3) %<-% c(9, 8, 7)
+top3 <- c(9, 8, 7, 6)
+
+ids %:% Unique(Integer) %<-% c(1L, 2L, 3L)
+ids <- c(1L, 2L, 2L)
+```
+
+### Refine
+
+Add a custom rule on top of an existing type:
+
+```{r}
+#| error: true
+
+Password <- Refine(
+  Scalar(String),
+  function(x) nchar(x) >= 8,
+  message = "must be at least 8 characters"
+)
+
+pw %:% Password %<-% "correct horse battery"
+pw <- "short"
+```
+
+### Nullable
+
+`Optional()` fields may be left out of a list; `Nullable()` fields must be present but may be `NULL`:
+
+```{r}
+#| error: true
+
+Profile <- create_list_type(list(
+  name     = String,
+  nickname = Optional(String),
+  bio      = Nullable(String)
+))
+
+profile %:% Profile %<-% list(name = "Ann", bio = NULL)
+profile <- list(name = "Ann")
+```
+
+## Transforming Values
+
+`Default()` and `Coerce()` change the value as well as checking it. Typed variables, typed function arguments and `parse_as()` all keep the transformed value.
+
+```{r}
+#| error: true
+
+retries %:% Default(Integer, 3L) %<-% NULL
+retries
+
+Config <- create_list_type(list(host = String, port = Default(Numeric, 8080)))
+parse_as(list(host = "localhost"), Config)
+
+age %:% Coerce(Numeric) %<-% "42"
+age
+age <- "forty"   # cannot be converted: an error, not a silent NA
+```
+
+List and data frame types can also accept or remove unknown fields with `extra = "allow"` or `extra = "drop"`:
+
+```{r}
+Stripped <- create_list_type(list(name = String), extra = "drop")
+parse_as(list(name = "Ann", internal_id = 7), Stripped)
+```
+
+## More Type Shapes
+
+### Intersections
+
+```{r}
+#| error: true
+
+Named <- create_list_type(list(name = String))
+Aged  <- create_list_type(list(age = Numeric))
+
+someone %:% (Named & Aged) %<-% list(name = "Ann", age = 31)
+
+Percent <- Numeric & Between(0, 100)
+check_type(150, Percent)
+```
+
+### Tuples and Records
+
+```{r}
+#| error: true
+
+point %:% Tuple(Numeric, Numeric) %<-% list(1.5, 2)
+point <- list(1.5, "2")
+
+scores %:% Record(String, Numeric) %<-% list(alice = 90, bob = 85)
+flags  %:% Record(Enum("debug", "verbose"), Bool) %<-% list(debug = TRUE)
+flags <- list(debug = TRUE, color = FALSE)
+```
+
+### Discriminated Unions
+
+```{r}
+#| error: true
+
+Circle <- create_list_type(list(radius = Numeric))
+Square <- create_list_type(list(side = Numeric))
+Shape  <- DiscriminatedUnion("kind", circle = Circle, square = Square)
+
+shape %:% Shape %<-% list(kind = "circle", radius = 2)
+shape <- list(kind = "square", radius = 3)
+```
+
+### Recursive Types
+
+```{r}
+Tree <- create_list_type(list(
+  value    = Numeric,
+  children = ListOf(Lazy(function() Tree, name = "Tree"))
+))
+
+tree %:% Tree %<-% list(value = 1, children = list(
+  list(value = 2, children = list())
+))
+```
+
+### Branded Types
+
+```{r}
+#| error: true
+
+UserId  <- Brand(Scalar(String), "UserId")
+OrderId <- Brand(Scalar(String), "OrderId")
+
+current_user %:% UserId %<-% brand("u-123", UserId)
+current_user <- brand("o-789", OrderId)
+```
+
+### Function Types
+
+```{r}
+#| error: true
+
+Formatter <- FunctionOf(list(x = Numeric), .return = String)
+
+fmt %:% Formatter %<-% function(x) format(x, nsmall = 2)
+fmt(3)
+fmt("a")
+```
+
+### Generic Types
+
+A generic type is a function that takes types and returns a type:
+
+```{r}
+Paginated <- function(Item) {
+  create_list_type(list(items = ListOf(Item), total = Scalar(Integer)))
+}
+
+page %:% Paginated(Numeric) %<-% list(items = list(1, 2), total = 2L)
+```
+
+## Object Utilities
+
+```{r}
+#| error: true
+
+User <- create_list_type(list(
+  id    = Integer,
+  name  = String,
+  email = Optional(String)
+))
+
+Pick(User, "id", "name")
+Omit(User, "id")
+Partial(User)
+Required(User)
+KeyOf(User)
+
+patch %:% Partial(Omit(User, "id")) %<-% list(email = "new@example.com")
+```
+
+## Validating Data
+
+```{r}
+#| error: true
+
+TodoItem <- create_list_type(list(id = Numeric, title = String, done = Bool))
+
+data <- list(
+  list(id = 1, title = "Buy milk", done = FALSE),
+  list(id = "2", title = 3)
+)
+
+is_type(data, ListOf(TodoItem))
+
+result <- safe_parse(data, ListOf(TodoItem))
+result
+result$issues
+
+parse_as(data, ListOf(TodoItem), context = "todos")
+```
+
+### JSON
+
+```{r}
+#| error: true
+
+Order <- create_list_type(list(
+  id    = Scalar(Integer),
+  items = ListOf(create_list_type(list(sku = Scalar(String), qty = Scalar(Whole))))
+))
+
+validate_json('{"id": 7, "items": [{"sku": "A1", "qty": 2}]}', Order)
+validate_json('{"id": "7", "items": [{"sku": "A1"}]}', Order)
+
+cat(to_json_schema(Order, json = TRUE))
+```
+
+### Inspecting Typed Variables
+
+```{r}
+age_years %:% Numeric %<-% 30
+type_of(age_years)
+
+untype(age_years)
+age_years <- "no longer checked"
+```
+
 ## Error Messages
 
 `sicher` provides clear, contextual error messages:
 
-```{r, error=TRUE}
+```{r}
 #| error: true
 
 # Type mismatch
@@ -468,4 +720,58 @@ p %:% PersonType %<-% list(name = "Alice")
 ```{r, error=TRUE}
 # Wrong vector length
 vec %:% Numeric[3] %<-% c(1, 2)
+```
+
+### Every Problem, With Its Location
+
+Errors report every problem at once instead of stopping at the first one, and each problem says where it is:
+
+```{r, error=TRUE}
+Todo <- create_list_type(list(id = Numeric, title = String))
+
+todos %:% ListOf(Todo) %<-% list(
+  list(id = 1, title = "Buy milk"),
+  list(id = "2", title = 3, extra_field = TRUE)
+)
+```
+
+### Catching Type Errors
+
+Type errors are conditions of class `sicher_type_error`. Their `issues` element lists each problem with its `message`, `expected`, `got` and `code`:
+
+```{r}
+err <- tryCatch(
+  check_type(list(id = "2", title = 3), Todo, context = "todo"),
+  sicher_type_error = function(e) e
+)
+
+vapply(err$issues, function(issue) issue$message, character(1))
+```
+
+For a data frame of issues with readable paths, use `safe_parse()` instead:
+
+```{r}
+safe_parse(list(id = "2", title = 3), Todo, context = "todo")$issues
+```
+
+### Forgotten Parentheses
+
+Using a type factory without calling it gives a hint:
+
+```{r, error=TRUE}
+size %:% Factor %<-% factor("M")
+```
+
+### Warnings Instead of Errors
+
+With `options(sicher.mode = "warn")`, violations become warnings and the assigned value is kept. This helps when adding sicher to existing code. `Readonly()` is still enforced.
+
+```{r}
+options(sicher.mode = "warn")
+
+score %:% Numeric %<-% 10
+score <- "ten"
+score
+
+options(sicher.mode = "on")
 ```

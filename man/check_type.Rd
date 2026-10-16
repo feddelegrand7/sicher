@@ -15,8 +15,8 @@ check_type(value, type, context = NULL)
 (used in error messages)}
 }
 \value{
-Returns `TRUE` invisibly if the value matches the type, otherwise
-  throws an error with a descriptive message.
+Returns `TRUE` if the value matches the type, otherwise throws an
+  error of class \code{"sicher_type_error"} with a descriptive message.
 }
 \description{
 Validates that a value conforms to a specified type. This is the core
@@ -29,8 +29,16 @@ This function:
   \item Checks if a value matches a type specification
   \item Handles union types (checks if value matches any type in the union)
   \item Handles readonly types (strips the readonly modifier before checking)
-  \item Provides detailed error messages when checks fail
+  \item Reports every problem it finds in nested lists, data frames and
+    \code{ListOf()} values, each with its location (e.g.
+    \code{todos[[2]]$title})
 }
+
+The condition thrown on failure has class \code{"sicher_type_error"} and an
+\code{issues} element holding the individual problems, so it can be
+caught with \code{tryCatch(..., sicher_type_error = function(e) e$issues)}.
+Use \code{\link{is_type}()} or \code{\link{safe_parse}()} for a check
+that does not throw.
 }
 \examples{
 # Direct type checking
@@ -46,5 +54,6 @@ try(check_type(5.5, Integer | String))  # Throws error
 
 }
 \seealso{
-\code{\link{create_type}} for creating custom types
+\code{\link{create_type}} for creating custom types,
+\code{\link{is_type}}, \code{\link{safe_parse}}, \code{\link{parse_as}}
 }

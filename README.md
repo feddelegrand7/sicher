@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# sicher <a><img src="man/figures/sicher_logo.png" align="right" height="200"/></a>
+# sicher
 
 <!-- badges: start -->
 
@@ -12,10 +12,10 @@ status](https://www.r-pkg.org/badges/version/sicher)](https://CRAN.R-project.org
 <!-- badges: end -->
 
 **sicher** (German for *safe* or *certain* and pronounced *zeesher*) is
-an R package that brings runtime type safety to R programming, inspired
-by TypeScript for JavaScript. Declare types for your variables and have
-them enforced automatically on every assignment, catching type errors
-early and making your code more robust and self-documenting. 🛡️
+an R package that brings runtime type safety to R programming. Declare
+types for your variables and have them enforced automatically on every
+assignment, catching type errors early and making your code more robust
+and self-documenting. 🛡️
 
 **sicher** implements runtime type safety in R by attaching types to
 variables via active bindings rather than traditional attributes or
@@ -67,24 +67,45 @@ age <- "thirty"   # Error: Type error
 
 sicher ships with a complete set of primitive and container types:
 
-| Type        | Checks            |
-|-------------|-------------------|
-| `Integer`   | `is.integer()`    |
-| `Double`    | `is.double()`     |
-| `Numeric`   | `is.numeric()`    |
-| `String`    | `is.character()`  |
-| `Bool`      | `is.logical()`    |
-| `List`      | `is.list()`       |
-| `DataFrame` | `is.data.frame()` |
-| `Function`  | `is.function()`   |
-| `Any`       | always passes     |
-| `Null`      | `is.null()`       |
+| Type          | Checks                                         |
+|---------------|------------------------------------------------|
+| `Integer`     | `is.integer()`                                 |
+| `Double`      | `is.double()`                                  |
+| `Numeric`     | `is.numeric()`                                 |
+| `String`      | `is.character()`                               |
+| `Bool`        | `is.logical()`                                 |
+| `List`        | `is.list()`                                    |
+| `DataFrame`   | `is.data.frame()`                              |
+| `Function`    | `is.function()`                                |
+| `Any`         | always passes                                  |
+| `Null`        | `is.null()`                                    |
+| `Date`        | `inherits(x, "Date")`                          |
+| `DateTime`    | `inherits(x, "POSIXct")`                       |
+| `Environment` | `is.environment()`                             |
+| `Positive`    | numeric, all `> 0`, no `NA`                    |
+| `NonNegative` | numeric, all `>= 0`, no `NA`                   |
+| `Whole`       | numeric whole numbers (`3` or `3L`, not `3.5`) |
+
+A few more are built with factory functions:
+
+| Factory | Checks |
+|----|----|
+| `Factor(levels = NULL)` | a factor, optionally with exactly these levels |
+| `MatrixOf(type = Any, nrow = NULL, ncol = NULL)` | a matrix with the given element type and dimensions |
+| `InstanceOf(class)` | an object inheriting from `class` (S3, S4 or R6) |
 
 ``` r
 x    %:% Integer   %<-% 42L
 y    %:% Double    %<-% 3.14
 flag %:% Bool      %<-% TRUE
 df   %:% DataFrame %<-% data.frame(a = 1:3)
+
+price %:% Positive %<-% 9.99
+price <- 0      # Error: not > 0
+#> Error: Type error in 'price': expected positive, but value [0] is not > 0
+
+size %:% Factor(c("S", "M", "L")) %<-% factor("M", levels = c("S", "M", "L"))
+model %:% InstanceOf("lm") %<-% lm(mpg ~ wt, data = mtcars)
 ```
 
 ### ⚙️ Operators
@@ -132,7 +153,7 @@ silent bugs in data pipelines. The underlying type is validated first;
 ``` r
 salary %:% NonNA(Numeric) %<-% c(1800, 2300, 4000)
 salary <- c(1800, NA, 4000)   # Error: value contains NA(s)
-#> Error: Type error: expected non_na<numeric> (no NA values), but value contains NA(s)
+#> Error: Type error in 'salary': expected non_na<numeric> (no NA values), but value contains NA(s)
 ```
 
 Composes freely with other modifiers:
@@ -140,7 +161,7 @@ Composes freely with other modifiers:
 ``` r
 clean_tag %:% NonNA(Scalar(String)) %<-% "admin"
 clean_tag <- NA_character_   # Error
-#> Error: Type error: expected non_na<scalar<string>> (no NA values), but value contains NA(s)
+#> Error: Type error in 'clean_tag': expected non_na<scalar<string>> (no NA values), but value contains NA(s)
 ```
 
 #### 📐 `Between(min, max)` — closed-interval range
@@ -153,9 +174,9 @@ rejected.
 age   %:% Between(0, 150)   %<-% 30
 score %:% Between(0.0, 1.0) %<-% 0.95
 score <- 1.5    # Error: 1.5 is outside [0, 1]
-#> Error: Type error: expected between[0, 1], but value [1.5] is outside [0, 1]
+#> Error: Type error in 'score': expected between[0, 1], but value [1.5] is outside [0, 1]
 score <- NA     # Error: value contains NA(s)
-#> Error: Type error: Expected between[0, 1], got bool
+#> Error: Type error in 'score': Expected between[0, 1], got bool
 #> Received: NA
 ```
 
@@ -169,7 +190,7 @@ vacuously; pair with `NonEmpty()` to also require at least one element.
 ``` r
 email %:% Matches("^[^@]+@[^@]+\\.[^@]+$") %<-% "user@example.com"
 email <- "not-an-email"   # Error: does not match pattern
-#> Error: Type error: expected matches("^[^@]+@[^@]+\.[^@]+$"), but value ["not-an-email"] does not match the pattern
+#> Error: Type error in 'email': expected matches("^[^@]+@[^@]+\.[^@]+$"), but value ["not-an-email"] does not match the pattern
 
 hex_color %:% NonEmpty(Matches("^#[0-9A-Fa-f]{6}$")) %<-% c("#FF5733", "#1A2B3C")
 ```
@@ -183,8 +204,84 @@ checked.
 ``` r
 tags %:% NonEmpty(String) %<-% c("r", "types")
 tags <- character(0)   # Error: length > 0
-#> Error: Type error: expected non_empty<string> (length > 0), but got an empty value
+#> Error: Type error in 'tags': expected non_empty<string> (length > 0), but got an empty value
 tags <- "r"            # OK — length 1 is fine
+```
+
+#### 📏 `MinLength()`, `MaxLength()` and `Unique()`
+
+Bound the number of elements (rows for data frames) or reject
+duplicates. Lengths are counted with `length()`, like `NonEmpty()` and
+`[n]`; to limit the number of characters in a string, use `Matches()` or
+`Refine()`.
+
+``` r
+top3 %:% MaxLength(Numeric, 3) %<-% c(9, 8, 7)
+top3 <- c(9, 8, 7, 6)   # Error: more than 3 elements
+#> Error: Type error in 'top3': expected max_length<numeric, 3> (at most 3 element(s)), but got 4
+
+ids %:% Unique(Integer) %<-% c(1L, 2L, 3L)
+ids <- c(1L, 2L, 2L)    # Error: duplicated value
+#> Error: Type error in 'ids': expected unique<integer>, but found duplicated value(s): [2]
+```
+
+#### ✅ `Refine()` — custom rules on top of a type
+
+The base type is checked first, then your predicate runs, and its
+message is used when it fails.
+
+``` r
+Password <- Refine(
+  Scalar(String),
+  function(x) nchar(x) >= 8,
+  message = "must be at least 8 characters"
+)
+
+pw %:% Password %<-% "correct horse battery"
+pw <- "short"   # Error: must be at least 8 characters
+#> Error: Type error in 'pw': must be at least 8 characters
+#> Received: short
+```
+
+#### 🪄 `Default()` and `Coerce()` — transform values
+
+`Default(type, value)` replaces `NULL` (or a missing list field) with a
+default. `Coerce(type)` converts values with the matching `as.*()`
+function before checking them, and reports values that cannot be
+converted instead of silently producing `NA`. A typed variable stores
+the transformed value.
+
+``` r
+retries %:% Default(Integer, 3L) %<-% NULL
+retries
+#> [1] 3
+
+age %:% Coerce(Numeric) %<-% "42"
+age             # now a number
+#> [1] 42
+age <- "forty"  # Error: cannot convert
+#> Error: Type error in 'age': cannot convert ["forty"] to numeric
+
+when %:% Coerce(Date) %<-% "2024-05-01"
+class(when)
+#> [1] "Date"
+```
+
+#### 🕳️ `Nullable()` — present, but possibly `NULL`
+
+`Optional()` fields may be left out of a list entirely. `Nullable()`
+fields must be present but may hold `NULL`.
+
+``` r
+Profile <- create_list_type(list(
+  name     = String,
+  nickname = Optional(String),  # may be missing
+  bio      = Nullable(String)   # must be present, may be NULL
+))
+
+profile %:% Profile %<-% list(name = "Ann", bio = NULL)
+profile <- list(name = "Ann")   # Error: 'bio' is missing
+#> Error: Type error in 'profile$bio': Missing required field (expected string | null)
 ```
 
 ### 🔀 Union Types
@@ -219,8 +316,7 @@ priority <- 5            # Error
 
 ### 🔒 Literal Types
 
-Use `Literal()` when the value itself is part of the type, similar to
-TypeScript literal types:
+Use `Literal()` when the value itself is part of the type:
 
 ``` r
 direction %:% Literal("left", "right") %<-% "left"
@@ -262,9 +358,18 @@ Person <- create_list_type(list(
 person %:% Person %<-% list(name = "Alice", age = 30, email = "alice@example.com")
 
 person <- list(name = "Bob")   # Error: missing required field 'age'
-#> Error: Type error: Expected {name: string, age: numeric, email?: string | null}, got list
-#> Details: Missing required field(s): age (expected fields: name, age)
-#> Received: list with fields: [name]
+#> Error: Type error in 'person$age': Missing required field (expected numeric)
+```
+
+By default, fields that are not part of the schema are rejected. Use
+`extra = "allow"` to accept them unchecked or `extra = "drop"` to remove
+them:
+
+``` r
+Loose <- create_list_type(list(name = String), extra = "drop")
+parse_as(list(name = "Alice", internal_id = 99), Loose)
+#> $name
+#> [1] "Alice"
 ```
 
 Use `extend()` when a new schema should reuse an existing list type
@@ -294,6 +399,41 @@ If `extra` reuses a field name from the base type, the new field
 definition overrides the old one and `extend()` emits a warning so the
 change is explicit.
 
+### 🧰 Object Utilities
+
+Derive new schemas from existing ones. They work on both list and data
+frame types:
+
+| Helper            | What it does                    |
+|-------------------|---------------------------------|
+| `Pick(type, ...)` | keep only some fields           |
+| `Omit(type, ...)` | drop some fields                |
+| `Partial(type)`   | make every field optional       |
+| `Required(type)`  | make every field required       |
+| `KeyOf(type)`     | an `Enum()` of the field names  |
+| `A & B`           | merge the fields of two schemas |
+
+``` r
+User <- create_list_type(list(
+  id    = Integer,
+  name  = String,
+  email = Optional(String)
+))
+
+UserPatch <- Partial(Omit(User, "id"))
+patch %:% UserPatch %<-% list(email = "new@example.com")
+
+Timestamps <- create_list_type(list(created = Date))
+StoredUser <- User & Timestamps
+StoredUser
+#> <type: {id: integer, name: string, email?: string | null, created: date} >
+
+sort_by %:% KeyOf(User) %<-% "name"
+sort_by <- "password"   # Error: not a field of User
+#> Error: Type error in 'sort_by': Expected enum["id", "name", "email"], got string
+#> Received: password
+```
+
 ### 🗄️ Data Frame Schemas
 
 Validate column names and types with `create_dataframe_type()`:
@@ -317,7 +457,7 @@ users <- data.frame(
   username = c("alice", "bob"),
   active   = c(TRUE, FALSE)
 )
-#> Error: Type error in 'id': Expected integer, got string of length 2
+#> Error: Type error in 'users$id': Expected integer, got string of length 2
 #> Received: [1, 2]
 ```
 
@@ -343,8 +483,116 @@ todos <- list(
   list(id = 1, title = "Buy milk", completed = FALSE),
   list(wrong = "shape")   # Error: element does not match TodoItem
 )
-#> Error: Type error in 'todos': Expected list<{id: numeric, title: string, completed: bool}>, got list of length 2
-#> Received: list of length 2
+#> Error: 4 type errors found:
+#>   * Type error in 'todos[[2]]$id': Missing required field (expected numeric)
+#>   * Type error in 'todos[[2]]$title': Missing required field (expected string)
+#>   * Type error in 'todos[[2]]$completed': Missing required field (expected bool)
+#>   * Type error in 'todos[[2]]$wrong': Unexpected field (valid fields: id, title, completed)
+```
+
+### 🧬 More Type Shapes
+
+#### `Tuple()` — fixed positions
+
+``` r
+Point <- Tuple(Numeric, Numeric)
+p %:% Point %<-% list(1.5, 2)
+p <- list(1.5, "2")   # Error at [[2]]
+#> Error: Type error in 'p[[2]]': Expected numeric, got string
+#> Received: 2
+```
+
+#### `Record()` — named collections with any keys
+
+``` r
+scores %:% Record(String, Numeric) %<-% list(alice = 90, bob = 85)
+
+Flags <- Record(Enum("debug", "verbose"), Bool)
+flags %:% Flags %<-% list(debug = TRUE)
+flags <- list(debug = TRUE, color = FALSE)   # Error: invalid key
+#> Error: Type error in 'flags$color': Invalid key (expected enum["debug", "verbose"])
+```
+
+#### `DiscriminatedUnion()` — tagged unions
+
+The discriminator picks which member to check, so errors point at the
+right field instead of “nothing in the union matched”:
+
+``` r
+Circle <- create_list_type(list(radius = Numeric))
+Square <- create_list_type(list(side = Numeric))
+Shape  <- DiscriminatedUnion("kind", circle = Circle, square = Square)
+
+shape %:% Shape %<-% list(kind = "circle", radius = 2)
+shape <- list(kind = "square", radius = 3)   # Error: 'side' is missing
+#> Error: 2 type errors found:
+#>   * Type error in 'shape$side': Missing required field (expected numeric)
+#>   * Type error in 'shape$radius': Unexpected field (valid fields: kind, side)
+```
+
+#### `Lazy()` — recursive types
+
+``` r
+Tree <- create_list_type(list(
+  value    = Numeric,
+  children = ListOf(Lazy(function() Tree, name = "Tree"))
+))
+
+tree %:% Tree %<-% list(value = 1, children = list(
+  list(value = 2, children = list())
+))
+```
+
+#### `Brand()` — nominal types
+
+Two IDs that are both strings can still be told apart. `brand()` checks
+a value and attaches the brand:
+
+``` r
+UserId  <- Brand(Scalar(String), "UserId")
+OrderId <- Brand(Scalar(String), "OrderId")
+
+current_user %:% UserId %<-% brand("u-123", UserId)
+current_user <- brand("o-789", OrderId)   # Error: wrong brand
+#> Error: Type error in 'current_user': Expected UserId<scalar<string>>, got a value branded as OrderId. Create branded values with brand(value, <type>)
+#> Received: o-789
+current_user <- "u-456"                   # Error: not branded
+#> Error: Type error in 'current_user': Expected UserId<scalar<string>>, got an unbranded string. Create branded values with brand(value, <type>)
+#> Received: u-456
+```
+
+#### `FunctionOf()` — function signatures
+
+The function is wrapped with `typed_function()`, so every later call is
+checked too:
+
+``` r
+Formatter <- FunctionOf(list(x = Numeric), .return = String)
+
+fmt %:% Formatter %<-% function(x) format(x, nsmall = 2)
+fmt(3)
+#> [1] "3.00"
+fmt("a")                    # Error: argument x
+#> Error: Type error in 'x': Expected numeric, got string
+#> Received: a
+fmt <- function(y) y        # Error: no parameter named x
+#> Error: Type error in 'fmt': Expected function(x: numeric) => string, but the function has no parameter(s) named x
+```
+
+### 🧬 Generic Types
+
+Generic types need no special syntax: write a function that takes types
+and returns a type.
+
+``` r
+Paginated <- function(T) {
+  create_list_type(list(items = ListOf(T), total = Scalar(Integer)))
+}
+
+page %:% Paginated(User) %<-% list(
+  items = list(list(id = 1L, name = "Ann")),
+  total = 1L
+)
 ```
 
 ### 🛠️ Custom Types
@@ -353,18 +601,18 @@ Use `create_type()` to define your own validator with any predicate
 function:
 
 ``` r
-Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
+Even <- create_type("even", function(x) is.numeric(x) && all(x %% 2 == 0))
 
-value %:% Positive %<-% 5
-value <- -1   # Error
-#> Error: Type error in 'value': Expected positive, got double
-#> Received: -1
+value %:% Even %<-% 4
+value <- 3   # Error
+#> Error: Type error in 'value': Expected even, got double
+#> Received: 3
 ```
 
-Use `Literal()` for TypeScript-style exact scalar values, `Enum()` for
-membership in a finite set that may also allow vectors of allowed
-values, and `create_type()` when the rule is more general than
-membership in a predefined list.
+Use `Literal()` for exact scalar values, `Enum()` for membership in a
+finite set that may also allow vectors of allowed values, and
+`create_type()` when the rule is more general than membership in a
+predefined list.
 
 ## 🔤 Typed Functions
 
@@ -518,6 +766,127 @@ calculate_mean_payroll(c(1800, "2300", 4000)) # Error: type mismatch
 #> Received: [1800, 2300, 4000]
 ```
 
+## 🧪 Validating Data
+
+Typed variables are one way to use a type; you can also check values
+directly:
+
+| Function                  | Returns                                      |
+|---------------------------|----------------------------------------------|
+| `is_type(value, type)`    | `TRUE` or `FALSE`                            |
+| `check_type(value, type)` | `TRUE`, or throws                            |
+| `parse_as(value, type)`   | the parsed value, or throws                  |
+| `safe_parse(value, type)` | a result with `success`, `data` and `issues` |
+
+Errors report **every** problem, each with its location:
+
+``` r
+raw_todos <- list(
+  list(id = 1, title = "Buy milk", completed = FALSE),
+  list(id = "2", title = 3)
+)
+
+parse_as(raw_todos, ListOf(TodoItem), context = "todos")
+#> Error: 3 type errors found:
+#>   * Type error in 'todos[[2]]$id': Expected numeric, got string
+#>   * Type error in 'todos[[2]]$title': Expected string, got double
+#>   * Type error in 'todos[[2]]$completed': Missing required field (expected bool)
+
+result <- safe_parse(raw_todos, ListOf(TodoItem))
+result$success
+#> [1] FALSE
+result$issues
+#>              path                                message expected     got
+#> 1        [[2]]$id           Expected numeric, got string  numeric  string
+#> 2     [[2]]$title            Expected string, got double   string  double
+#> 3 [[2]]$completed Missing required field (expected bool)     bool missing
+#>            code
+#> 1  invalid_type
+#> 2  invalid_type
+#> 3 missing_field
+```
+
+The error is a condition of class `sicher_type_error` with the same
+issues in `e$issues`, so it can be handled with
+`tryCatch(..., sicher_type_error = function(e) ...)`.
+
+### 🌐 JSON
+
+`validate_json()` parses JSON with jsonlite and checks it in one step,
+which is handy for plumber request bodies. `to_json_schema()` exports a
+type as JSON Schema:
+
+``` r
+Order <- create_list_type(list(
+  id    = Scalar(Integer),
+  items = ListOf(create_list_type(list(sku = Scalar(String), qty = Scalar(Whole))))
+))
+
+validate_json('{"id": 7, "items": [{"sku": "A1", "qty": 2}]}', Order)
+#> $id
+#> [1] 7
+#> 
+#> $items
+#> $items[[1]]
+#> $items[[1]]$sku
+#> [1] "A1"
+#> 
+#> $items[[1]]$qty
+#> [1] 2
+validate_json('{"id": "7", "items": [{"sku": "A1"}]}', Order)
+#> Error: 2 type errors found:
+#>   * Type error in 'id': Expected scalar<integer>, got string
+#>   * Type error in 'items[[1]]$qty': Missing required field (expected scalar<whole>)
+
+cat(to_json_schema(Order, json = TRUE))
+#> {
+#>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+#>   "type": "object",
+#>   "properties": {
+#>     "id": {
+#>       "type": "integer"
+#>     },
+#>     "items": {
+#>       "type": "array",
+#>       "items": {
+#>         "type": "object",
+#>         "properties": {
+#>           "sku": {
+#>             "type": "string"
+#>           },
+#>           "qty": {
+#>             "type": "integer"
+#>           }
+#>         },
+#>         "required": [
+#>           "sku",
+#>           "qty"
+#>         ],
+#>         "additionalProperties": false
+#>       }
+#>     }
+#>   },
+#>   "required": [
+#>     "id",
+#>     "items"
+#>   ],
+#>   "additionalProperties": false
+#> }
+```
+
+### 🔎 Inspecting typed variables
+
+``` r
+age %:% Numeric %<-% 30
+type_of(age)
+#> <type: numeric >
+
+backup_age %:% type_of(age) %<-% 31   # reuse a variable's type
+
+untype(age)   # back to a regular variable
+age <- "no longer checked"
+```
+
 ## 🔍 Type inference
 
 You can automatically infer the type for an R object using
@@ -589,6 +958,11 @@ Controls how typed assignments (`%:%` and `%<-%`) behave.
   - Typed variables are implemented as active bindings  
   - All assignments are validated against their declared type  
   - Type violations result in immediate errors
+- **`"warn"`**  
+  Reports type violations as warnings instead of errors and keeps the
+  assigned value. Useful when adding sicher to existing code: you see
+  every violation without breaking anything. Applies to typed variables
+  and typed functions (`Readonly()` is still enforced).
 - **`"off"`**  
   Disables the type system entirely.
   - Typed annotations are ignored  
@@ -632,6 +1006,14 @@ options(sicher.mode = "on") # this is the default
     and variables behave like regular R objects.
 
 ### Example
+
+``` r
+options(sicher.mode = "warn")
+my_var_w %:% Numeric %<-% "10"   # warns, but assigns
+#> Warning: Type error in 'my_var_w': Expected numeric, got string
+#> Received: 10
+options(sicher.mode = "on")
+```
 
 ``` r
 my_var_x %:% Numeric %<-% 10   # validated and bound with type enforcement

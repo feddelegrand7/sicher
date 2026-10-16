@@ -125,7 +125,16 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sicher-0.1.2" id="toc-sicher-0.1.2" class="nav-link active" data-scroll-target="#sicher-0.1.2">sicher 0.1.2</a></li>
+  <li><a href="#sicher-0.2.0" id="toc-sicher-0.2.0" class="nav-link active" data-scroll-target="#sicher-0.2.0">sicher 0.2.0</a>
+  <ul class="collapse">
+  <li><a href="#validating-data" id="toc-validating-data" class="nav-link" data-scroll-target="#validating-data">Validating data</a></li>
+  <li><a href="#better-error-messages" id="toc-better-error-messages" class="nav-link" data-scroll-target="#better-error-messages">Better error messages</a></li>
+  <li><a href="#new-types" id="toc-new-types" class="nav-link" data-scroll-target="#new-types">New types</a></li>
+  <li><a href="#new-modifiers" id="toc-new-modifiers" class="nav-link" data-scroll-target="#new-modifiers">New modifiers</a></li>
+  <li><a href="#object-utilities" id="toc-object-utilities" class="nav-link" data-scroll-target="#object-utilities">Object utilities</a></li>
+  <li><a href="#typed-variables-and-functions" id="toc-typed-variables-and-functions" class="nav-link" data-scroll-target="#typed-variables-and-functions">Typed variables and functions</a></li>
+  <li><a href="#other-changes" id="toc-other-changes" class="nav-link" data-scroll-target="#other-changes">Other changes</a></li>
+  </ul></li>
   <li><a href="#sicher-0.1.1" id="toc-sicher-0.1.1" class="nav-link" data-scroll-target="#sicher-0.1.1">sicher 0.1.1</a></li>
   <li><a href="#sicher-0.1.0" id="toc-sicher-0.1.0" class="nav-link" data-scroll-target="#sicher-0.1.0">sicher 0.1.0</a></li>
   </ul>
@@ -137,20 +146,90 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="sicher-0.1.2" class="level1">
-<h1>sicher 0.1.2</h1>
+<section id="sicher-0.2.0" class="level1">
+<h1>sicher 0.2.0</h1>
+<section id="validating-data" class="level2">
+<h2 class="anchored" data-anchor-id="validating-data">Validating data</h2>
 <ul>
-<li>Adding <code>NonNA()</code> modifier — rejects any value that contains at least one <code>NA</code>.</li>
-<li>Adding <code>Between(min, max)</code> — closed-interval numeric range constraint.</li>
-<li>Adding <code>Matches(pattern)</code> — PCRE regex-constrained string type.</li>
-<li>Adding <code>NonEmpty()</code> modifier — rejects zero-length vectors, lists, and zero-row data frames.</li>
+<li>New <code>is_type(value, type)</code>: returns <code>TRUE</code>/<code>FALSE</code> and never throws for invalid data.</li>
+<li>New <code>parse_as(value, type)</code>: returns the parsed value or throws.</li>
+<li>New <code>safe_parse(value, type)</code>: returns a <code>sicher_parse_result</code> with <code>success</code>, <code>data</code>, <code>issues</code> (a data frame with <code>path</code>, <code>message</code>, <code>expected</code>, <code>got</code> and <code>code</code>) and <code>error</code>.</li>
+<li>New <code>validate_json(json, type)</code>: parses JSON with jsonlite and checks the result in one step (<code>safe = TRUE</code> returns a <code>safe_parse()</code> result).</li>
+<li>New <code>to_json_schema(type)</code>: exports a type as a JSON Schema (draft 2020-12) list, or as a JSON string with <code>json = TRUE</code>.</li>
 </ul>
+</section>
+<section id="better-error-messages" class="level2">
+<h2 class="anchored" data-anchor-id="better-error-messages">Better error messages</h2>
+<ul>
+<li>Errors now report <strong>every</strong> problem instead of stopping at the first one, and each problem includes its full location, for example <code>todos[[2]]$title</code> or <code>users$id</code>. <code>ListOf()</code> errors now say which element failed.</li>
+<li>Missing fields and unexpected fields in list and data frame types are reported once per field, e.g.&nbsp;<code>Type error in 'person$age': Missing required field (expected numeric)</code>.</li>
+<li>Type errors are now conditions of class <code>sicher_type_error</code> with an <code>issues</code> element, so they can be caught with <code>tryCatch(..., sicher_type_error = function(e) e$issues)</code>.</li>
+<li>Using a type factory without calling it (e.g.&nbsp;<code>Factor</code> instead of <code>Factor()</code>) now gives a hint.</li>
+</ul>
+</section>
+<section id="new-types" class="level2">
+<h2 class="anchored" data-anchor-id="new-types">New types</h2>
+<ul>
+<li><code>Tuple(...)</code>: fixed-length lists with a type per position.</li>
+<li><code>Record(keys, values)</code>: named lists or named vectors with arbitrary keys (<code>Record&lt;K, V&gt;</code>, <code>z.record()</code>).</li>
+<li><code>DiscriminatedUnion(key, ...)</code>: tagged unions where the <code>key</code> field picks the member to check, so errors point at the right fields (<code>z.discriminatedUnion()</code>).</li>
+<li><code>Lazy(fn)</code>: recursive types such as trees (<code>z.lazy()</code>).</li>
+<li><code>InstanceOf(class)</code>: objects inheriting from an S3, S4 or R6 class (<code>z.instanceof()</code>).</li>
+<li><code>Brand(type, brand)</code> and <code>brand(value, type)</code>: nominal types, so a <code>UserId</code> cannot be used where an <code>OrderId</code> is expected.</li>
+<li><code>FunctionOf(params, .return)</code>: function signatures. Checked functions are wrapped with <code>typed_function()</code>, so their later calls are checked too.</li>
+<li><code>Factor(levels)</code>, <code>Date</code>, <code>DateTime</code>, <code>Environment</code> and <code>MatrixOf(type, nrow, ncol)</code> for common R objects. <code>MatrixOf</code> is named so it does not clash with the Matrix package.</li>
+<li><code>Positive</code>, <code>NonNegative</code> and <code>Whole</code> numeric types.</li>
+<li>Intersection operator <code>&amp;</code>. Two list types (or two data frame types) are merged into one type with the fields of both; any other combination must satisfy both sides.</li>
+</ul>
+</section>
+<section id="new-modifiers" class="level2">
+<h2 class="anchored" data-anchor-id="new-modifiers">New modifiers</h2>
+<ul>
+<li><code>Refine(type, predicate, message)</code>: adds a custom rule with a custom error message on top of a type.</li>
+<li><code>MinLength(type, n)</code>, <code>MaxLength(type, n)</code> and <code>Unique(type)</code>. Lengths are counted with <code>length()</code> (<code>nrow()</code> for data frames), like <code>NonEmpty()</code> and <code>[n]</code>.</li>
+<li><code>Nullable(type)</code>: like <code>Optional()</code>, but inside list and data frame types the field must be present (<code>field: T | null</code> versus <code>field?: T</code>).</li>
+<li><code>Default(type, value)</code>: replaces <code>NULL</code> with a default and fills in missing list fields.</li>
+<li><code>Coerce(type, using = NULL)</code>: converts values before checking them, for example <code>"42"</code> to <code>42</code>. A conversion that would introduce <code>NA</code> is reported as an error.</li>
+</ul>
+</section>
+<section id="object-utilities" class="level2">
+<h2 class="anchored" data-anchor-id="object-utilities">Object utilities</h2>
+<ul>
+<li><code>Pick()</code>, <code>Omit()</code>, <code>Partial()</code>, <code>Required()</code> and <code>KeyOf()</code> derive new schemas from list and data frame types.</li>
+<li><code>create_list_type()</code> and <code>create_dataframe_type()</code> gain an <code>extra</code> argument: <code>"error"</code> (default, unchanged behaviour), <code>"allow"</code> to keep unknown fields, or <code>"drop"</code> to remove them.</li>
+<li><code>extend()</code> now also works on data frame types and keeps the base type’s <code>extra</code> setting.</li>
+</ul>
+</section>
+<section id="typed-variables-and-functions" class="level2">
+<h2 class="anchored" data-anchor-id="typed-variables-and-functions">Typed variables and functions</h2>
+<ul>
+<li>Typed variables and <code>typed_function()</code> arguments and return values now store the <em>parsed</em> value. This only makes a difference for types that transform values (<code>Default()</code>, <code>Coerce()</code>, <code>extra = "drop"</code>, <code>FunctionOf()</code>); for every other type the stored value is exactly the assigned one.</li>
+<li>New <code>type_of(x)</code> returns the declared type of a typed variable (<code>NULL</code> for regular variables), so one variable’s type can be reused for another: <code>y %:% type_of(x) %&lt;-% value</code>.</li>
+<li>New <code>untype(x)</code> turns a typed variable back into a regular variable.</li>
+<li>New <code>sicher.mode = "warn"</code> option: type violations are reported as warnings and the assigned value is kept, which helps when adding sicher to existing code. <code>Readonly()</code> is still enforced.</li>
+</ul>
+</section>
+<section id="other-changes" class="level2">
+<h2 class="anchored" data-anchor-id="other-changes">Other changes</h2>
+<ul>
+<li><code>Scalar()</code> now also accepts union types.</li>
+<li><code>infer_type()</code> now infers <code>Factor()</code>, <code>Date</code> and <code>DateTime</code> instead of <code>Any</code>.</li>
+<li>Union type names are built from their members, so unions that contain intersections or other unions print correctly.</li>
+<li>Readonly types now have a print method (<code>&lt;type: readonly&lt;string&gt; &gt;</code>).</li>
+<li>The package now declares <code>R (&gt;= 4.0.0)</code> (needed for <code>type_of()</code>) and imports <code>methods</code> (used by <code>InstanceOf()</code> for S4 classes). jsonlite is suggested for <code>validate_json()</code> and <code>to_json_schema(json = TRUE)</code>.</li>
+<li>The hex logo was removed from the README and the website.</li>
+</ul>
+</section>
 </section>
 <section id="sicher-0.1.1" class="level1">
 <h1>sicher 0.1.1</h1>
 <ul>
 <li>Adding the <code>Literal</code> type check</li>
 <li>Adding the <code>extend</code> method to extend a preexisting <code>list</code> schema.</li>
+<li>Adding <code>NonNA()</code> modifier — rejects any value that contains at least one <code>NA</code>.</li>
+<li>Adding <code>Between(min, max)</code> — closed-interval numeric range constraint.</li>
+<li>Adding <code>Matches(pattern)</code> — PCRE regex-constrained string type.</li>
+<li>Adding <code>NonEmpty()</code> modifier — rejects zero-length vectors, lists, and zero-row data frames.</li>
 </ul>
 </section>
 <section id="sicher-0.1.0" class="level1">

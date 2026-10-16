@@ -186,6 +186,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
   <li><a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">Basic Usage</a></li>
+  <li><a href="#validating-data-without-typed-variables" id="toc-validating-data-without-typed-variables" class="nav-link" data-scroll-target="#validating-data-without-typed-variables">Validating Data Without Typed Variables</a></li>
   </ul></li>
   <li><a href="#error-examples" id="toc-error-examples" class="nav-link" data-scroll-target="#error-examples">Error Examples</a></li>
   <li><a href="#global-options" id="toc-global-options" class="nav-link" data-scroll-target="#global-options">Global Options</a>
@@ -204,10 +205,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<p><a><img src="man/figures/sicher_logo.png" align="right" height="400" width="400"></a></p>
 <section id="what-is-sicher" class="level2">
 <h2 class="anchored" data-anchor-id="what-is-sicher">What is sicher?</h2>
-<p><strong>sicher</strong> (German for <em>safe</em> or <em>certain</em> and pronounced <em>zeesher</em>) is an R package that brings type safety to R programming, using a Typescript similar syntax. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.</p>
+<p><strong>sicher</strong> (German for <em>safe</em> or <em>certain</em> and pronounced <em>zeesher</em>) is an R package that brings type safety to R programming. It allows you to define types for your variables and enforce them at runtime, catching type errors early and making your code more robust and maintainable.</p>
 <p><strong>sicher</strong> implements runtime type safety in R by attaching types to variables via active bindings rather than traditional attributes or classes. When a variable is declared with a type (e.g., <code>x %:% Numeric %&lt;-% 5</code>), it is replaced by an active binding that wraps the value inside a closure with a private environment storing both the value and its associated type.</p>
 <p>Every read and write to the variable is intercepted: reads return the stored value, while writes trigger validation through the type’s checker function before updating. This design provides strong guarantees that values cannot violate their declared types, enabling expressive and composable type definitions (including unions, structured lists, and data frame schemas).</p>
 <section id="key-features" class="level3">
@@ -218,9 +218,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Rich Type System</strong>: Support for primitives, lists, data frames, unions, and more</li>
 <li><strong>Schema Extension</strong>: Build larger structured list types from smaller reusable ones with <code>extend()</code></li>
 <li><strong>Enum Types</strong>: Restrict variables to a fixed set of allowed values with <code>Enum(...)</code></li>
-<li><strong>Literal Types</strong>: Model exact TypeScript-style scalar literals with <code>Literal(...)</code></li>
+<li><strong>Literal Types</strong>: Model exact scalar literals with <code>Literal(...)</code></li>
 <li><strong>Typed Functions</strong>: Enforce parameter and return types on any function with <code>typed_function()</code></li>
-<li><strong>Constraint Modifiers</strong>: <code>NonNA()</code>, <code>Between()</code>, <code>Matches()</code>, <code>NonEmpty()</code> for value-level constraints</li>
+<li><strong>Constraint Modifiers</strong>: <code>NonNA()</code>, <code>Between()</code>, <code>Matches()</code>, <code>NonEmpty()</code>, <code>MinLength()</code>, <code>MaxLength()</code>, <code>Unique()</code> and <code>Refine()</code> for value-level constraints</li>
+<li><strong>Advanced Type Shapes</strong>: Intersections (<code>&amp;</code>), tuples, records, discriminated unions, recursive, branded and function types</li>
+<li><strong>Object Utilities</strong>: Derive schemas with <code>Pick()</code>, <code>Omit()</code>, <code>Partial()</code>, <code>Required()</code> and <code>KeyOf()</code></li>
+<li><strong>Data Validation</strong>: Check data without typed variables using <code>is_type()</code>, <code>parse_as()</code>, <code>safe_parse()</code> and <code>validate_json()</code>, and export types with <code>to_json_schema()</code></li>
+<li><strong>Transforming Types</strong>: Fill in defaults with <code>Default()</code> and convert values with <code>Coerce()</code></li>
+<li><strong>Detailed Errors</strong>: Every problem is reported at once, with its location (e.g.&nbsp;<code>todos[[2]]$title</code>)</li>
 <li><strong>Zero Runtime Overhead</strong>: Types are checked only during assignment</li>
 <li><strong>Gradual Adoption</strong>: Add types incrementally to existing code</li>
 </ul>
@@ -400,7 +405,7 @@ $completed
 <span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> invalid_response</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'completed': Expected bool, got string
+<pre><code>Error: Type error in 'response$completed': Expected bool, got string
 Received: yes</code></pre>
 </div>
 </div>
@@ -414,9 +419,9 @@ Received: yes</code></pre>
 <span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> invalid_response</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected {userId: numeric, id: numeric, title: string, completed: bool}, got list
-Details: Missing required field(s): completed (expected fields: userId, id, title, completed)
-Received: list with fields: [userId, id, title, new_name_not_recognized]</code></pre>
+<pre><code>Error: 2 type errors found:
+  * Type error in 'response$completed': Missing required field (expected bool)
+  * Type error in 'response$new_name_not_recognized': Unexpected field (valid fields: userId, id, title, completed)</code></pre>
 </div>
 </div>
 <p>The above URL returns only 1 object back, if we use the following URL <code>https://jsonplaceholder.typicode.com/todos/</code> we get several (200) json objects back:</p>
@@ -454,8 +459,8 @@ $completed
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>invalid_list <span class="ot">&lt;-</span> full_response[[<span class="dv">1</span>]]<span class="sc">$</span>userId <span class="ot">&lt;-</span> <span class="st">"A string"</span> <span class="co"># Invalid type</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'full_response': Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list of length 200
-Received: list of length 200</code></pre>
+<pre><code>Error: Type error in 'full_response[[1]]$userId': Expected numeric, got string
+Received: A string</code></pre>
 </div>
 </div>
 <section id="data-frame-schemas" class="level3">
@@ -481,7 +486,7 @@ Received: list of length 200</code></pre>
 <span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a>validated_sales <span class="sc">%:%</span> SalesData <span class="sc">%&lt;-%</span> sales_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'quantity': Expected integer, got double of length 2
+<pre><code>Error: Type error in 'validated_sales$quantity': Expected integer, got double of length 2
 Received: [10, 5]</code></pre>
 </div>
 </div>
@@ -504,8 +509,10 @@ Received: [10, 5]</code></pre>
 <h3 class="anchored" data-anchor-id="built-in-types">Built-in Types</h3>
 <ul>
 <li><strong>Primitives</strong>: <code>Integer</code>, <code>Double</code>, <code>Numeric</code>, <code>String</code>, <code>Bool</code></li>
-<li><strong>Containers</strong>: <code>List</code>, <code>DataFrame</code>, <code>Function</code></li>
-<li><strong>Special</strong>: <code>Any</code>, <code>Null</code></li>
+<li><strong>Containers</strong>: <code>List</code>, <code>DataFrame</code>, <code>Function</code>, <code>Environment</code></li>
+<li><strong>Dates and factors</strong>: <code>Date</code>, <code>DateTime</code>, <code>Factor(levels)</code></li>
+<li><strong>Numeric rules</strong>: <code>Positive</code>, <code>NonNegative</code>, <code>Whole</code></li>
+<li><strong>Special</strong>: <code>Any</code>, <code>Null</code>, <code>InstanceOf(class)</code>, <code>MatrixOf(type, nrow, ncol)</code></li>
 </ul>
 </section>
 <section id="enum-types" class="level3">
@@ -518,7 +525,7 @@ Received: [10, 5]</code></pre>
 </section>
 <section id="literal-types" class="level3">
 <h3 class="anchored" data-anchor-id="literal-types">Literal Types</h3>
-<p>Use <code>Literal(...)</code> when you want TypeScript-style exact scalar values:</p>
+<p>Use <code>Literal(...)</code> when you want exact scalar values:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>direction <span class="sc">%:%</span> <span class="fu">Literal</span>(<span class="st">"left"</span>, <span class="st">"right"</span>) <span class="sc">%&lt;-%</span> <span class="st">"left"</span></span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>http_status <span class="sc">%:%</span> <span class="fu">Literal</span>(<span class="dv">200</span>, <span class="dv">404</span>) <span class="sc">%&lt;-%</span> <span class="dv">200</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -534,6 +541,12 @@ Received: [10, 5]</code></pre>
 <li><strong>Between(min, max)</strong>: Numeric closed-interval range constraint</li>
 <li><strong>Matches(pattern)</strong>: Regex-constrained character vectors</li>
 <li><strong>NonEmpty</strong>: Rejects zero-length vectors, lists, and zero-row data frames</li>
+<li><strong>Nullable</strong>: Field must be present but may be <code>NULL</code></li>
+<li><strong>MinLength(type, n) / MaxLength(type, n)</strong>: Bound the number of elements</li>
+<li><strong>Unique</strong>: Rejects duplicated elements</li>
+<li><strong>Refine(type, predicate, message)</strong>: Adds a custom rule</li>
+<li><strong>Default(type, value)</strong>: Replaces <code>NULL</code> or a missing field with a default</li>
+<li><strong>Coerce(type)</strong>: Converts values (e.g.&nbsp;<code>"42"</code> to <code>42</code>) before checking</li>
 </ul>
 </section>
 <section id="advanced-types" class="level3">
@@ -547,6 +560,15 @@ Received: [10, 5]</code></pre>
 <li><strong>Data frame types</strong>: Column type specifications</li>
 <li><strong>Homogeneous lists</strong>: <code>ListOf(ElementType)</code></li>
 <li><strong>Typed functions</strong>: <code>typed_function(fn, params, .return)</code></li>
+<li><strong>Intersections</strong>: <code>TypeA &amp; TypeB</code></li>
+<li><strong>Tuples and records</strong>: <code>Tuple(String, Numeric)</code>, <code>Record(String, Numeric)</code></li>
+<li><strong>Tagged unions</strong>: <code>DiscriminatedUnion("kind", circle = Circle, square = Square)</code></li>
+<li><strong>Recursive types</strong>: <code>Lazy(function() Tree)</code></li>
+<li><strong>Branded types</strong>: <code>Brand(String, "UserId")</code> with <code>brand()</code></li>
+<li><strong>Function signatures</strong>: <code>FunctionOf(list(x = Numeric), .return = String)</code></li>
+<li><strong>Object utilities</strong>: <code>Pick()</code>, <code>Omit()</code>, <code>Partial()</code>, <code>Required()</code>, <code>KeyOf()</code></li>
+<li><strong>Validation</strong>: <code>is_type()</code>, <code>parse_as()</code>, <code>safe_parse()</code>, <code>validate_json()</code>, <code>to_json_schema()</code></li>
+<li><strong>Typed variable helpers</strong>: <code>type_of(x)</code> returns a variable’s declared type, <code>untype(x)</code> removes it</li>
 </ul>
 </section>
 </section>
@@ -580,7 +602,7 @@ Received: [10, 5]</code></pre>
 <span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 3b. Restrict values with enums</span></span>
 <span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>status <span class="sc">%:%</span> <span class="fu">Enum</span>(<span class="st">"draft"</span>, <span class="st">"published"</span>, <span class="st">"archived"</span>) <span class="sc">%&lt;-%</span> <span class="st">"draft"</span></span>
 <span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 3c. TypeScript-style literal values</span></span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 3c. Literal values</span></span>
 <span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>direction <span class="sc">%:%</span> <span class="fu">Literal</span>(<span class="st">"left"</span>, <span class="st">"right"</span>) <span class="sc">%&lt;-%</span> <span class="st">"left"</span></span>
 <span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Create structured types</span></span>
@@ -612,34 +634,59 @@ Received: [10, 5]</code></pre>
 </div>
 <p>If a field in <code>extra</code> has the same name as one in the base type, the new definition wins and <code>extend()</code> warns so the override is not silent.</p>
 </section>
+<section id="validating-data-without-typed-variables" class="level3">
+<h3 class="anchored" data-anchor-id="validating-data-without-typed-variables">Validating Data Without Typed Variables</h3>
+<p><code>safe_parse()</code> checks a value and returns every problem instead of throwing, which is handy for validating input such as API responses:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>Todo <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Numeric, <span class="at">title =</span> String, <span class="at">done =</span> Bool))</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">safe_parse</span>(</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Buy milk"</span>, <span class="at">done =</span> <span class="cn">FALSE</span>), <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>)),</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ListOf</span>(Todo)</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>success</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] FALSE</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>issues</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         path                                message expected     got
+1    [[2]]$id           Expected numeric, got string  numeric  string
+2 [[2]]$title            Expected string, got double   string  double
+3  [[2]]$done Missing required field (expected bool)     bool missing
+           code
+1  invalid_type
+2  invalid_type
+3 missing_field</code></pre>
+</div>
+</div>
+</section>
 </section>
 <section id="error-examples" class="level2">
 <h2 class="anchored" data-anchor-id="error-examples">Error Examples</h2>
 <p>See how sicher catches type errors:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong type assignment</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong type assignment</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"text"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: text</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required fields</span></span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>User <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>user <span class="sc">%:%</span> User <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)  <span class="co"># Missing age</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required fields</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>User <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>user <span class="sc">%:%</span> User <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)  <span class="co"># Missing age</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected {name: string, age: numeric}, got list
-Details: Missing required field(s): age (expected fields: name, age)
-Received: list with fields: [name]</code></pre>
+<pre><code>Error: Type error in 'user$age': Missing required field (expected numeric)</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong data frame column types</span></span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>Table <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Integer, <span class="at">name =</span> String))</span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%:%</span> Table <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(<span class="at">id =</span> <span class="fu">c</span>(<span class="st">"1"</span>, <span class="st">"2"</span>), <span class="at">name =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>))  <span class="co"># id should be integer</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong data frame column types</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>Table <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Integer, <span class="at">name =</span> String))</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%:%</span> Table <span class="sc">%&lt;-%</span> <span class="fu">data.frame</span>(<span class="at">id =</span> <span class="fu">c</span>(<span class="st">"1"</span>, <span class="st">"2"</span>), <span class="at">name =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>))  <span class="co"># id should be integer</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'id': Expected integer, got string of length 2
+<pre><code>Error: Type error in 'df$id': Expected integer, got string of length 2
 Received: [1, 2]</code></pre>
 </div>
 </div>
@@ -662,6 +709,15 @@ Enables full runtime type enforcement.
 </li>
 <li>Type violations result in immediate errors</li>
 </ul></li>
+<li><strong><code>"warn"</code></strong><br>
+Reports type violations as warnings and keeps the assigned value.
+<ul>
+<li>Useful when adding sicher to existing code<br>
+</li>
+<li>Applies to typed variables and typed functions<br>
+</li>
+<li><code>Readonly()</code> is still enforced</li>
+</ul></li>
 <li><strong><code>"off"</code></strong><br>
 Disables the type system entirely.
 <ul>
@@ -680,11 +736,15 @@ Disables the type system entirely.
 <h3 class="anchored" data-anchor-id="how-to-set-options">How to set options</h3>
 <p>You can configure the mode globally, for example, disabling strict type checking with:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Report type violations as warnings while keeping the assigned value with:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"warn"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Or enable strict typing with:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>) <span class="co"># this is the default</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>) <span class="co"># this is the default</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="when-to-use-each-mode" class="level3">
@@ -696,6 +756,11 @@ Disables the type system entirely.
 <li>Data validation pipelines</li>
 <li>Production systems where type guarantees are desired</li>
 <li>APIs or functions expecting structured inputs In this mode, sicher actively enforces types at runtime and prevents invalid assignments.</li>
+</ul></li>
+<li><strong><code>"warn"</code></strong> <strong>(gradual adoption mode)</strong> Use when adding sicher to existing code:
+<ul>
+<li>Find type violations in a working codebase without breaking it</li>
+<li>Log problems in production while you fix them In this mode, violations are reported as warnings and the assigned value is kept. <code>Readonly()</code> is still enforced.</li>
 </ul></li>
 <li><strong><code>"off"</code></strong> <strong>(disabled mode)</strong> Use when you want to bypass the type system entirely:
 <ul>
@@ -709,28 +774,28 @@ Disables the type system entirely.
 <section id="example" class="level3">
 <h3 class="anchored" data-anchor-id="example">Example</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span>   <span class="co"># validated and bound with type enforcement</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>my_var_x <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># trigger an error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'my_var_x': Expected numeric, got string
 Received: string</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
-<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span> </span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span> <span class="co"># nothing happens</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>It can also be temporarily scoped:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>),</span>
-<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>  {</span>
-<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
-<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span></span>
-<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">sicher.mode =</span> <span class="st">"off"</span>),</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  {</span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>    my_var_y <span class="ot">&lt;-</span> <span class="st">"string"</span></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 
 

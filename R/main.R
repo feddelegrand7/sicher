@@ -98,7 +98,7 @@ create_type <- function(name, checker) {
 #' A type that checks for integer vectors.
 #'
 #' @export
-Integer <- create_type("integer", is.integer)
+Integer <- with_meta(create_type("integer", is.integer), kind = "integer", coerce = as.integer)
 
 #' Built-in Double Type
 #'
@@ -106,7 +106,7 @@ Integer <- create_type("integer", is.integer)
 #' A type that checks for double-precision numeric vectors.
 #'
 #' @export
-Double <- create_type("double", is.double)
+Double <- with_meta(create_type("double", is.double), kind = "double", coerce = as.double)
 
 #' Built-in Numeric Type
 #'
@@ -114,7 +114,7 @@ Double <- create_type("double", is.double)
 #' A type that checks for numeric vectors (integer or double).
 #'
 #' @export
-Numeric <- create_type("numeric", is.numeric)
+Numeric <- with_meta(create_type("numeric", is.numeric), kind = "numeric", coerce = as.numeric)
 
 #' Built-in String Type
 #'
@@ -122,7 +122,7 @@ Numeric <- create_type("numeric", is.numeric)
 #' A type that checks for character vectors.
 #'
 #' @export
-String <- create_type("string", is.character)
+String <- with_meta(create_type("string", is.character), kind = "string", coerce = as.character)
 
 #' Built-in Boolean Type
 #'
@@ -130,7 +130,7 @@ String <- create_type("string", is.character)
 #' A type that checks for logical vectors.
 #'
 #' @export
-Bool <- create_type("bool", is.logical)
+Bool <- with_meta(create_type("bool", is.logical), kind = "bool", coerce = as.logical)
 
 #' Built-in List Type
 #'
@@ -138,7 +138,7 @@ Bool <- create_type("bool", is.logical)
 #' A type that checks for list objects.
 #'
 #' @export
-List <- create_type("list", is.list)
+List <- with_meta(create_type("list", is.list), kind = "list_any", coerce = as.list)
 
 #' Create a homogeneous list type
 #'
@@ -178,16 +178,25 @@ ListOf <- function(element_type) {
       "Example: ListOf(String) or ListOf(create_list_type(list(id = Numeric)))"
     ), call. = FALSE)
   }
-  create_type(
-    glue::glue("list<{element_type$name}>"),
-    function(x) {
-      if (!is.list(x)) return(FALSE)
-      # empty list is OK
-      if (length(x) == 0) return(TRUE)
-      all(vapply(x, function(el) {
-        tryCatch(check_type(el, element_type), error = function(e) FALSE)
-      }, logical(1)))
-    }
+  type_name <- glue::glue("list<{element_type$name}>")
+  new_parser_type(
+    type_name,
+    function(x, path) {
+      if (!is.list(x) || is.data.frame(x)) {
+        return(issue_result(x, plain_issue(x, type_name, path)))
+      }
+      issues <- list()
+      for (i in seq_along(x)) {
+        res <- run_type(x[[i]], element_type, c(path, list(i)))
+        issues <- c(issues, res$issues)
+        if (length(res$issues) == 0 && !identical(res$value, x[[i]])) {
+          x[i] <- list(res$value)
+        }
+      }
+      list(value = x, issues = issues)
+    },
+    meta = list(kind = "list_of", inner = element_type),
+    strict_check = "never"
   )
 }
 
@@ -197,7 +206,7 @@ ListOf <- function(element_type) {
 #' A type that accepts any value.
 #'
 #' @export
-Any <- create_type("any", function(x) TRUE)
+Any <- with_meta(create_type("any", function(x) TRUE), kind = "any")
 
 #' Built-in Null Type
 #'
@@ -205,7 +214,7 @@ Any <- create_type("any", function(x) TRUE)
 #' A type that checks for NULL values.
 #'
 #' @export
-Null <- create_type("null", is.null)
+Null <- with_meta(create_type("null", is.null), kind = "null")
 
 #' Built-in Function Type
 #'
@@ -213,7 +222,7 @@ Null <- create_type("null", is.null)
 #' A type that checks for function objects.
 #'
 #' @export
-Function <- create_type("Function", is.function)
+Function <- with_meta(create_type("Function", is.function), kind = "function_any")
 
 #' Built-in DataFrame Type
 #'
@@ -221,7 +230,7 @@ Function <- create_type("Function", is.function)
 #' A type that checks for data.frame objects.
 #'
 #' @export
-DataFrame <- create_type("data.frame", is.data.frame)
+DataFrame <- with_meta(create_type("data.frame", is.data.frame), kind = "data.frame_any", coerce = as.data.frame)
 
 format_enum_value <- function(value) {
   if (is.character(value)) {
@@ -303,19 +312,22 @@ Enum <- function(...) {
     "enum[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
   )
 
-  create_type(
-    type_name,
-    function(x) {
-      if (!is.atomic(x) || !is.null(dim(x))) {
-        return(FALSE)
-      }
+  with_meta(
+    create_type(
+      type_name,
+      function(x) {
+        if (!is.atomic(x) || !is.null(dim(x))) {
+          return(FALSE)
+        }
 
-      all(vapply(as.list(x), function(value) {
-        any(vapply(allowed_values, function(allowed) {
-          enum_value_matches(value, allowed)
+        all(vapply(as.list(x), function(value) {
+          any(vapply(allowed_values, function(allowed) {
+            enum_value_matches(value, allowed)
+          }, logical(1)))
         }, logical(1)))
-      }, logical(1)))
-    }
+      }
+    ),
+    kind = "enum", values = allowed_values
   )
 }
 
@@ -366,17 +378,20 @@ Literal <- function(...) {
     "literal[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
   )
 
-  create_type(
-    type_name,
-    function(x) {
-      if (!is.atomic(x) || !is.null(dim(x)) || length(x) != 1) {
-        return(FALSE)
-      }
+  with_meta(
+    create_type(
+      type_name,
+      function(x) {
+        if (!is.atomic(x) || !is.null(dim(x)) || length(x) != 1) {
+          return(FALSE)
+        }
 
-      any(vapply(allowed_values, function(allowed) {
-        literal_value_matches(x, allowed)
-      }, logical(1)))
-    }
+        any(vapply(allowed_values, function(allowed) {
+          literal_value_matches(x, allowed)
+        }, logical(1)))
+      }
+    ),
+    kind = "literal", values = allowed_values
   )
 }
 
@@ -408,9 +423,17 @@ Literal <- function(...) {
       "Size must be a non-negative integer (e.g. Numeric[3]), got {deparse(size)}"
     ), call. = FALSE)
   }
-  create_type(
-    glue::glue("{type$name}[{as.integer(size)}]"),
-    function(x) type$check(x) && length(x) == size
+  size <- as.integer(size)
+  type_name <- glue::glue("{type$name}[{size}]")
+  new_parser_type(
+    type_name,
+    function(x, path) {
+      if (length(x) != size) {
+        return(issue_result(x, plain_issue(x, type_name, path)))
+      }
+      delegate(x, type, path, type_name)
+    },
+    meta = list(kind = "sized", inner = type, size = size)
   )
 }
 
@@ -425,6 +448,12 @@ Literal <- function(...) {
 #' Similar to object types in TypeScript/JavaScript.
 #'
 #' @param type_spec A named list where names are field names and values are sicher_type objects
+#' @param extra What to do with fields that are not part of \code{type_spec}:
+#'   \code{"error"} (the default) rejects them, \code{"allow"} keeps them
+#'   unchecked, and \code{"drop"} removes them from the parsed value (similar
+#'   to zod's \code{.strict()}, \code{.passthrough()} and \code{.strip()}).
+#'   Typed variables and \code{\link{parse_as}()} store the parsed value, so
+#'   with \code{"drop"} unknown fields are silently removed.
 #'
 #' @return A sicher_type that validates list structure
 #'
@@ -447,7 +476,8 @@ Literal <- function(...) {
 #' )
 #'
 #' @export
-create_list_type <- function(type_spec) {
+create_list_type <- function(type_spec, extra = c("error", "allow", "drop")) {
+  extra <- match.arg(extra)
 
   if (!is.list(type_spec) || is.null(names(type_spec))) {
     stop(glue::glue(
@@ -466,8 +496,7 @@ create_list_type <- function(type_spec) {
   }
 
   for (i in seq_along(type_spec)) {
-    if (!inherits(type_spec[[i]], "sicher_type") &&
-        !inherits(type_spec[[i]], "sicher_union")) {
+    if (!is_sicher_type_like(type_spec[[i]])) {
       stop(glue::glue(
         "Field '{names(type_spec)[i]}' must be a sicher_type or sicher_union ",
         "(e.g. String, Numeric, Optional(Bool)); ",
@@ -476,50 +505,72 @@ create_list_type <- function(type_spec) {
     }
   }
 
-  field_names  <- names(type_spec)
-  is_optional  <- sapply(type_spec, function(t) {
-    if (inherits(t, "sicher_union")) {
-      any(sapply(t$types, function(ut) identical(ut, Null)))
-    } else {
-      FALSE
-    }
-  })
-  required_fields <- field_names[!is_optional]
-  type_labels     <- sapply(type_spec, function(t) t$name)
-  field_parts     <- glue::glue(
+  field_names <- names(type_spec)
+  is_optional <- vapply(type_spec, field_is_optional, logical(1))
+  type_labels <- vapply(type_spec, type_label, character(1))
+  field_parts <- glue::glue(
     "{field_names}{ifelse(is_optional, '?', '')}: {type_labels}"
   )
   type_name <- glue::glue("{{{paste(field_parts, collapse = ', ')}}}")
 
-  result <- create_type(
+  result <- new_parser_type(
     type_name,
-    function(x) {
-      if (!is.list(x)) return(FALSE)
-
-      if (!all(required_fields %in% names(x))) {
-        missing_fields <- setdiff(required_fields, names(x))
-        details <- glue::glue(
-          "Missing required field(s): {paste(missing_fields, collapse = ', ')} ",
-          "(expected fields: {paste(required_fields, collapse = ', ')})"
-        )
-        stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
+    function(x, path) {
+      if (!is.list(x)) {
+        return(issue_result(x, plain_issue(x, type_name, path)))
       }
 
-      present_fields <- names(x)
-      for (field in present_fields) {
-        if (field %in% field_names) {
-          if (!check_type(x[[field]], type_spec[[field]], context = field)) {
-            return(FALSE)
+      issues <- list()
+      present <- names(x)
+      if (is.null(present)) present <- character(0)
+
+      for (field in field_names) {
+        field_path <- c(path, list(field))
+        field_type <- type_spec[[field]]
+        if (field %in% present) {
+          res <- run_type(x[[field]], field_type, field_path)
+          issues <- c(issues, res$issues)
+          if (length(res$issues) == 0 && !identical(res$value, x[[field]])) {
+            x[field] <- list(res$value)
           }
         } else {
-          details <- glue::glue(
-            "Unexpected field: '{field}' (valid fields: {paste(field_names, collapse = ', ')})"
-          )
-          stop(type_error(NULL, type_name, "list", x, details), call. = FALSE)
+          default <- field_default(field_type)
+          if (default$has) {
+            x[field] <- list(default$value)
+          } else if (!field_is_optional(field_type)) {
+            issues <- c(issues, list(new_issue(
+              field_path,
+              glue::glue("Missing required field (expected {type_label(field_type)})"),
+              expected = type_label(field_type),
+              got = "missing",
+              code = "missing_field"
+            )))
+          }
         }
       }
-      TRUE
-    }
+
+      unknown <- setdiff(present, field_names)
+      if (length(unknown) > 0) {
+        if (extra == "error") {
+          for (field in unknown) {
+            issues <- c(issues, list(new_issue(
+              c(path, list(field)),
+              glue::glue(
+                "Unexpected field (valid fields: {paste(field_names, collapse = ', ')})"
+              ),
+              expected = "no field",
+              got = get_type_name(x[[field]]),
+              code = "unexpected_field"
+            )))
+          }
+        } else if (extra == "drop") {
+          x <- x[!(names(x) %in% unknown)]
+        }
+      }
+
+      list(value = x, issues = issues)
+    },
+    meta = list(kind = "list", spec = type_spec, extra = extra)
   )
 
   # Store the raw spec so extend() can retrieve it later.
@@ -584,12 +635,12 @@ extend <- function(base, extra) {
     ), call. = FALSE)
   }
 
-  base_spec <- attr(base, "sicher_spec")
+  base_spec <- object_spec(base)
 
   if (is.null(base_spec)) {
     stop(
       "`base` does not carry a field specification. ",
-      "Only types created with create_list_type() can be extended. ",
+      "Only types created with create_list_type() or create_dataframe_type() can be extended. ",
       "Primitive types (String, Numeric, ...) and custom create_type() types ",
       "cannot be used as a base for extend().",
       call. = FALSE
@@ -631,7 +682,7 @@ extend <- function(base, extra) {
     extra
   )
 
-  create_list_type(merged_spec)
+  rebuild_object_type(base, merged_spec)
 }
 
 #' Create a Data Frame Type with Column Specification
@@ -643,6 +694,9 @@ extend <- function(base, extra) {
 #'
 #' @param col_spec A named list where names are column names and values are
 #'   sicher_type or sicher_union objects describing the expected column type.
+#' @param extra What to do with columns that are not part of \code{col_spec}:
+#'   \code{"error"} (the default), \code{"allow"} or \code{"drop"}. See
+#'   \code{\link{create_list_type}()}.
 #'
 #' @return A sicher_type representing the data frame schema.
 #'
@@ -659,7 +713,9 @@ extend <- function(base, extra) {
 #' )
 #'
 #' @export
-create_dataframe_type <- function(col_spec) {
+create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop")) {
+  extra <- match.arg(extra)
+
   if (!is.list(col_spec) || is.null(names(col_spec))) {
     stop(glue::glue(
       "`col_spec` must be a named list mapping column names to types; ",
@@ -677,8 +733,7 @@ create_dataframe_type <- function(col_spec) {
 
   # Validate each column type specification
   for (i in seq_along(col_spec)) {
-    if (!inherits(col_spec[[i]], "sicher_type") &&
-        !inherits(col_spec[[i]], "sicher_union")) {
+    if (!is_sicher_type_like(col_spec[[i]])) {
       stop(glue::glue(
         "Column '{names(col_spec)[i]}' must be a sicher_type or sicher_union ",
         "(e.g. String, Numeric, Optional(Bool)); ",
@@ -688,57 +743,71 @@ create_dataframe_type <- function(col_spec) {
   }
 
   col_names <- names(col_spec)
-
-  is_optional <- sapply(col_spec, function(t) {
-    if (inherits(t, "sicher_union")) {
-      any(sapply(t$types, function(ut) identical(ut, Null)))
-    } else {
-      FALSE
-    }
-  })
-
-  required_cols <- col_names[!is_optional]
-  optional_cols <- col_names[is_optional]
-
-  type_labels <- sapply(col_spec, function(t) t$name)
+  is_optional <- vapply(col_spec, field_is_optional, logical(1))
+  type_labels <- vapply(col_spec, type_label, character(1))
   col_parts <- glue::glue("{col_names}{ifelse(is_optional, '?', '')}: {type_labels}")
   type_name <- glue::glue("data.frame{{{paste(col_parts, collapse = ', ')}}}")
 
-  create_type(
+  result <- new_parser_type(
     type_name,
-    function(x) {
-      if (!is.data.frame(x)) return(FALSE)
-
-      # check required columns exist
-      if (!all(required_cols %in% names(x))) {
-        missing_cols <- setdiff(required_cols, names(x))
-        details <- glue::glue(
-          "Missing required column(s): {paste(missing_cols, collapse = ', ')} ",
-          "(expected columns: {paste(required_cols, collapse = ', ')})"
-        )
-        stop(type_error(NULL, type_name, get_type_name(x), NULL, details), call. = FALSE)
+    function(x, path) {
+      if (!is.data.frame(x)) {
+        return(issue_result(x, plain_issue(x, type_name, path)))
       }
 
-      # no extra columns allowed
-      if (!all(names(x) %in% col_names)) {
-        extra_cols <- setdiff(names(x), col_names)
-        details <- glue::glue(
-          "Unexpected column(s): {paste(extra_cols, collapse = ', ')} ",
-          "(valid columns: {paste(col_names, collapse = ', ')})"
-        )
-        stop(type_error(NULL, type_name, get_type_name(x), NULL, details), call. = FALSE)
-      }
-
-      # check each column type
+      issues <- list()
       for (col in col_names) {
+        col_path <- c(path, list(col))
+        col_type <- col_spec[[col]]
         if (col %in% names(x)) {
-          check_type(x[[col]], col_spec[[col]], context = col)
+          res <- run_type(x[[col]], col_type, col_path)
+          issues <- c(issues, res$issues)
+          if (length(res$issues) == 0 && !is.null(res$value) &&
+              !identical(res$value, x[[col]])) {
+            x[[col]] <- res$value
+          }
+        } else {
+          default <- field_default(col_type)
+          if (default$has) {
+            x[[col]] <- rep_len(default$value, nrow(x))
+          } else if (!field_is_optional(col_type)) {
+            issues <- c(issues, list(new_issue(
+              col_path,
+              glue::glue("Missing required column (expected {type_label(col_type)})"),
+              expected = type_label(col_type),
+              got = "missing",
+              code = "missing_field"
+            )))
+          }
         }
       }
 
-      TRUE
-    }
+      unknown <- setdiff(names(x), col_names)
+      if (length(unknown) > 0) {
+        if (extra == "error") {
+          for (col in unknown) {
+            issues <- c(issues, list(new_issue(
+              c(path, list(col)),
+              glue::glue(
+                "Unexpected column (valid columns: {paste(col_names, collapse = ', ')})"
+              ),
+              expected = "no column",
+              got = get_type_name(x[[col]]),
+              code = "unexpected_field"
+            )))
+          }
+        } else if (extra == "drop") {
+          x <- x[, !(names(x) %in% unknown), drop = FALSE]
+        }
+      }
+
+      list(value = x, issues = issues)
+    },
+    meta = list(kind = "data.frame", spec = col_spec, extra = extra)
   )
+
+  attr(result, "sicher_spec") <- col_spec
+  result
 }
 
 #' Create a scalar (length-1) type variant
@@ -756,15 +825,22 @@ create_dataframe_type <- function(col_spec) {
 #'
 #' @export
 Scalar <- function(type) {
-  if (!inherits(type, "sicher_type")) {
+  if (!inherits(type, "sicher_type") && !inherits(type, "sicher_union")) {
     stop(glue::glue(
       "Scalar() requires a type argument (sicher_type, e.g. Scalar(Numeric) or Scalar(String)); ",
       "got {class(type)[1]}"
     ), call. = FALSE)
   }
-  create_type(
-    glue::glue("scalar<{type$name}>"),
-    function(x) length(x) == 1 && type$check(x)
+  type_name <- glue::glue("scalar<{type$name}>")
+  new_parser_type(
+    type_name,
+    function(x, path) {
+      if (length(x) != 1) {
+        return(issue_result(x, plain_issue(x, type_name, path)))
+      }
+      delegate(x, type, path, type_name)
+    },
+    meta = list(kind = "scalar", inner = type)
   )
 }
 
@@ -796,21 +872,27 @@ NonNA <- function(type) {
     ), call. = FALSE)
   }
   base_name <- type$name
-  create_type(
+  new_parser_type(
     glue::glue("non_na<{base_name}>"),
-    function(x) {
-      check_type(x, type)
-      if (anyNA(x)) {
-        stop(
+    function(x, path) {
+      res <- run_type(x, type, path)
+      if (length(res$issues) > 0) return(res)
+      if (anyNA(res$value)) {
+        return(issue_result(res$value, new_issue(
+          path,
           glue::glue(
-            "Type error: expected non_na<{base_name}> (no NA values), ",
+            "expected non_na<{base_name}> (no NA values), ",
             "but value contains NA(s)"
           ),
-          call. = FALSE
-        )
+          expected = glue::glue("non_na<{base_name}>"),
+          got = "NA",
+          code = "na_value"
+        )))
       }
-      TRUE
-    }
+      res
+    },
+    meta = list(kind = "non_na", inner = type),
+    strict_check = TRUE
   )
 }
 
@@ -853,38 +935,12 @@ Between <- function(min, max) {
   if (min > max) {
     stop(glue::glue("`min` ({min}) must be <= `max` ({max})"), call. = FALSE)
   }
-  type_name <- glue::glue("between[{min}, {max}]")
-  create_type(
-    type_name,
-    function(x) {
-      if (!is.numeric(x)) {
-        stop(type_error(NULL, type_name, get_type_name(x), x), call. = FALSE)
-      }
-      if (anyNA(x)) {
-        stop(
-          glue::glue(
-            "Type error: expected {type_name} (no NA values), ",
-            "but value contains NA(s)"
-          ),
-          call. = FALSE
-        )
-      }
-      out_of_range <- x[x < min | x > max]
-      if (length(out_of_range) > 0) {
-        preview <- paste(utils::head(out_of_range, 5), collapse = ", ")
-        if (length(out_of_range) > 5) preview <- paste0(preview, ", ...")
-        noun <- if (length(out_of_range) == 1) "value" else "values"
-        verb <- if (length(out_of_range) == 1) "is"    else "are"
-        stop(
-          glue::glue(
-            "Type error: expected {type_name}, ",
-            "but {noun} [{preview}] {verb} outside [{min}, {max}]"
-          ),
-          call. = FALSE
-        )
-      }
-      TRUE
-    }
+  numeric_rule_type(
+    glue::glue("between[{min}, {max}]"),
+    function(x) x >= min & x <= max,
+    glue::glue("outside [{min}, {max}]"),
+    glue::glue("outside [{min}, {max}]"),
+    meta = list(kind = "between", min = min, max = max, coerce = as.numeric)
   )
 }
 
@@ -931,19 +987,18 @@ Matches <- function(pattern) {
     )
   )
   type_name <- glue::glue("matches(\"{pattern}\")")
-  create_type(
+  new_parser_type(
     type_name,
-    function(x) {
+    function(x, path) {
       if (!is.character(x)) {
-        stop(type_error(NULL, type_name, get_type_name(x), x), call. = FALSE)
+        return(issue_result(x, plain_issue(x, type_name, path)))
       }
       if (anyNA(x)) {
-        stop(
-          glue::glue(
-            "Type error: expected {type_name}, but value contains NA(s)"
-          ),
-          call. = FALSE
-        )
+        return(issue_result(x, new_issue(
+          path,
+          glue::glue("expected {type_name}, but value contains NA(s)"),
+          expected = type_name, got = "NA", code = "na_value"
+        )))
       }
       failing <- x[!grepl(pattern, x, perl = TRUE)]
       if (length(failing) > 0) {
@@ -952,16 +1007,19 @@ Matches <- function(pattern) {
         if (length(failing) > 3) preview <- paste0(preview, ", ...")
         noun <- if (length(failing) == 1) "value" else "values"
         verb <- if (length(failing) == 1) "does"  else "do"
-        stop(
+        return(issue_result(x, new_issue(
+          path,
           glue::glue(
-            "Type error: expected {type_name}, ",
+            "expected {type_name}, ",
             "but {noun} [{preview}] {verb} not match the pattern"
           ),
-          call. = FALSE
-        )
+          expected = type_name, got = get_type_name(x), code = "invalid_string"
+        )))
       }
-      TRUE
-    }
+      ok_result(x)
+    },
+    meta = list(kind = "matches", pattern = pattern),
+    strict_check = TRUE
   )
 }
 
@@ -993,22 +1051,27 @@ NonEmpty <- function(type) {
     ), call. = FALSE)
   }
   base_name <- type$name
-  create_type(
+  new_parser_type(
     glue::glue("non_empty<{base_name}>"),
-    function(x) {
-      check_type(x, type)
-      n <- if (is.data.frame(x)) nrow(x) else length(x)
-      if (n == 0L) {
-        stop(
+    function(x, path) {
+      res <- run_type(x, type, path)
+      if (length(res$issues) > 0) return(res)
+      if (value_size(res$value) == 0L) {
+        return(issue_result(res$value, new_issue(
+          path,
           glue::glue(
-            "Type error: expected non_empty<{base_name}> (length > 0), ",
+            "expected non_empty<{base_name}> (length > 0), ",
             "but got an empty value"
           ),
-          call. = FALSE
-        )
+          expected = glue::glue("non_empty<{base_name}>"),
+          got = get_type_name(res$value),
+          code = "too_small"
+        )))
       }
-      TRUE
-    }
+      res
+    },
+    meta = list(kind = "min_length", inner = type, n = 1L),
+    strict_check = TRUE
   )
 }
 
@@ -1052,35 +1115,58 @@ Optional <- function(type) {
   create_union(type, Null)
 }
 
+#' Create a nullable type variant
+#'
+#' @description
+#' Creates a type that accepts \code{NULL} in addition to the base type, like
+#' \code{Optional()}. The difference shows up inside
+#' \code{\link{create_list_type}()} and \code{\link{create_dataframe_type}()}:
+#' an \code{Optional()} field may be left out entirely, while a
+#' \code{Nullable()} field must be present but may hold \code{NULL}. This
+#' mirrors the distinction between \code{field?: T} and
+#' \code{field: T | null} in TypeScript (zod's \code{.optional()} versus
+#' \code{.nullable()}).
+#'
+#' @param type A sicher_type or sicher_union object.
+#'
+#' @return A union type that includes Null and is marked as nullable.
+#'
+#' @examples
+#' Profile <- create_list_type(list(
+#'   name     = String,
+#'   nickname = Optional(String),  # may be missing
+#'   bio      = Nullable(String)   # must be present, may be NULL
+#' ))
+#'
+#' check_type(list(name = "Ann", bio = NULL), Profile)
+#' try(check_type(list(name = "Ann"), Profile))  # Error: 'bio' is missing
+#'
+#' @export
+Nullable <- function(type) {
+  check_type_arg(type, "Nullable")
+  result <- create_union(type, Null)
+  attr(result, "sicher_nullable") <- TRUE
+  result
+}
+
 # =============================================================================
 # Union Types
 # =============================================================================
 
 create_union <- function(type1, type2) {
-  types_list <- list()
-  names_list <- character()
-
-  if (inherits(type1, "sicher_union")) {
-    types_list <- type1$types
-    names_list <- strsplit(type1$name, " \\| ")[[1]]
-  } else if (inherits(type1, "sicher_type")) {
-    types_list <- list(type1)
-    names_list <- type1$name
-  } else if (is.null(type1)) {
-    types_list <- list(Null)
-    names_list <- "null"
+  union_members <- function(type) {
+    if (inherits(type, "sicher_union")) return(type$types)
+    if (inherits(type, "sicher_readonly")) return(list(type$base_type))
+    if (inherits(type, "sicher_type")) return(list(type))
+    if (is.null(type)) return(list(Null))
+    stop(glue::glue(
+      "Union members must be sicher types (e.g. String | Numeric); ",
+      "got {class(type)[1]}"
+    ), call. = FALSE)
   }
 
-  if (inherits(type2, "sicher_union")) {
-    types_list <- c(types_list, type2$types)
-    names_list <- c(names_list, strsplit(type2$name, " \\| ")[[1]])
-  } else if (inherits(type2, "sicher_type")) {
-    types_list <- c(types_list, list(type2))
-    names_list <- c(names_list, type2$name)
-  } else if (is.null(type2)) {
-    types_list <- c(types_list, list(Null))
-    names_list <- c(names_list, "null")
-  }
+  types_list <- c(union_members(type1), union_members(type2))
+  names_list <- vapply(types_list, function(t) t$name, character(1))
 
   structure(
     list(name = paste(names_list, collapse = " | "), types = types_list),
@@ -1107,6 +1193,43 @@ create_union <- function(type1, type2) {
 #' @export
 `|.sicher_union` <- function(type1, type2) create_union(type1, type2)
 
+#' Intersection Type Operator
+#'
+#' @description
+#' S3 methods for the \code{&} operator to create intersection types, like
+#' \code{A & B} in TypeScript. A value must satisfy both types.
+#'
+#' When both sides are structured list types (from
+#' \code{\link{create_list_type}()}) the result is a single list type that
+#' has the fields of both sides, so \code{Person & Timestamps} accepts a list
+#' with all of the fields. Fields present on both sides must satisfy both
+#' field types. When both sides are data frame types the columns are merged
+#' the same way. Any other combination produces a type that runs both checks.
+#'
+#' @param type1 First type (sicher_type or sicher_union object)
+#' @param type2 Second type (sicher_type or sicher_union object)
+#'
+#' @return A sicher_type
+#'
+#' @examples
+#' Named <- create_list_type(list(name = String))
+#' Aged  <- create_list_type(list(age = Numeric))
+#'
+#' person %:% (Named & Aged) %<-% list(name = "Ann", age = 31)
+#'
+#' # Combine a base type with a rule
+#' Score <- Numeric & Between(0, 100)
+#' check_type(42, Score)
+#'
+#' @name intersection-operator
+#' @aliases &.sicher_type &.sicher_union
+#' @export
+`&.sicher_type` <- function(type1, type2) create_intersection(type1, type2)
+
+#' @rdname intersection-operator
+#' @export
+`&.sicher_union` <- `&.sicher_type`
+
 # =============================================================================
 # Type Checking Engine
 # =============================================================================
@@ -1131,52 +1254,6 @@ get_type_name <- function(value) {
   }
 }
 
-type_error <- function(context = NULL, expected, got,
-                       value = NULL, details = NULL) {
-  base_msg <- if (is.null(context)) {
-    glue::glue("Type error: Expected {expected}, got {got}")
-  } else {
-    glue::glue("Type error in '{context}': Expected {expected}, got {got}")
-  }
-
-  if (!is.null(details)) {
-    base_msg <- glue::glue("{base_msg}\n  Details: {details}")
-  }
-
-  if (!is.null(value)) {
-    value_str <- tryCatch({
-      if (length(value) == 0) {
-        "(empty)"
-      } else if (is.list(value) && !is.data.frame(value)) {
-        fields <- names(value)
-        if (!is.null(fields) && length(fields) > 0) {
-          preview <- paste(utils::head(fields, 6), collapse = ", ")
-          if (length(fields) > 6) preview <- glue::glue("{preview}, ...")
-          glue::glue("list with fields: [{preview}]")
-        } else {
-          glue::glue("list of length {length(value)}")
-        }
-      } else if (is.data.frame(value)) {
-        col_preview <- paste(utils::head(names(value), 6), collapse = ", ")
-        if (ncol(value) > 6) col_preview <- glue::glue("{col_preview}, ...")
-        glue::glue("data.frame[{nrow(value)} x {ncol(value)}] with columns: [{col_preview}]")
-      } else if (length(value) == 1) {
-        as.character(value)
-      } else if (length(value) > 6) {
-        glue::glue(
-          "[{paste(utils::head(value, 6), collapse = ', ')}, ...] (length: {length(value)})"
-        )
-      } else {
-        glue::glue("[{paste(value, collapse = ', ')}]")
-      }
-    }, error = function(e) "<unprintable>")
-
-    base_msg <- glue::glue("{base_msg}\n  Received: {value_str}")
-  }
-
-  base_msg
-}
-
 #' Type Checking Function
 #'
 #' @description
@@ -1189,8 +1266,8 @@ type_error <- function(context = NULL, expected, got,
 #' @param context Optional character string describing where the check is occurring
 #'   (used in error messages)
 #'
-#' @return Returns `TRUE` invisibly if the value matches the type, otherwise
-#'   throws an error with a descriptive message.
+#' @return Returns `TRUE` if the value matches the type, otherwise throws an
+#'   error of class \code{"sicher_type_error"} with a descriptive message.
 #'
 #' @details
 #' This function:
@@ -1198,11 +1275,20 @@ type_error <- function(context = NULL, expected, got,
 #'   \item Checks if a value matches a type specification
 #'   \item Handles union types (checks if value matches any type in the union)
 #'   \item Handles readonly types (strips the readonly modifier before checking)
-#'   \item Provides detailed error messages when checks fail
+#'   \item Reports every problem it finds in nested lists, data frames and
+#'     \code{ListOf()} values, each with its location (e.g.
+#'     \code{todos[[2]]$title})
 #' }
 #'
+#' The condition thrown on failure has class \code{"sicher_type_error"} and an
+#' \code{issues} element holding the individual problems, so it can be
+#' caught with \code{tryCatch(..., sicher_type_error = function(e) e$issues)}.
+#' Use \code{\link{is_type}()} or \code{\link{safe_parse}()} for a check
+#' that does not throw.
+#'
 #' @seealso
-#' \code{\link{create_type}} for creating custom types
+#' \code{\link{create_type}} for creating custom types,
+#' \code{\link{is_type}}, \code{\link{safe_parse}}, \code{\link{parse_as}}
 #'
 #' @examples
 #' # Direct type checking
@@ -1218,53 +1304,11 @@ type_error <- function(context = NULL, expected, got,
 #'
 #' @export
 check_type <- function(value, type, context = NULL) {
-  if (inherits(type, "sicher_readonly")) {
-    type <- type$base_type
+  res <- run_type(value, type, if (is.null(context)) list() else list(context))
+  if (length(res$issues) > 0) {
+    sicher_abort(res$issues)
   }
-
-  if (is.null(value)) {
-    if (inherits(type, "sicher_union")) {
-      has_null <- any(sapply(type$types, function(t) {
-        inherits(t, "sicher_type") && identical(t, Null)
-      }))
-      if (!has_null) {
-        stop(type_error(context, type$name, "null", value), call. = FALSE)
-      }
-      return(TRUE)
-    }
-
-    if (inherits(type, "sicher_type")) {
-      if (identical(type, Null) || identical(type, Any)) {
-        return(TRUE)
-      }
-    }
-
-    stop(type_error(context, type$name, "null", value), call. = FALSE)
-  }
-
-  if (inherits(type, "sicher_type")) {
-    if (type$check(value)) return(TRUE)
-    stop(
-      type_error(context, type$name, get_type_name(value), value),
-      call. = FALSE
-    )
-  }
-
-  if (inherits(type, "sicher_union")) {
-    for (t in type$types) {
-      if (inherits(t, "sicher_type") && t$check(value)) return(TRUE)
-    }
-    stop(
-      type_error(context, type$name, get_type_name(value), value),
-      call. = FALSE
-    )
-  }
-
-  stop(glue::glue(
-    "Invalid type specification: expected a sicher_type, sicher_union, or sicher_readonly ",
-    "(e.g. Numeric, String | Bool, Optional(Integer)); ",
-    "got {class(type)[1]}"
-  ), call. = FALSE)
+  TRUE
 }
 
 # =============================================================================
@@ -1275,7 +1319,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
   is_readonly <- inherits(type, "sicher_readonly")
   actual_type <- if (is_readonly) type$base_type else type
 
-  check_type(value, actual_type, context = var_name)
+  value <- enforce_type(value, actual_type, var_name)
 
   if (exists(var_name, envir = envir, inherits = FALSE)) {
     rm(list = var_name, envir = envir)
@@ -1304,8 +1348,7 @@ create_typed_binding <- function(var_name, value, type, envir) {
               call. = FALSE
             )
           }
-          check_type(new_value, penv$type, context = vname)
-          penv$value <- new_value
+          penv$value <- enforce_type(new_value, penv$type, vname)
         }
       }
     }),
@@ -1445,10 +1488,11 @@ typed_function <- function(fn, params = list(), .return = NULL) {
     supplied <- as.list(mc[-1])
     evaled   <- lapply(supplied, eval, envir = caller)
 
-    # Type-check each annotated parameter
+    # Type-check each annotated parameter (using the parsed value, so
+    # Coerce(), Default() and FunctionOf() apply to arguments too)
     for (nm in names(.params)) {
       if (nm %in% names(evaled)) {
-        check_type(evaled[[nm]], .params[[nm]], context = nm)
+        evaled[nm] <- list(enforce_type(evaled[[nm]], .params[[nm]], nm))
       }
     }
 
@@ -1457,7 +1501,7 @@ typed_function <- function(fn, params = list(), .return = NULL) {
 
     # Optionally validate the return value
     if (!is.null(.ret)) {
-      check_type(result, .ret, context = "<return value>")
+      result <- enforce_type(result, .ret, "<return value>")
     }
 
     result
@@ -1528,7 +1572,7 @@ typed_function <- function(fn, params = list(), .return = NULL) {
   }
 
   # Global switch
-  if (identical(getOption("sicher.mode"), "off")) {
+  if (identical(sicher_mode(), "off")) {
     assign(
       typed_annotation$var_name,
       value,
@@ -1575,6 +1619,19 @@ print.sicher_union <- function(x, ...) {
   invisible(x)
 }
 
+#' Print method for sicher_readonly
+#'
+#' @param x A sicher_readonly object
+#' @param ... Additional arguments (ignored)
+#'
+#' @return Invisibly returns the input object
+#'
+#' @export
+print.sicher_readonly <- function(x, ...) {
+  cat("<type: readonly<", type_label(x$base_type), "> >\n", sep = "")
+  invisible(x)
+}
+
 #' Print method for sicher_typed_annotation
 #'
 #' @param x A sicher_typed_annotation object
@@ -1584,7 +1641,12 @@ print.sicher_union <- function(x, ...) {
 #'
 #' @export
 print.sicher_typed_annotation <- function(x, ...) {
-  cat("<typed:", x$var_name, "%:%", x$type$name, ">\n")
+  type_name <- if (inherits(x$type, "sicher_readonly")) {
+    paste0("readonly<", type_label(x$type$base_type), ">")
+  } else {
+    x$type$name
+  }
+  cat("<typed:", x$var_name, "%:%", type_name, ">\n")
   invisible(x)
 }
 

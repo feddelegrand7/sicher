@@ -150,14 +150,12 @@ testthat::test_that("get_type_name returns correct strings", {
   testthat::expect_equal(get_type_name(df), "data.frame[1 x 1]")
 })
 
-testthat::test_that("type_error formatting various values", {
-  testthat::expect_match(type_error(NULL, "foo", "bar"), "Expected foo, got bar")
+testthat::test_that("type errors format various values", {
+  testthat::expect_error(check_type(1, String), "Expected string, got double")
   # long vector
-  err <- type_error(NULL, "nums", "bool", 1:10)
-  testthat::expect_match(err, "length: 10")
+  testthat::expect_error(check_type(1:10, String), "length: 10")
   # empty value
-  err2 <- type_error(NULL, "t", "g", numeric())
-  testthat::expect_match(err2, "\\(empty\\)")
+  testthat::expect_error(check_type(numeric(), String), "\\(empty\\)")
 })
 
 testthat::test_that("get_type_name includes length for non-scalar values", {
@@ -545,7 +543,7 @@ testthat::test_that("create_list_type surfaces field context on mismatch", {
 testthat::test_that("nested list types propagate inner errors", {
   schema <- create_list_type(list(meta = create_list_type(list(flag = Bool))))
 
-  testthat::expect_error(schema$check(list(meta = list(flag = "yes"))), "Type error in 'flag'")
+  testthat::expect_error(schema$check(list(meta = list(flag = "yes"))), "Type error in 'meta\\$flag'")
 })
 
 testthat::test_that("create_dataframe_type rejects blank column names", {
@@ -613,28 +611,26 @@ testthat::test_that("check_type rejects NULL for non-null unions", {
   testthat::expect_error(check_type(NULL, String | Numeric), "Expected string \\| numeric, got null")
 })
 
-testthat::test_that("type_error previews named list fields", {
-  err <- type_error("cfg", "schema", "list", list(a = 1, b = 2))
-
-  testthat::expect_match(err, "list with fields: \\[a, b\\]")
+testthat::test_that("type errors preview named list fields", {
+  testthat::expect_error(
+    check_type(list(a = 1, b = 2), String, context = "cfg"),
+    "list with fields: \\[a, b\\]"
+  )
 })
 
-testthat::test_that("type_error previews unnamed list lengths", {
-  err <- type_error(NULL, "schema", "list", list(1, 2, 3))
-
-  testthat::expect_match(err, "list of length 3")
+testthat::test_that("type errors preview unnamed list lengths", {
+  testthat::expect_error(check_type(list(1, 2, 3), String), "list of length 3")
 })
 
-testthat::test_that("type_error previews data frame columns", {
-  err <- type_error(NULL, "schema", "data.frame", data.frame(a = 1, b = 2))
-
-  testthat::expect_match(err, "columns: \\[a, b\\]")
+testthat::test_that("type errors preview data frame columns", {
+  testthat::expect_error(
+    check_type(data.frame(a = 1, b = 2), String),
+    "columns: \\[a, b\\]"
+  )
 })
 
-testthat::test_that("type_error previews short atomic vectors", {
-  err <- type_error(NULL, "nums", "bool", c(1, 2, 3))
-
-  testthat::expect_match(err, "Received: \\[1, 2, 3\\]")
+testthat::test_that("type errors preview short atomic vectors", {
+  testthat::expect_error(check_type(c(1, 2, 3), Bool), "Received: \\[1, 2, 3\\]")
 })
 
 testthat::test_that("get_type_name reports functions", {
@@ -749,7 +745,7 @@ testthat::test_that("typed_function print is compact without annotations", {
 })
 
 testthat::test_that("infer_type falls back to Any for unsupported classes", {
-  testthat::expect_equal(infer_type(factor("a"))$name, Any$name)
+  testthat::expect_equal(infer_type(as.raw(1))$name, Any$name)
 })
 
 testthat::test_that("infer_type treats partially named lists as generic lists", {
@@ -943,7 +939,7 @@ testthat::test_that("create_list_type surfaces field context on mismatch", {
 testthat::test_that("nested list types propagate inner errors", {
   schema <- create_list_type(list(meta = create_list_type(list(flag = Bool))))
 
-  testthat::expect_error(schema$check(list(meta = list(flag = "yes"))), "Type error in 'flag'")
+  testthat::expect_error(schema$check(list(meta = list(flag = "yes"))), "Type error in 'meta\\$flag'")
 })
 
 testthat::test_that("create_dataframe_type rejects blank column names", {
@@ -1009,30 +1005,6 @@ testthat::test_that("check_type includes context in scalar mismatch", {
 
 testthat::test_that("check_type rejects NULL for non-null unions", {
   testthat::expect_error(check_type(NULL, String | Numeric), "Expected string \\| numeric, got null")
-})
-
-testthat::test_that("type_error previews named list fields", {
-  err <- type_error("cfg", "schema", "list", list(a = 1, b = 2))
-
-  testthat::expect_match(err, "list with fields: \\[a, b\\]")
-})
-
-testthat::test_that("type_error previews unnamed list lengths", {
-  err <- type_error(NULL, "schema", "list", list(1, 2, 3))
-
-  testthat::expect_match(err, "list of length 3")
-})
-
-testthat::test_that("type_error previews data frame columns", {
-  err <- type_error(NULL, "schema", "data.frame", data.frame(a = 1, b = 2))
-
-  testthat::expect_match(err, "columns: \\[a, b\\]")
-})
-
-testthat::test_that("type_error previews short atomic vectors", {
-  err <- type_error(NULL, "nums", "bool", c(1, 2, 3))
-
-  testthat::expect_match(err, "Received: \\[1, 2, 3\\]")
 })
 
 testthat::test_that("get_type_name reports functions", {
@@ -1147,7 +1119,7 @@ testthat::test_that("typed_function print is compact without annotations", {
 })
 
 testthat::test_that("infer_type falls back to Any for unsupported classes", {
-  testthat::expect_equal(infer_type(factor("a"))$name, Any$name)
+  testthat::expect_equal(infer_type(as.raw(1))$name, Any$name)
 })
 
 testthat::test_that("infer_type treats partially named lists as generic lists", {
@@ -1212,12 +1184,12 @@ testthat::test_that("extend merges base and extra fields", {
 
   testthat::expect_error(
     employee$check(list(name = "Alice", role = "Engineer")),
-    "Missing required field\\(s\\): age"
+    "Type error in 'age': Missing required field"
   )
 
   testthat::expect_error(
     employee$check(list(name = "Alice", age = 30)),
-    "Missing required field\\(s\\): role"
+    "Type error in 'role': Missing required field"
   )
 })
 
@@ -1232,7 +1204,7 @@ testthat::test_that("extend does not mutate the base type", {
   testthat::expect_true(person$check(list(name = "Alice", age = 30)))
   testthat::expect_error(
     person$check(list(name = "Alice", age = 30, role = "Engineer")),
-    "Unexpected field: 'role'"
+    "Type error in 'role': Unexpected field"
   )
 
   testthat::expect_true(employee$check(list(

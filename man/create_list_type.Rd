@@ -4,10 +4,17 @@
 \alias{create_list_type}
 \title{Create a List Type with Specific Structure}
 \usage{
-create_list_type(type_spec)
+create_list_type(type_spec, extra = c("error", "allow", "drop"))
 }
 \arguments{
 \item{type_spec}{A named list where names are field names and values are sicher_type objects}
+
+\item{extra}{What to do with fields that are not part of \code{type_spec}:
+\code{"error"} (the default) rejects them, \code{"allow"} keeps them
+unchecked, and \code{"drop"} removes them from the parsed value (similar
+to zod's \code{.strict()}, \code{.passthrough()} and \code{.strip()}).
+Typed variables and \code{\link{parse_as}()} store the parsed value, so
+with \code{"drop"} unknown fields are silently removed.}
 }
 \value{
 A sicher_type that validates list structure

@@ -4,7 +4,7 @@ project:
 
 website:
   title: "sicher: Type Safety for R"
-  description: "A comprehensive type checking system for R, inspired by TypeScript."
+  description: "A comprehensive type checking system for R."
   navbar:
     left:
       - href: index.qmd

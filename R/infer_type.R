@@ -65,6 +65,8 @@ has_uniform_types <- function(types) {
 #' infer_type(TRUE)               # Bool
 #' infer_type(NULL)               # Null
 #' infer_type(function(x) x + 1)  # Function
+#' infer_type(factor(c("a", "b")))  # Factor(c("a", "b"))
+#' infer_type(Sys.Date())           # Date
 #' infer_type(list(a = 1, b = "x"))   # create_list_type(list(a = Double, b = String))
 #' infer_type(list(1, 2, 3))           # ListOf(Double)
 #' infer_type(data.frame(x = 1:3))     # create_dataframe_type(list(x = Integer))
@@ -86,6 +88,18 @@ infer_type <- function(obj, strict = FALSE) {
 
   if (is.function(obj)) {
     return(Function)
+  }
+
+  if (is.factor(obj)) {
+    return(Factor(levels(obj)))
+  }
+
+  if (inherits(obj, "Date")) {
+    return(infer_atomic_type(obj, Date, strict = strict))
+  }
+
+  if (inherits(obj, "POSIXct")) {
+    return(infer_atomic_type(obj, DateTime, strict = strict))
   }
 
   if (is.data.frame(obj)) {

@@ -43,28 +43,34 @@ Creates a new type with a name and validation function.
 **Example:**
 
 ```{r}
-Positive <- create_type("positive", function(x) is.numeric(x) && all(x > 0))
+Even <- create_type("even", function(x) is.numeric(x) && all(x %% 2 == 0))
 ```
 
-### `create_list_type(type_spec)`
+### `create_list_type(type_spec, extra = "error")`
 
 Creates a type for lists with specific field requirements.
 
-**Parameters:** - `type_spec`: Named list where names are field names and values are `sicher_type` or `sicher_union` objects
+**Parameters:** - `type_spec`: Named list where names are field names and values are `sicher_type` or `sicher_union` objects - `extra`: What to do with fields that are not in `type_spec`: `"error"` (default) rejects them, `"allow"` keeps them unchecked, and `"drop"` removes them from the parsed value.
 
-**Returns:** A `sicher_type` that validates list fields, rejects missing required fields, and rejects unknown fields. The original field specification is stored internally so it can be reused by `extend()`.
+**Returns:** A `sicher_type` that validates list fields, rejects missing required fields, and handles unknown fields according to `extra`. The original field specification is stored internally so it can be reused by `extend()`, `Pick()`, `Omit()`, `Partial()`, `Required()` and `KeyOf()`.
 
 **Example:**
 
 ```{r}
 Person <- create_list_type(list(name = String, age = Numeric))
+
+Loose <- create_list_type(list(name = String), extra = "allow")
+check_type(list(name = "Ann", note = "kept"), Loose)
+
+Strict <- create_list_type(list(name = String), extra = "drop")
+parse_as(list(name = "Ann", note = "removed"), Strict)
 ```
 
 ### `extend(base, extra)`
 
-Creates a new structured list type by extending an existing one created with `create_list_type()`.
+Creates a new structured type by extending an existing one created with `create_list_type()` or `create_dataframe_type()`. The result keeps the base type's `extra` setting.
 
-**Parameters:** - `base`: A `sicher_type` returned by `create_list_type()`. Primitive types and arbitrary `create_type()` validators cannot be extended because they do not carry a field specification. - `extra`: Named list of additional fields to merge into the base schema. Values must be `sicher_type` or `sicher_union` objects.
+**Parameters:** - `base`: A `sicher_type` returned by `create_list_type()` or `create_dataframe_type()`. Primitive types and arbitrary `create_type()` validators cannot be extended because they do not carry a field specification. - `extra`: Named list of additional fields to merge into the base schema. Values must be `sicher_type` or `sicher_union` objects.
 
 **Returns:** A new `sicher_type` created from the merged field specification. Fields declared in `extra` override fields with the same name in `base`; when that happens, `extend()` emits a warning.
 
@@ -84,18 +90,32 @@ Employee <- extend(Person, list(
 Manager <- extend(Employee, list(
   reports = Numeric
 ))
+
+Rows      <- create_dataframe_type(list(id = Integer))
+NamedRows <- extend(Rows, list(name = String))
 ```
 
-### `create_dataframe_type(col_spec)`
+### `create_dataframe_type(col_spec, extra = "error")`
 
 Creates a type for data frames with column specifications.
 
-**Parameters:** - `col_spec`: Named list where names are column names and values are types
+**Parameters:** - `col_spec`: Named list where names are column names and values are types - `extra`: What to do with columns that are not in `col_spec`: `"error"` (default), `"allow"` or `"drop"`, as in `create_list_type()`.
 
 **Example:**
 
 ```{r}
 Table <- create_dataframe_type(list(id = Integer, name = String))
+```
+
+### `infer_type(obj, strict = FALSE)`
+
+Infers a type from an example value. Factors, `Date` and `POSIXct` values are inferred as `Factor()`, `Date` and `DateTime`. With `strict = TRUE`, the observed lengths are also locked in with `Scalar()` and `[n]`.
+
+**Example:**
+
+```{r}
+infer_type(list(name = "Ann", joined = as.Date("2024-01-01"), size = factor("M")))
+infer_type(c(1, 2, 3), strict = TRUE)
 ```
 
 ### `Enum(...)`
@@ -134,7 +154,7 @@ review("hola")
 
 ### `Literal(...)`
 
-Creates a type that only accepts exact scalar atomic literals, inspired by TypeScript literal types.
+Creates a type that only accepts exact scalar atomic literals.
 
 **Parameters:** - `...`: Allowed scalar atomic literal values
 
@@ -175,16 +195,96 @@ Creates a type for homogeneous lists.
 Numbers <- ListOf(Numeric)
 ```
 
+### `Tuple(...)`
+
+A list with a fixed number of elements, each with its own type.
+
+```{r}
+Point <- Tuple(Numeric, Numeric)
+```
+
+### `Record(keys, values)`
+
+A named list (or named vector) with arbitrary keys. With one argument, keys default to `String`.
+
+```{r}
+Scores <- Record(String, Numeric)
+Prices <- Record(Numeric)
+```
+
+### `DiscriminatedUnion(key, ...)`
+
+A union of list types selected by the value of the `key` field. Name each member with its discriminator value, or give each member a `key = Literal(value)` field.
+
+```{r}
+Shape <- DiscriminatedUnion(
+  "kind",
+  circle = create_list_type(list(radius = Numeric)),
+  square = create_list_type(list(side = Numeric))
+)
+```
+
+### `Lazy(fn, name = "lazy")`
+
+Defers building a type until it is used, for recursive types.
+
+```{r}
+Tree <- create_list_type(list(
+  value = Numeric,
+  children = ListOf(Lazy(function() Tree, name = "Tree"))
+))
+```
+
+### `FunctionOf(params, .return)`
+
+A function with the given parameters. Checked functions are wrapped with `typed_function()`, so later calls are checked too.
+
+```{r}
+Formatter <- FunctionOf(list(x = Numeric), .return = String)
+```
+
+### `Brand(type, brand)` and `brand(value, type)`
+
+Nominal types: `brand()` checks a value against the base type and adds the brand as a class.
+
+```{r}
+UserId <- Brand(Scalar(String), "UserId")
+uid <- brand("u-1", UserId)
+```
+
+### `Factor(levels = NULL)`, `MatrixOf(type, nrow, ncol)`, `InstanceOf(class)`
+
+Factors (optionally with exact levels), matrices (optionally with an element type and dimensions) and objects inheriting from a class (S3, S4 or R6).
+
+```{r}
+Size  <- Factor(c("S", "M", "L"))
+Grid  <- MatrixOf(Numeric, nrow = 3, ncol = 3)
+Model <- InstanceOf("lm")
+```
+
+## Object Utilities
+
+These work on types created with `create_list_type()` or `create_dataframe_type()` and keep their `extra` setting.
+
+| Function | Result |
+|----------|--------|
+| `Pick(type, ...)` | only the named fields |
+| `Omit(type, ...)` | all fields except the named ones |
+| `Partial(type)` | every field optional |
+| `Required(type)` | every field required (`Nullable()` fields stay nullable) |
+| `KeyOf(type)` | an `Enum()` of the field names |
+
 ## Type Modifiers
 
 ### `Scalar(type)`
 
-Requires exactly one element (length 1).
+Requires exactly one element (length 1). Also accepts union types.
 
 **Example:**
 
 ```{r}
 SingleValue <- Scalar(Numeric)
+Id <- Scalar(String | Numeric)
 ```
 
 ### `Readonly(type)`
@@ -271,6 +371,84 @@ items %:% NonEmpty(List)    %<-% list(1, 2)
 tags  <- character(0)   # Error: length > 0
 ```
 
+### `Nullable(type)`
+
+Allows `NULL`, but inside list and data frame types the field must be present (unlike `Optional()`, which lets the field be left out).
+
+```{r}
+MaybeBio <- Nullable(String)
+```
+
+### `MinLength(type, n)`, `MaxLength(type, n)`
+
+Require at least / at most `n` elements (`nrow()` for data frames).
+
+```{r}
+Top3 <- MaxLength(Numeric, 3)
+```
+
+### `Unique(type)`
+
+Rejects duplicated elements (duplicated rows for data frames).
+
+```{r}
+Ids <- Unique(Integer)
+```
+
+### `Refine(type, predicate, message = NULL, name = NULL)`
+
+Checks `type`, then runs `predicate` on the value; `message` is used when it does not return `TRUE`.
+
+```{r}
+Even <- Refine(Integer, function(x) all(x %% 2L == 0L), "must be even")
+```
+
+### `Default(type, value)`
+
+Replaces `NULL` with `value`. Inside list types, a missing field with a default is filled in.
+
+```{r}
+Port <- Default(Numeric, 8080)
+```
+
+### `Coerce(type, using = NULL)`
+
+Converts values before checking them (`as.numeric()`, `as.integer()`, `as.character()`, `as.logical()`, `as.Date()`, `as.POSIXct()`, `factor()`, or the `using` function). Conversions that would introduce `NA` are reported as errors.
+
+```{r}
+NumberFromText <- Coerce(Numeric)
+```
+
+## Validation
+
+### `check_type(value, type, context = NULL)`
+
+Returns `TRUE` or throws a `sicher_type_error` condition. Its `issues` element lists every problem with its path.
+
+### `is_type(value, type)`
+
+Returns `TRUE` or `FALSE`, never throws for invalid data.
+
+### `parse_as(value, type, context = NULL)` and `safe_parse(value, type, context = NULL)`
+
+`parse_as()` returns the parsed value (after `Default()`, `Coerce()`, `extra = "drop"` and `FunctionOf()` transforms) or throws. `safe_parse()` returns a list with `success`, `data`, `issues` (a data frame with `path`, `message`, `expected`, `got`, `code`) and `error`.
+
+```{r}
+safe_parse(list(a = "x"), create_list_type(list(a = Numeric)))
+```
+
+### `validate_json(json, type, safe = FALSE, ...)`
+
+Parses JSON with `jsonlite::fromJSON()` and checks the result. Requires the jsonlite package.
+
+### `to_json_schema(type, json = FALSE)`
+
+Converts a type to a JSON Schema (draft 2020-12) list, or a JSON string with `json = TRUE`.
+
+### `type_of(x)` and `untype(x)`
+
+`type_of()` returns the declared type of a typed variable (or `NULL`); `untype()` turns a typed variable back into a regular one.
+
 ## Operators
 
 ### `%:%`
@@ -303,6 +481,16 @@ Union operator for combining types.
 StringOrNumber <- (String | Numeric)
 ```
 
+### `&`
+
+Intersection operator. Two list (or data frame) types are merged into one with the fields of both; any other combination must satisfy both types.
+
+**Example:**
+
+``` r
+Percent <- Numeric & Between(0, 100)
+```
+
 ### `[size]`
 
 Size constraint operator.
@@ -327,6 +515,12 @@ ThreeNumbers <- Numeric[3]
 -   `Null`: Only NULL values
 -   `Function`: Function objects
 -   `DataFrame`: Data frame objects
+-   `Date`: `Date` vectors
+-   `DateTime`: `POSIXct` vectors
+-   `Environment`: Environments
+-   `Positive`: Numeric values `> 0` (no `NA`)
+-   `NonNegative`: Numeric values `>= 0` (no `NA`)
+-   `Whole`: Numeric whole numbers, in integer or double storage
 
 ## Error Handling
 
@@ -336,12 +530,28 @@ Type errors provide detailed context:
 x %:% Numeric %<-% "text"
 ```
 
-Error messages include: - Expected type - Actual type - Variable name (when available) - Value preview (for debugging)
+Error messages include: - Expected type - Actual type - Location, such as `todos[[2]]$title` - Value preview (for debugging)
+
+When several things are wrong, every problem is reported:
+
+```{r, error=TRUE}
+Point <- create_list_type(list(x = Numeric, y = Numeric))
+pt %:% Point %<-% list(x = "a", y = "b")
+```
+
+The condition has class `sicher_type_error` and carries the individual problems in `e$issues`:
+
+```{r}
+err <- tryCatch(check_type("a", Numeric), sicher_type_error = function(e) e)
+err$issues[[1]]$expected
+```
+
+Set `options(sicher.mode = "warn")` to report violations as warnings instead.
 
 
 ## Global Options
 
-The behavior of **sicher** can be controlled globally using R’s `options()` mechanism. These options allow you to switch between strict type enforcement and a fully disabled mode depending on your use case.
+The behavior of **sicher** can be controlled globally using R’s `options()` mechanism. The `sicher.mode` option accepts three values: `"on"` (default, violations are errors), `"warn"` (violations are warnings and the assigned value is kept) and `"off"` (no checking at all).
 
 ```{r, error=TRUE}
 my_var_x %:% Numeric %<-% 10   # validated and bound with type enforcement
@@ -349,6 +559,15 @@ my_var_x %:% Numeric %<-% 10   # validated and bound with type enforcement
 my_var_x <- "string" # trigger an error
 ```
 
+
+```{r}
+options(sicher.mode = "warn")
+my_var_w %:% Numeric %<-% 10
+my_var_w <- "string" # a warning, and the value is kept
+my_var_w
+```
+
+`Readonly()` is still enforced in `"warn"` mode.
 
 ```{r}
 options(sicher.mode = "off")

@@ -1,7 +1,7 @@
 Package: sicher
 Type: Package
 Title: Runtime Type Checking
-Version: 0.1.1
+Version: 0.2.0
 Authors@R: 
     person(given = c("Mohamed", "El", "Fodil"),
            family = "Ihaddaden",
@@ -19,7 +19,13 @@ LazyData: true
 URL: https://github.com/feddelegrand7/sicher
 BugReports: https://github.com/feddelegrand7/sicher/issues
 RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.0.0)
 Imports:
-    glue (>= 1.8.0)
+    glue (>= 1.8.0),
+    methods,
+    utils
 Suggests: 
-    testthat
+    jsonlite,
+    testthat,
+    withr

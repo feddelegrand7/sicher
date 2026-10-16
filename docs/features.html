@@ -178,7 +178,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#custom-types" id="toc-custom-types" class="nav-link" data-scroll-target="#custom-types">Custom Types</a></li>
   <li><a href="#type-composition" id="toc-type-composition" class="nav-link" data-scroll-target="#type-composition">Type Composition</a></li>
   </ul></li>
-  <li><a href="#error-messages" id="toc-error-messages" class="nav-link" data-scroll-target="#error-messages">Error Messages</a></li>
+  <li><a href="#more-built-in-types" id="toc-more-built-in-types" class="nav-link" data-scroll-target="#more-built-in-types">More Built-in Types</a></li>
+  <li><a href="#more-modifiers" id="toc-more-modifiers" class="nav-link" data-scroll-target="#more-modifiers">More Modifiers</a>
+  <ul class="collapse">
+  <li><a href="#minlength-maxlength-and-unique" id="toc-minlength-maxlength-and-unique" class="nav-link" data-scroll-target="#minlength-maxlength-and-unique">MinLength, MaxLength and Unique</a></li>
+  <li><a href="#refine" id="toc-refine" class="nav-link" data-scroll-target="#refine">Refine</a></li>
+  <li><a href="#nullable" id="toc-nullable" class="nav-link" data-scroll-target="#nullable">Nullable</a></li>
+  </ul></li>
+  <li><a href="#transforming-values" id="toc-transforming-values" class="nav-link" data-scroll-target="#transforming-values">Transforming Values</a></li>
+  <li><a href="#more-type-shapes" id="toc-more-type-shapes" class="nav-link" data-scroll-target="#more-type-shapes">More Type Shapes</a>
+  <ul class="collapse">
+  <li><a href="#intersections" id="toc-intersections" class="nav-link" data-scroll-target="#intersections">Intersections</a></li>
+  <li><a href="#tuples-and-records" id="toc-tuples-and-records" class="nav-link" data-scroll-target="#tuples-and-records">Tuples and Records</a></li>
+  <li><a href="#discriminated-unions" id="toc-discriminated-unions" class="nav-link" data-scroll-target="#discriminated-unions">Discriminated Unions</a></li>
+  <li><a href="#recursive-types" id="toc-recursive-types" class="nav-link" data-scroll-target="#recursive-types">Recursive Types</a></li>
+  <li><a href="#branded-types" id="toc-branded-types" class="nav-link" data-scroll-target="#branded-types">Branded Types</a></li>
+  <li><a href="#function-types" id="toc-function-types" class="nav-link" data-scroll-target="#function-types">Function Types</a></li>
+  <li><a href="#generic-types" id="toc-generic-types" class="nav-link" data-scroll-target="#generic-types">Generic Types</a></li>
+  </ul></li>
+  <li><a href="#object-utilities" id="toc-object-utilities" class="nav-link" data-scroll-target="#object-utilities">Object Utilities</a></li>
+  <li><a href="#validating-data" id="toc-validating-data" class="nav-link" data-scroll-target="#validating-data">Validating Data</a>
+  <ul class="collapse">
+  <li><a href="#json" id="toc-json" class="nav-link" data-scroll-target="#json">JSON</a></li>
+  <li><a href="#inspecting-typed-variables" id="toc-inspecting-typed-variables" class="nav-link" data-scroll-target="#inspecting-typed-variables">Inspecting Typed Variables</a></li>
+  </ul></li>
+  <li><a href="#error-messages" id="toc-error-messages" class="nav-link" data-scroll-target="#error-messages">Error Messages</a>
+  <ul class="collapse">
+  <li><a href="#every-problem-with-its-location" id="toc-every-problem-with-its-location" class="nav-link" data-scroll-target="#every-problem-with-its-location">Every Problem, With Its Location</a></li>
+  <li><a href="#catching-type-errors" id="toc-catching-type-errors" class="nav-link" data-scroll-target="#catching-type-errors">Catching Type Errors</a></li>
+  <li><a href="#forgotten-parentheses" id="toc-forgotten-parentheses" class="nav-link" data-scroll-target="#forgotten-parentheses">Forgotten Parentheses</a></li>
+  <li><a href="#warnings-instead-of-errors" id="toc-warnings-instead-of-errors" class="nav-link" data-scroll-target="#warnings-instead-of-errors">Warnings Instead of Errors</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -285,7 +315,7 @@ Received: 123</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>salary <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1800</span>, <span class="cn">NA</span>, <span class="dv">4000</span>)   <span class="co"># Error: value contains NA(s)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected non_na&lt;numeric&gt; (no NA values), but value contains NA(s)</code></pre>
+<pre><code>Error: Type error in 'salary': expected non_na&lt;numeric&gt; (no NA values), but value contains NA(s)</code></pre>
 </div>
 </div>
 <p>Composes with other modifiers — here combined with <code>Scalar</code> to require a single, non-NA string:</p>
@@ -293,7 +323,7 @@ Received: 123</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>label <span class="sc">%:%</span> <span class="fu">NonNA</span>(<span class="fu">Scalar</span>(String)) <span class="sc">%&lt;-%</span> <span class="st">"active"</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>label <span class="ot">&lt;-</span> <span class="cn">NA_character_</span>   <span class="co"># Error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected non_na&lt;scalar&lt;string&gt;&gt; (no NA values), but value contains NA(s)</code></pre>
+<pre><code>Error: Type error in 'label': expected non_na&lt;scalar&lt;string&gt;&gt; (no NA values), but value contains NA(s)</code></pre>
 </div>
 </div>
 </section>
@@ -305,13 +335,13 @@ Received: 123</code></pre>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>age <span class="sc">%:%</span> <span class="fu">Between</span>(<span class="dv">0</span>, <span class="dv">150</span>) <span class="sc">%&lt;-%</span> <span class="dv">30</span></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>age <span class="ot">&lt;-</span> <span class="dv">200</span>   <span class="co"># Error: 200 is outside [0, 150]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected between[0, 150], but value [200] is outside [0, 150]</code></pre>
+<pre><code>Error: Type error in 'age': expected between[0, 150], but value [200] is outside [0, 150]</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Vector usage — all elements must be in range</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>score <span class="sc">%:%</span> <span class="fu">Between</span>(<span class="fl">0.0</span>, <span class="fl">1.0</span>) <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.95</span>, <span class="fl">0.5</span>)</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">1.5</span>)   <span class="co"># Error: 1.5 is outside [0, 1]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected between[0, 1], but value [1.5] is outside [0, 1]</code></pre>
+<pre><code>Error: Type error in 'score': expected between[0, 1], but value [1.5] is outside [0, 1]</code></pre>
 </div>
 </div>
 <p><code>Between</code> works with integer storage because <code>is.numeric(1L)</code> is <code>TRUE</code> in R:</p>
@@ -326,7 +356,7 @@ Received: 123</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>email <span class="sc">%:%</span> <span class="fu">Matches</span>(<span class="st">"^[^@]+@[^@]+</span><span class="sc">\\</span><span class="st">.[^@]+$"</span>) <span class="sc">%&lt;-%</span> <span class="st">"user@example.com"</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>email <span class="ot">&lt;-</span> <span class="st">"not-an-email"</span>   <span class="co"># Error: does not match pattern</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected matches("^[^@]+@[^@]+\.[^@]+$"), but value ["not-an-email"] does not match the pattern</code></pre>
+<pre><code>Error: Type error in 'email': expected matches("^[^@]+@[^@]+\.[^@]+$"), but value ["not-an-email"] does not match the pattern</code></pre>
 </div>
 </div>
 <p>Applies element-wise to vectors:</p>
@@ -334,7 +364,7 @@ Received: 123</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>codes <span class="sc">%:%</span> <span class="fu">Matches</span>(<span class="st">"^[A-Z]{3}$"</span>) <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="st">"USD"</span>, <span class="st">"EUR"</span>, <span class="st">"GBP"</span>)</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>codes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"USD"</span>, <span class="st">"us"</span>)   <span class="co"># Error: "us" does not match</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected matches("^[A-Z]{3}$"), but value ["us"] does not match the pattern</code></pre>
+<pre><code>Error: Type error in 'codes': expected matches("^[A-Z]{3}$"), but value ["us"] does not match the pattern</code></pre>
 </div>
 </div>
 <p>An empty <code>character(0)</code> passes vacuously. Pair with <code>NonEmpty</code> when at least one element is required:</p>
@@ -342,11 +372,11 @@ Received: 123</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>tags <span class="sc">%:%</span> <span class="fu">NonEmpty</span>(<span class="fu">Matches</span>(<span class="st">"^[a-z]+$"</span>)) <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="st">"foo"</span>, <span class="st">"bar"</span>)</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>tags <span class="ot">&lt;-</span> <span class="fu">character</span>(<span class="dv">0</span>)   <span class="co"># Error: length &gt; 0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected non_empty&lt;matches("^[a-z]+$")&gt; (length &gt; 0), but got an empty value</code></pre>
+<pre><code>Error: Type error in 'tags': expected non_empty&lt;matches("^[a-z]+$")&gt; (length &gt; 0), but got an empty value</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>tags <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"foo"</span>, <span class="st">"BAR"</span>)   <span class="co"># Error: "BAR" does not match</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected matches("^[a-z]+$"), but value ["BAR"] does not match the pattern</code></pre>
+<pre><code>Error: Type error in 'tags': expected matches("^[a-z]+$"), but value ["BAR"] does not match the pattern</code></pre>
 </div>
 </div>
 </section>
@@ -357,12 +387,12 @@ Received: 123</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>tags <span class="sc">%:%</span> <span class="fu">NonEmpty</span>(String) <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="st">"r"</span>, <span class="st">"types"</span>)</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>tags <span class="ot">&lt;-</span> <span class="fu">character</span>(<span class="dv">0</span>)   <span class="co"># Error: length &gt; 0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected non_empty&lt;string&gt; (length &gt; 0), but got an empty value</code></pre>
+<pre><code>Error: Type error in 'tags': expected non_empty&lt;string&gt; (length &gt; 0), but got an empty value</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>items <span class="sc">%:%</span> <span class="fu">NonEmpty</span>(List) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>)</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>items <span class="ot">&lt;-</span> <span class="fu">list</span>()   <span class="co"># Error: length &gt; 0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected non_empty&lt;list&gt; (length &gt; 0), but got an empty value</code></pre>
+<pre><code>Error: Type error in 'items': expected non_empty&lt;list&gt; (length &gt; 0), but got an empty value</code></pre>
 </div>
 </div>
 <p>For data frames, an empty-row frame is rejected while a zero-column frame never passes the schema check first:</p>
@@ -374,7 +404,7 @@ Received: 123</code></pre>
 <span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>valid_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">id =</span> <span class="fu">integer</span>(<span class="dv">0</span>), <span class="at">name =</span> <span class="fu">character</span>(<span class="dv">0</span>))  <span class="co"># Error: length &gt; 0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: expected non_empty&lt;data.frame{id: integer, name: string}&gt; (length &gt; 0), but got an empty value</code></pre>
+<pre><code>Error: Type error in 'valid_df': expected non_empty&lt;data.frame{id: integer, name: string}&gt; (length &gt; 0), but got an empty value</code></pre>
 </div>
 </div>
 </section>
@@ -450,9 +480,7 @@ Received: deleted</code></pre>
 <span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field fails</span></span>
 <span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a>person <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Bob"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected {name: string, age: numeric, email?: string | null}, got list
-Details: Missing required field(s): age (expected fields: name, age)
-Received: list with fields: [name]</code></pre>
+<pre><code>Error: Type error in 'person$age': Missing required field (expected numeric)</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extra fields not allowed fail</span></span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>person <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
@@ -462,9 +490,7 @@ Received: list with fields: [name]</code></pre>
 <span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">extra =</span> <span class="st">"not allowed"</span></span>
 <span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected {name: string, age: numeric, email?: string | null}, got list
-Details: Unexpected field: 'extra' (valid fields: name, age, email)
-Received: list with fields: [name, age, email, extra]</code></pre>
+<pre><code>Error: Type error in 'person$extra': Unexpected field (valid fields: name, age, email)</code></pre>
 </div>
 </div>
 </section>
@@ -493,8 +519,7 @@ Received: list with fields: [name, age, email, extra]</code></pre>
 <span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>)</span>
 <span id="cb46-20"><a href="#cb46-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected data.frame{id: integer, username: string, active: bool, last_login?: string | null}, got data.frame[2 x 2]
-Details: Missing required column(s): id (expected columns: id, username, active)</code></pre>
+<pre><code>Error: Type error in 'users$id': Missing required column (expected integer)</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>users <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
 <span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
@@ -502,7 +527,7 @@ Details: Missing required column(s): id (expected columns: id, username, active)
 <span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">active =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>)  <span class="co"># Should be logical</span></span>
 <span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'active': Expected bool, got string of length 2
+<pre><code>Error: Type error in 'users$active': Expected bool, got string of length 2
 Received: [yes, no]</code></pre>
 </div>
 </div>
@@ -533,8 +558,12 @@ Received: [yes, no]</code></pre>
 <span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">wrong =</span> <span class="st">"structure"</span>)</span>
 <span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'todos': Expected list&lt;{userId: numeric, id: numeric, title: string, completed: bool}&gt;, got list of length 2
-Received: list of length 2</code></pre>
+<pre><code>Error: 5 type errors found:
+  * Type error in 'todos[[2]]$userId': Missing required field (expected numeric)
+  * Type error in 'todos[[2]]$id': Missing required field (expected numeric)
+  * Type error in 'todos[[2]]$title': Missing required field (expected string)
+  * Type error in 'todos[[2]]$completed': Missing required field (expected bool)
+  * Type error in 'todos[[2]]$wrong': Unexpected field (valid fields: userId, id, title, completed)</code></pre>
 </div>
 </div>
 </section>
@@ -638,17 +667,17 @@ Received: TRUE</code></pre>
 <h3 class="anchored" data-anchor-id="custom-types">Custom Types</h3>
 <p>Create your own types using <code>create_type()</code>:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Positive number type</span></span>
-<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>Positive <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"positive"</span>, <span class="cf">function</span>(x) {</span>
-<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.numeric</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(x <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Even number type</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>Even <span class="ot">&lt;-</span> <span class="fu">create_type</span>(<span class="st">"even"</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.numeric</span>(x) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(x <span class="sc">%%</span> <span class="dv">2</span> <span class="sc">==</span> <span class="dv">0</span>)</span>
 <span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>})</span>
 <span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>value <span class="sc">%:%</span> Positive <span class="sc">%&lt;-%</span> <span class="dv">5</span></span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>value <span class="sc">%:%</span> Even <span class="sc">%&lt;-%</span> <span class="dv">4</span></span>
 <span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>value <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>value <span class="ot">&lt;-</span> <span class="dv">3</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'value': Expected positive, got double
-Received: -1</code></pre>
+<pre><code>Error: Type error in 'value': Expected even, got double
+Received: 3</code></pre>
 </div>
 </div>
 <p>Use <code>Enum(...)</code> when you only need membership in a known set of values. Use <code>create_type()</code> when the rule depends on arbitrary logic.</p>
@@ -682,9 +711,377 @@ Received: -1</code></pre>
 <span id="cb71-23"><a href="#cb71-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">age =</span> <span class="dv">25</span></span>
 <span id="cb71-24"><a href="#cb71-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error in 'email': Expected email, got string
+<pre><code>Error: Type error in 'person$email': Expected email, got string
 Received: invalid-email</code></pre>
 </div>
+</div>
+</section>
+</section>
+<section id="more-built-in-types" class="level2">
+<h2 class="anchored" data-anchor-id="more-built-in-types">More Built-in Types</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>start   <span class="sc">%:%</span> Date        <span class="sc">%&lt;-%</span> <span class="fu">as.Date</span>(<span class="st">"2024-01-01"</span>)</span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>created <span class="sc">%:%</span> DateTime    <span class="sc">%&lt;-%</span> <span class="fu">Sys.time</span>()</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>cache   <span class="sc">%:%</span> Environment <span class="sc">%&lt;-%</span> <span class="fu">new.env</span>()</span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>price <span class="sc">%:%</span> Positive    <span class="sc">%&lt;-%</span> <span class="fl">9.99</span></span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>count <span class="sc">%:%</span> NonNegative <span class="sc">%&lt;-%</span> <span class="dv">0</span></span>
+<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>n     <span class="sc">%:%</span> Whole       <span class="sc">%&lt;-%</span> <span class="dv">3</span>      <span class="co"># 3 and 3L are fine, 3.5 is not</span></span>
+<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fl">2.5</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'n': expected whole, but value [2.5] is not a whole number</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>size  <span class="sc">%:%</span> <span class="fu">Factor</span>(<span class="fu">c</span>(<span class="st">"S"</span>, <span class="st">"M"</span>, <span class="st">"L"</span>)) <span class="sc">%&lt;-%</span> <span class="fu">factor</span>(<span class="st">"M"</span>, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"S"</span>, <span class="st">"M"</span>, <span class="st">"L"</span>))</span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>m     <span class="sc">%:%</span> <span class="fu">MatrixOf</span>(Numeric, <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">%&lt;-%</span> <span class="fu">diag</span>(<span class="dv">2</span>)</span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>model <span class="sc">%:%</span> <span class="fu">InstanceOf</span>(<span class="st">"lm"</span>) <span class="sc">%&lt;-%</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> wt, <span class="at">data =</span> mtcars)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="more-modifiers" class="level2">
+<h2 class="anchored" data-anchor-id="more-modifiers">More Modifiers</h2>
+<section id="minlength-maxlength-and-unique" class="level3">
+<h3 class="anchored" data-anchor-id="minlength-maxlength-and-unique">MinLength, MaxLength and Unique</h3>
+<p>Lengths are counted with <code>length()</code> (<code>nrow()</code> for data frames), like <code>NonEmpty()</code> and <code>[n]</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>top3 <span class="sc">%:%</span> <span class="fu">MaxLength</span>(Numeric, <span class="dv">3</span>) <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">8</span>, <span class="dv">7</span>)</span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>top3 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">8</span>, <span class="dv">7</span>, <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'top3': expected max_length&lt;numeric, 3&gt; (at most 3 element(s)), but got 4</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>ids <span class="sc">%:%</span> <span class="fu">Unique</span>(Integer) <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>L, <span class="dv">2</span>L, <span class="dv">3</span>L)</span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>ids <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>L, <span class="dv">2</span>L, <span class="dv">2</span>L)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'ids': expected unique&lt;integer&gt;, but found duplicated value(s): [2]</code></pre>
+</div>
+</div>
+</section>
+<section id="refine" class="level3">
+<h3 class="anchored" data-anchor-id="refine">Refine</h3>
+<p>Add a custom rule on top of an existing type:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a>Password <span class="ot">&lt;-</span> <span class="fu">Refine</span>(</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Scalar</span>(String),</span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) <span class="fu">nchar</span>(x) <span class="sc">&gt;=</span> <span class="dv">8</span>,</span>
+<span id="cb80-4"><a href="#cb80-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">message =</span> <span class="st">"must be at least 8 characters"</span></span>
+<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb80-6"><a href="#cb80-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb80-7"><a href="#cb80-7" aria-hidden="true" tabindex="-1"></a>pw <span class="sc">%:%</span> Password <span class="sc">%&lt;-%</span> <span class="st">"correct horse battery"</span></span>
+<span id="cb80-8"><a href="#cb80-8" aria-hidden="true" tabindex="-1"></a>pw <span class="ot">&lt;-</span> <span class="st">"short"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'pw': must be at least 8 characters
+Received: short</code></pre>
+</div>
+</div>
+</section>
+<section id="nullable" class="level3">
+<h3 class="anchored" data-anchor-id="nullable">Nullable</h3>
+<p><code>Optional()</code> fields may be left out of a list; <code>Nullable()</code> fields must be present but may be <code>NULL</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a>Profile <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name     =</span> String,</span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">nickname =</span> <span class="fu">Optional</span>(String),</span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">bio      =</span> <span class="fu">Nullable</span>(String)</span>
+<span id="cb82-5"><a href="#cb82-5" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb82-6"><a href="#cb82-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-7"><a href="#cb82-7" aria-hidden="true" tabindex="-1"></a>profile <span class="sc">%:%</span> Profile <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Ann"</span>, <span class="at">bio =</span> <span class="cn">NULL</span>)</span>
+<span id="cb82-8"><a href="#cb82-8" aria-hidden="true" tabindex="-1"></a>profile <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Ann"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'profile$bio': Missing required field (expected string | null)</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="transforming-values" class="level2">
+<h2 class="anchored" data-anchor-id="transforming-values">Transforming Values</h2>
+<p><code>Default()</code> and <code>Coerce()</code> change the value as well as checking it. Typed variables, typed function arguments and <code>parse_as()</code> all keep the transformed value.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>retries <span class="sc">%:%</span> <span class="fu">Default</span>(Integer, <span class="dv">3</span>L) <span class="sc">%&lt;-%</span> <span class="cn">NULL</span></span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>retries</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>Config <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">host =</span> String, <span class="at">port =</span> <span class="fu">Default</span>(Numeric, <span class="dv">8080</span>)))</span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="fu">parse_as</span>(<span class="fu">list</span>(<span class="at">host =</span> <span class="st">"localhost"</span>), Config)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$host
+[1] "localhost"
+
+$port
+[1] 8080</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a>age <span class="sc">%:%</span> <span class="fu">Coerce</span>(Numeric) <span class="sc">%&lt;-%</span> <span class="st">"42"</span></span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a>age</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 42</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb90"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a>age <span class="ot">&lt;-</span> <span class="st">"forty"</span>   <span class="co"># cannot be converted: an error, not a silent NA</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'age': cannot convert ["forty"] to numeric</code></pre>
+</div>
+</div>
+<p>List and data frame types can also accept or remove unknown fields with <code>extra = "allow"</code> or <code>extra = "drop"</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a>Stripped <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String), <span class="at">extra =</span> <span class="st">"drop"</span>)</span>
+<span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a><span class="fu">parse_as</span>(<span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Ann"</span>, <span class="at">internal_id =</span> <span class="dv">7</span>), Stripped)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$name
+[1] "Ann"</code></pre>
+</div>
+</div>
+</section>
+<section id="more-type-shapes" class="level2">
+<h2 class="anchored" data-anchor-id="more-type-shapes">More Type Shapes</h2>
+<section id="intersections" class="level3">
+<h3 class="anchored" data-anchor-id="intersections">Intersections</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb94"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a>Named <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String))</span>
+<span id="cb94-2"><a href="#cb94-2" aria-hidden="true" tabindex="-1"></a>Aged  <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">age =</span> Numeric))</span>
+<span id="cb94-3"><a href="#cb94-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb94-4"><a href="#cb94-4" aria-hidden="true" tabindex="-1"></a>someone <span class="sc">%:%</span> (Named <span class="sc">&amp;</span> Aged) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Ann"</span>, <span class="at">age =</span> <span class="dv">31</span>)</span>
+<span id="cb94-5"><a href="#cb94-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb94-6"><a href="#cb94-6" aria-hidden="true" tabindex="-1"></a>Percent <span class="ot">&lt;-</span> Numeric <span class="sc">&amp;</span> <span class="fu">Between</span>(<span class="dv">0</span>, <span class="dv">100</span>)</span>
+<span id="cb94-7"><a href="#cb94-7" aria-hidden="true" tabindex="-1"></a><span class="fu">check_type</span>(<span class="dv">150</span>, Percent)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error: expected between[0, 100], but value [150] is outside [0, 100]</code></pre>
+</div>
+</div>
+</section>
+<section id="tuples-and-records" class="level3">
+<h3 class="anchored" data-anchor-id="tuples-and-records">Tuples and Records</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>point <span class="sc">%:%</span> <span class="fu">Tuple</span>(Numeric, Numeric) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="fl">1.5</span>, <span class="dv">2</span>)</span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>point <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fl">1.5</span>, <span class="st">"2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'point[[2]]': Expected numeric, got string
+Received: 2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a>scores <span class="sc">%:%</span> <span class="fu">Record</span>(String, Numeric) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">alice =</span> <span class="dv">90</span>, <span class="at">bob =</span> <span class="dv">85</span>)</span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>flags  <span class="sc">%:%</span> <span class="fu">Record</span>(<span class="fu">Enum</span>(<span class="st">"debug"</span>, <span class="st">"verbose"</span>), Bool) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">debug =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a>flags <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">debug =</span> <span class="cn">TRUE</span>, <span class="at">color =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'flags$color': Invalid key (expected enum["debug", "verbose"])</code></pre>
+</div>
+</div>
+</section>
+<section id="discriminated-unions" class="level3">
+<h3 class="anchored" data-anchor-id="discriminated-unions">Discriminated Unions</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb100"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a>Circle <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">radius =</span> Numeric))</span>
+<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a>Square <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">side =</span> Numeric))</span>
+<span id="cb100-3"><a href="#cb100-3" aria-hidden="true" tabindex="-1"></a>Shape  <span class="ot">&lt;-</span> <span class="fu">DiscriminatedUnion</span>(<span class="st">"kind"</span>, <span class="at">circle =</span> Circle, <span class="at">square =</span> Square)</span>
+<span id="cb100-4"><a href="#cb100-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb100-5"><a href="#cb100-5" aria-hidden="true" tabindex="-1"></a>shape <span class="sc">%:%</span> Shape <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">kind =</span> <span class="st">"circle"</span>, <span class="at">radius =</span> <span class="dv">2</span>)</span>
+<span id="cb100-6"><a href="#cb100-6" aria-hidden="true" tabindex="-1"></a>shape <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">kind =</span> <span class="st">"square"</span>, <span class="at">radius =</span> <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: 2 type errors found:
+  * Type error in 'shape$side': Missing required field (expected numeric)
+  * Type error in 'shape$radius': Unexpected field (valid fields: kind, side)</code></pre>
+</div>
+</div>
+</section>
+<section id="recursive-types" class="level3">
+<h3 class="anchored" data-anchor-id="recursive-types">Recursive Types</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb102"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a>Tree <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb102-2"><a href="#cb102-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">value    =</span> Numeric,</span>
+<span id="cb102-3"><a href="#cb102-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">children =</span> <span class="fu">ListOf</span>(<span class="fu">Lazy</span>(<span class="cf">function</span>() Tree, <span class="at">name =</span> <span class="st">"Tree"</span>))</span>
+<span id="cb102-4"><a href="#cb102-4" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb102-5"><a href="#cb102-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb102-6"><a href="#cb102-6" aria-hidden="true" tabindex="-1"></a>tree <span class="sc">%:%</span> Tree <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">value =</span> <span class="dv">1</span>, <span class="at">children =</span> <span class="fu">list</span>(</span>
+<span id="cb102-7"><a href="#cb102-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">value =</span> <span class="dv">2</span>, <span class="at">children =</span> <span class="fu">list</span>())</span>
+<span id="cb102-8"><a href="#cb102-8" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="branded-types" class="level3">
+<h3 class="anchored" data-anchor-id="branded-types">Branded Types</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb103"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a>UserId  <span class="ot">&lt;-</span> <span class="fu">Brand</span>(<span class="fu">Scalar</span>(String), <span class="st">"UserId"</span>)</span>
+<span id="cb103-2"><a href="#cb103-2" aria-hidden="true" tabindex="-1"></a>OrderId <span class="ot">&lt;-</span> <span class="fu">Brand</span>(<span class="fu">Scalar</span>(String), <span class="st">"OrderId"</span>)</span>
+<span id="cb103-3"><a href="#cb103-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb103-4"><a href="#cb103-4" aria-hidden="true" tabindex="-1"></a>current_user <span class="sc">%:%</span> UserId <span class="sc">%&lt;-%</span> <span class="fu">brand</span>(<span class="st">"u-123"</span>, UserId)</span>
+<span id="cb103-5"><a href="#cb103-5" aria-hidden="true" tabindex="-1"></a>current_user <span class="ot">&lt;-</span> <span class="fu">brand</span>(<span class="st">"o-789"</span>, OrderId)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'current_user': Expected UserId&lt;scalar&lt;string&gt;&gt;, got a value branded as OrderId. Create branded values with brand(value, &lt;type&gt;)
+Received: o-789</code></pre>
+</div>
+</div>
+</section>
+<section id="function-types" class="level3">
+<h3 class="anchored" data-anchor-id="function-types">Function Types</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb105"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a>Formatter <span class="ot">&lt;-</span> <span class="fu">FunctionOf</span>(<span class="fu">list</span>(<span class="at">x =</span> Numeric), <span class="at">.return =</span> String)</span>
+<span id="cb105-2"><a href="#cb105-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb105-3"><a href="#cb105-3" aria-hidden="true" tabindex="-1"></a>fmt <span class="sc">%:%</span> Formatter <span class="sc">%&lt;-%</span> <span class="cf">function</span>(x) <span class="fu">format</span>(x, <span class="at">nsmall =</span> <span class="dv">2</span>)</span>
+<span id="cb105-4"><a href="#cb105-4" aria-hidden="true" tabindex="-1"></a><span class="fu">fmt</span>(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "3.00"</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb107"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fmt</span>(<span class="st">"a"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'x': Expected numeric, got string
+Received: a</code></pre>
+</div>
+</div>
+</section>
+<section id="generic-types" class="level3">
+<h3 class="anchored" data-anchor-id="generic-types">Generic Types</h3>
+<p>A generic type is a function that takes types and returns a type:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb109"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb109-1"><a href="#cb109-1" aria-hidden="true" tabindex="-1"></a>Paginated <span class="ot">&lt;-</span> <span class="cf">function</span>(Item) {</span>
+<span id="cb109-2"><a href="#cb109-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">items =</span> <span class="fu">ListOf</span>(Item), <span class="at">total =</span> <span class="fu">Scalar</span>(Integer)))</span>
+<span id="cb109-3"><a href="#cb109-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb109-4"><a href="#cb109-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-5"><a href="#cb109-5" aria-hidden="true" tabindex="-1"></a>page <span class="sc">%:%</span> <span class="fu">Paginated</span>(Numeric) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">items =</span> <span class="fu">list</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">total =</span> <span class="dv">2</span>L)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="object-utilities" class="level2">
+<h2 class="anchored" data-anchor-id="object-utilities">Object Utilities</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb110"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb110-1"><a href="#cb110-1" aria-hidden="true" tabindex="-1"></a>User <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb110-2"><a href="#cb110-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id    =</span> Integer,</span>
+<span id="cb110-3"><a href="#cb110-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">name  =</span> String,</span>
+<span id="cb110-4"><a href="#cb110-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">email =</span> <span class="fu">Optional</span>(String)</span>
+<span id="cb110-5"><a href="#cb110-5" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb110-6"><a href="#cb110-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb110-7"><a href="#cb110-7" aria-hidden="true" tabindex="-1"></a><span class="fu">Pick</span>(User, <span class="st">"id"</span>, <span class="st">"name"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: {id: integer, name: string} &gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb112"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Omit</span>(User, <span class="st">"id"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: {name: string, email?: string | null} &gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb114"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Partial</span>(User)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: {id?: integer | null, name?: string | null, email?: string | null} &gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb116"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb116-1"><a href="#cb116-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Required</span>(User)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: {id: integer, name: string, email: string} &gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb118"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb118-1"><a href="#cb118-1" aria-hidden="true" tabindex="-1"></a><span class="fu">KeyOf</span>(User)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: enum["id", "name", "email"] &gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb120"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb120-1"><a href="#cb120-1" aria-hidden="true" tabindex="-1"></a>patch <span class="sc">%:%</span> <span class="fu">Partial</span>(<span class="fu">Omit</span>(User, <span class="st">"id"</span>)) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">email =</span> <span class="st">"new@example.com"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="validating-data" class="level2">
+<h2 class="anchored" data-anchor-id="validating-data">Validating Data</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb121"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb121-1"><a href="#cb121-1" aria-hidden="true" tabindex="-1"></a>TodoItem <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Numeric, <span class="at">title =</span> String, <span class="at">done =</span> Bool))</span>
+<span id="cb121-2"><a href="#cb121-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-3"><a href="#cb121-3" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb121-4"><a href="#cb121-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Buy milk"</span>, <span class="at">done =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb121-5"><a href="#cb121-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>)</span>
+<span id="cb121-6"><a href="#cb121-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb121-7"><a href="#cb121-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-8"><a href="#cb121-8" aria-hidden="true" tabindex="-1"></a><span class="fu">is_type</span>(data, <span class="fu">ListOf</span>(TodoItem))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] FALSE</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb123"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">safe_parse</span>(data, <span class="fu">ListOf</span>(TodoItem))</span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a>result</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;parse result: 3 issues&gt;
+  * [[2]]$id: Expected numeric, got string
+  * [[2]]$title: Expected string, got double
+  * [[2]]$done: Missing required field (expected bool)</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb125"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb125-1"><a href="#cb125-1" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>issues</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         path                                message expected     got
+1    [[2]]$id           Expected numeric, got string  numeric  string
+2 [[2]]$title            Expected string, got double   string  double
+3  [[2]]$done Missing required field (expected bool)     bool missing
+           code
+1  invalid_type
+2  invalid_type
+3 missing_field</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb127"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb127-1"><a href="#cb127-1" aria-hidden="true" tabindex="-1"></a><span class="fu">parse_as</span>(data, <span class="fu">ListOf</span>(TodoItem), <span class="at">context =</span> <span class="st">"todos"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: 3 type errors found:
+  * Type error in 'todos[[2]]$id': Expected numeric, got string
+  * Type error in 'todos[[2]]$title': Expected string, got double
+  * Type error in 'todos[[2]]$done': Missing required field (expected bool)</code></pre>
+</div>
+</div>
+<section id="json" class="level3">
+<h3 class="anchored" data-anchor-id="json">JSON</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb129"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1" aria-hidden="true" tabindex="-1"></a>Order <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb129-2"><a href="#cb129-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id    =</span> <span class="fu">Scalar</span>(Integer),</span>
+<span id="cb129-3"><a href="#cb129-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">items =</span> <span class="fu">ListOf</span>(<span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">sku =</span> <span class="fu">Scalar</span>(String), <span class="at">qty =</span> <span class="fu">Scalar</span>(Whole))))</span>
+<span id="cb129-4"><a href="#cb129-4" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb129-5"><a href="#cb129-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-6"><a href="#cb129-6" aria-hidden="true" tabindex="-1"></a><span class="fu">validate_json</span>(<span class="st">'{"id": 7, "items": [{"sku": "A1", "qty": 2}]}'</span>, Order)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$id
+[1] 7
+
+$items
+$items[[1]]
+$items[[1]]$sku
+[1] "A1"
+
+$items[[1]]$qty
+[1] 2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb131"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb131-1"><a href="#cb131-1" aria-hidden="true" tabindex="-1"></a><span class="fu">validate_json</span>(<span class="st">'{"id": "7", "items": [{"sku": "A1"}]}'</span>, Order)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: 2 type errors found:
+  * Type error in 'id': Expected scalar&lt;integer&gt;, got string
+  * Type error in 'items[[1]]$qty': Missing required field (expected scalar&lt;whole&gt;)</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb133"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb133-1"><a href="#cb133-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">to_json_schema</span>(Order, <span class="at">json =</span> <span class="cn">TRUE</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sku",
+          "qty"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "id",
+    "items"
+  ],
+  "additionalProperties": false
+}</code></pre>
+</div>
+</div>
+</section>
+<section id="inspecting-typed-variables" class="level3">
+<h3 class="anchored" data-anchor-id="inspecting-typed-variables">Inspecting Typed Variables</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb135"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb135-1"><a href="#cb135-1" aria-hidden="true" tabindex="-1"></a>age_years <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">30</span></span>
+<span id="cb135-2"><a href="#cb135-2" aria-hidden="true" tabindex="-1"></a><span class="fu">type_of</span>(age_years)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: numeric &gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb137"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1" aria-hidden="true" tabindex="-1"></a><span class="fu">untype</span>(age_years)</span>
+<span id="cb137-2"><a href="#cb137-2" aria-hidden="true" tabindex="-1"></a>age_years <span class="ot">&lt;-</span> <span class="st">"no longer checked"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -692,33 +1089,102 @@ Received: invalid-email</code></pre>
 <h2 class="anchored" data-anchor-id="error-messages">Error Messages</h2>
 <p><code>sicher</code> provides clear, contextual error messages:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
-<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb138"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb138-1"><a href="#cb138-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
+<span id="cb138-2"><a href="#cb138-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: not a number</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field</span></span>
-<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>PersonType <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
-<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>p <span class="sc">%:%</span> PersonType <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb140"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb140-1"><a href="#cb140-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field</span></span>
+<span id="cb140-2"><a href="#cb140-2" aria-hidden="true" tabindex="-1"></a>PersonType <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
+<span id="cb140-3"><a href="#cb140-3" aria-hidden="true" tabindex="-1"></a>p <span class="sc">%:%</span> PersonType <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
-<pre><code>Error: Type error: Expected {name: string, age: numeric}, got list
-Details: Missing required field(s): age (expected fields: name, age)
-Received: list with fields: [name]</code></pre>
+<pre><code>Error: Type error in 'p$age': Missing required field (expected numeric)</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
-<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb142"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb142-1"><a href="#cb142-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
+<span id="cb142-2"><a href="#cb142-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'vec': Expected numeric[3], got double of length 2
 Received: [1, 2]</code></pre>
 </div>
 </div>
+<section id="every-problem-with-its-location" class="level3">
+<h3 class="anchored" data-anchor-id="every-problem-with-its-location">Every Problem, With Its Location</h3>
+<p>Errors report every problem at once instead of stopping at the first one, and each problem says where it is:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb144"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb144-1"><a href="#cb144-1" aria-hidden="true" tabindex="-1"></a>Todo <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Numeric, <span class="at">title =</span> String))</span>
+<span id="cb144-2"><a href="#cb144-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-3"><a href="#cb144-3" aria-hidden="true" tabindex="-1"></a>todos <span class="sc">%:%</span> <span class="fu">ListOf</span>(Todo) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb144-4"><a href="#cb144-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Buy milk"</span>),</span>
+<span id="cb144-5"><a href="#cb144-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>, <span class="at">extra_field =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb144-6"><a href="#cb144-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: 3 type errors found:
+  * Type error in 'todos[[2]]$id': Expected numeric, got string
+  * Type error in 'todos[[2]]$title': Expected string, got double
+  * Type error in 'todos[[2]]$extra_field': Unexpected field (valid fields: id, title)</code></pre>
+</div>
+</div>
+</section>
+<section id="catching-type-errors" class="level3">
+<h3 class="anchored" data-anchor-id="catching-type-errors">Catching Type Errors</h3>
+<p>Type errors are conditions of class <code>sicher_type_error</code>. Their <code>issues</code> element lists each problem with its <code>message</code>, <code>expected</code>, <code>got</code> and <code>code</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb146"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1" aria-hidden="true" tabindex="-1"></a>err <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb146-2"><a href="#cb146-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">check_type</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>), Todo, <span class="at">context =</span> <span class="st">"todo"</span>),</span>
+<span id="cb146-3"><a href="#cb146-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">sicher_type_error =</span> <span class="cf">function</span>(e) e</span>
+<span id="cb146-4"><a href="#cb146-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb146-5"><a href="#cb146-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb146-6"><a href="#cb146-6" aria-hidden="true" tabindex="-1"></a><span class="fu">vapply</span>(err<span class="sc">$</span>issues, <span class="cf">function</span>(issue) issue<span class="sc">$</span>message, <span class="fu">character</span>(<span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Expected numeric, got string" "Expected string, got double" </code></pre>
+</div>
+</div>
+<p>For a data frame of issues with readable paths, use <code>safe_parse()</code> instead:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb148"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb148-1"><a href="#cb148-1" aria-hidden="true" tabindex="-1"></a><span class="fu">safe_parse</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>), Todo, <span class="at">context =</span> <span class="st">"todo"</span>)<span class="sc">$</span>issues</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        path                      message expected    got         code
+1    todo$id Expected numeric, got string  numeric string invalid_type
+2 todo$title  Expected string, got double   string double invalid_type</code></pre>
+</div>
+</div>
+</section>
+<section id="forgotten-parentheses" class="level3">
+<h3 class="anchored" data-anchor-id="forgotten-parentheses">Forgotten Parentheses</h3>
+<p>Using a type factory without calling it gives a hint:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb150"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb150-1"><a href="#cb150-1" aria-hidden="true" tabindex="-1"></a>size <span class="sc">%:%</span> Factor <span class="sc">%&lt;-%</span> <span class="fu">factor</span>(<span class="st">"M"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Invalid type specification: expected a sicher_type, sicher_union, or sicher_readonly (e.g. Numeric, String | Bool, Optional(Integer)); got function. Did you forget to call a type factory, e.g. Factor() instead of Factor?</code></pre>
+</div>
+</div>
+</section>
+<section id="warnings-instead-of-errors" class="level3">
+<h3 class="anchored" data-anchor-id="warnings-instead-of-errors">Warnings Instead of Errors</h3>
+<p>With <code>options(sicher.mode = "warn")</code>, violations become warnings and the assigned value is kept. This helps when adding sicher to existing code. <code>Readonly()</code> is still enforced.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb152"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb152-1"><a href="#cb152-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"warn"</span>)</span>
+<span id="cb152-2"><a href="#cb152-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb152-3"><a href="#cb152-3" aria-hidden="true" tabindex="-1"></a>score <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
+<span id="cb152-4"><a href="#cb152-4" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="st">"ten"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Type error in 'score': Expected numeric, got string
+Received: ten</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb154"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb154-1"><a href="#cb154-1" aria-hidden="true" tabindex="-1"></a>score</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "ten"</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb156"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb156-1"><a href="#cb156-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

@@ -4,11 +4,15 @@
 \alias{create_dataframe_type}
 \title{Create a Data Frame Type with Column Specification}
 \usage{
-create_dataframe_type(col_spec)
+create_dataframe_type(col_spec, extra = c("error", "allow", "drop"))
 }
 \arguments{
 \item{col_spec}{A named list where names are column names and values are
 sicher_type or sicher_union objects describing the expected column type.}
+
+\item{extra}{What to do with columns that are not part of \code{col_spec}:
+\code{"error"} (the default), \code{"allow"} or \code{"drop"}. See
+\code{\link{create_list_type}()}.}
 }
 \value{
 A sicher_type representing the data frame schema.
