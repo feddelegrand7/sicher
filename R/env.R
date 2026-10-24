@@ -122,12 +122,12 @@ parse_env <- function(type, prefix = "", env = Sys.getenv(),
         ))
       }
       issues <- c(issues, res$issues)
-      out[field] <- list(res$value)
+      # Keep the converted text; the whole type is parsed once below, so
+      # Transform() fields are not transformed twice
+      out[field] <- list(value)
     } else {
       default <- field_default(field_type)
-      if (default$has) {
-        out[field] <- list(default$value)
-      } else if (!field_is_optional(field_type)) {
+      if (!default$has && !field_is_optional(field_type)) {
         issues <- c(issues, list(new_issue(
           list(var),
           glue::glue(
@@ -140,10 +140,13 @@ parse_env <- function(type, prefix = "", env = Sys.getenv(),
   }
   if (length(issues) > 0) sicher_abort(issues)
 
-  # Rules on the whole settings object, e.g. Refine() on the list type.
+  # Parse the settings (filling in defaults) and check rules on the whole
+  # object, e.g. Refine() on the list type.
   res <- run_type(out, type)
   if (length(res$issues) > 0) sicher_abort(res$issues)
-  res$value
+  # Fields in the order the type declares them (defaults are added last)
+  value <- res$value
+  value[c(intersect(names(spec), names(value)), setdiff(names(value), names(spec)))]
 }
 
 env_true <- c("true", "t", "yes", "y", "on", "1")

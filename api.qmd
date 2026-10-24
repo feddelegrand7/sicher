@@ -265,6 +265,27 @@ Grid  <- MatrixOf(Numeric, nrow = 3, ncol = 3)
 Model <- InstanceOf("lm")
 ```
 
+### `HasMethods(...)`
+
+Objects with methods for the given generics, whatever their class: S3 methods other than `default` (implicit classes such as `numeric` count), S4 methods, and function fields of R6 objects.
+
+```{r}
+Model <- HasMethods("predict", "residuals")
+is_type(lm(mpg ~ wt, data = mtcars), Model)
+```
+
+### `match_type(type, ..., .default = NULL)`
+
+Builds a function that checks a value against `type` and calls the handler for its case: a `DiscriminatedUnion()` tag, an `Enum()`/`Literal()` value, a `Factor(levels = ...)` level, or a union member (named by its type name, e.g. `integer`). Missing handlers are an error unless `.default` is given; handlers for cases that do not exist are always an error.
+
+```{r}
+describe <- match_type(Integer | String,
+  integer = function(x) "a number",
+  string = function(x) "some text"
+)
+describe(1L)
+```
+
 ## Object Utilities
 
 These work on types created with `create_list_type()` or `create_dataframe_type()` and keep their `extra` and `alias` settings.
@@ -406,6 +427,28 @@ Checks `type`, then runs `predicate` on the value; `message` is used when it doe
 Even <- Refine(Integer, function(x) all(x %% 2L == 0L), "must be even")
 ```
 
+### `Check(type, fn)`
+
+Checks `type`, then runs `fn(value, ctx)`. The rule reports problems with `ctx$issue(message, path = NULL)`, each at the field it names, so rules across fields point at the right input.
+
+```{r}
+Range <- Check(
+  create_list_type(list(min = Numeric, max = Numeric)),
+  function(x, ctx) if (x$max < x$min) ctx$issue("must not be below min", path = "max")
+)
+safe_parse(list(min = 5, max = 1), Range)$issues$path
+```
+
+### `Transform(type, fn, output = NULL)` and `Pipe(...)`
+
+`Transform()` checks `type`, converts the value with `fn` and, if given, checks the result against `output`. `Pipe()` chains types, passing each parsed value to the next and stopping at the first that fails. JSON Schema describes the input side.
+
+```{r}
+Trimmed <- Transform(String, trimws)
+Share <- Pipe(Coerce(Numeric), Transform(Numeric, function(x) x / 100), Between(0, 1))
+parse_as("42", Share)
+```
+
 ### `Default(type, value)`
 
 Replaces `NULL` with `value`. Inside list types, a missing field with a default is filled in.
@@ -477,6 +520,10 @@ The reverse of `validate_json()`: `dump_as()` followed by `jsonlite::toJSON()`. 
 ### `parse_env(type, prefix = "", env = Sys.getenv(), case_sensitive = FALSE)`
 
 Reads one environment variable per field of a list type and returns the settings as a named list. The variable for a field is `prefix` plus the field name in upper case (`APP_` + `db_url` = `APP_DB_URL`), or the field's `Alias()` without the prefix. Names match case-insensitively unless `case_sensitive = TRUE`. Values are converted to the field's type (whole numbers, numbers, logicals such as `yes`/`no`/`on`/`off`/`1`/`0`, dates, date-times, JSON arrays and objects, or the `Coerce()` conversion). Unset and empty variables use the field's `Default()` or are left out when `Optional()`; every problem is reported at once with the variable name. `Refine()` rules on the whole list type are checked too. Use `env` to pass variables explicitly, and `readRenviron(".env")` to load a `.env` file first.
+
+### `field_errors(x)` and `problem_json(x, status = 400L, title = "Invalid request", type = "about:blank", instance = NULL)`
+
+Both take a `safe_parse()` result or a caught `sicher_type_error`. `field_errors()` returns a named list of messages per path, for showing errors next to form inputs. `problem_json()` returns an RFC 9457 "problem details" list (`type`, `title`, `status`, `detail`, `errors`) for HTTP error responses; each error has a `path`, a JSON `pointer`, a `message` and a `code`.
 
 ### `type_of(x)` and `untype(x)`
 
@@ -563,7 +610,7 @@ Type errors provide detailed context:
 x %:% Numeric %<-% "text"
 ```
 
-Error messages include: - Expected type - Actual type - Location, such as `todos[[2]]$title` - Value preview (for debugging)
+Error messages include: - Expected type - Actual type - Location, such as `todos[[2]]$title` - Value preview (for debugging) - Positions of the failing elements of a vector, or rows of a data frame - A suggestion for misspelled field names, enum values and union tags
 
 When several things are wrong, every problem is reported:
 

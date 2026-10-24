@@ -429,6 +429,9 @@ find_coercer <- function(type) {
   if (is.null(meta)) return(NULL)
   if (is.function(meta$coerce)) return(meta$coerce)
   if (!is.null(meta$inner)) return(find_coercer(meta$inner))
+  # Transforms convert to the type they accept as input
+  if (identical(meta$kind, "transform")) return(find_coercer(meta$input))
+  if (identical(meta$kind, "pipe")) return(find_coercer(meta$types[[1]]))
   NULL
 }
 
@@ -700,6 +703,78 @@ InstanceOf <- function(class) {
         (isS4(x) && any(vapply(class, function(cl) methods::is(x, cl), logical(1))))
     }),
     kind = "instance_of", class = class
+  )
+}
+
+#' Types for objects that have certain methods
+#'
+#' @description
+#' Creates a structural type that accepts any object with methods for the
+#' given generic functions, like a Python protocol or a C++ concept. Where
+#' \code{\link{InstanceOf}("lm")} accepts only linear models,
+#' \code{HasMethods("predict")} accepts any object \code{predict()} works on:
+#' \code{lm}, \code{glm} or a model class from another package.
+#'
+#' An object has a method when one of its classes (including implicit
+#' classes such as \code{"numeric"}) has an S3 method for the generic, other
+#' than the \code{default} method. For S4 objects S4 methods count too, and
+#' for R6 objects (and other environments) a function field with the
+#' generic's name counts. S7 methods are not detected. S3 methods are
+#' looked up from where \code{HasMethods()} was called (and among registered
+#' methods), so a method defined inside another function is not found.
+#'
+#' @param ... Names of generic functions, as strings.
+#'
+#' @return A sicher_type.
+#'
+#' @examples
+#' Model <- HasMethods("predict", "residuals")
+#' is_type(lm(mpg ~ wt, data = mtcars), Model)   # TRUE
+#' try(check_type(list(), Model))
+#'
+#' @export
+HasMethods <- function(...) {
+  generics <- c(...)
+  if (!is.character(generics) || length(generics) == 0 || anyNA(generics) ||
+      any(!nzchar(generics))) {
+    stop("HasMethods() needs one or more generic function names, e.g. HasMethods(\"predict\")",
+         call. = FALSE)
+  }
+  generics <- unique(generics)
+  env <- parent.frame()
+  type_name <- glue::glue("has_methods[{paste(generics, collapse = ', ')}]")
+
+  has_method <- function(x, generic) {
+    classes <- setdiff(.class2(x), "default")
+    for (cls in classes) {
+      if (!is.null(utils::getS3method(generic, cls, optional = TRUE, envir = env))) {
+        return(TRUE)
+      }
+    }
+    if (isS4(x) && methods::hasMethod(generic, class(x))) return(TRUE)
+    if (is.environment(x) && is.function(x[[generic]])) return(TRUE)
+    FALSE
+  }
+
+  new_parser_type(
+    type_name,
+    function(x, path) {
+      missing_methods <- generics[!vapply(generics, has_method, logical(1), x = x)]
+      if (length(missing_methods) == 0) return(ok_result(x))
+      shown <- paste0(missing_methods, "()")
+      if (length(shown) > 1) {
+        shown <- paste(paste(utils::head(shown, -1), collapse = ", "), "or", utils::tail(shown, 1))
+      }
+      cls <- paste(class(x), collapse = "/")
+      issue_result(x, new_issue(
+        path,
+        glue::glue("Expected {type_name}, but class '{cls}' has no {shown} method"),
+        expected = type_name, got = get_type_name(x),
+        received = format_received(x), code = "missing_method"
+      ))
+    },
+    meta = list(kind = "has_methods", generics = generics),
+    strict_check = TRUE
   )
 }
 
@@ -1120,7 +1195,11 @@ DiscriminatedUnion <- function(key, ...) {
         return(issue_result(x, new_issue(
           key_path,
           glue::glue("Missing discriminator field (expected one of {shown_tags})"),
-          expected = shown_tags, got = "missing", code = "invalid_discriminator"
+          expected = shown_tags, got = "missing", code = "invalid_discriminator",
+          hint = {
+            found <- suggest_name(key, setdiff(names(x), key))
+            if (!is.null(found)) glue::glue("Found field '{found}'; did you mean '{key}'?")
+          }
         )))
       }
       tag <- x[[key]]
@@ -1130,7 +1209,8 @@ DiscriminatedUnion <- function(key, ...) {
           key_path,
           glue::glue("Invalid discriminator value (expected one of {shown_tags})"),
           expected = shown_tags, got = get_type_name(tag),
-          received = format_received(tag), code = "invalid_discriminator"
+          received = format_received(tag), code = "invalid_discriminator",
+          hint = if (is.character(tag)) value_hint(tag, as.list(tags))
         )))
       }
       run_type(x, members[[as.character(tag)]], path)

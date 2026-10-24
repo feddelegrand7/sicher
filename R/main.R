@@ -312,7 +312,7 @@ Enum <- function(...) {
     "enum[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
   )
 
-  with_meta(
+  leaf <- with_meta(
     create_type(
       type_name,
       function(x) {
@@ -329,6 +329,7 @@ Enum <- function(...) {
     ),
     kind = "enum", values = allowed_values
   )
+  with_value_hints(leaf, allowed_values, enum_value_matches)
 }
 
 #' Literal Type Factory
@@ -378,7 +379,7 @@ Literal <- function(...) {
     "literal[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
   )
 
-  with_meta(
+  leaf <- with_meta(
     create_type(
       type_name,
       function(x) {
@@ -393,6 +394,7 @@ Literal <- function(...) {
     ),
     kind = "literal", values = allowed_values
   )
+  with_value_hints(leaf, allowed_values, literal_value_matches)
 }
 
 # =============================================================================
@@ -540,6 +542,7 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop"),
       present <- names(x)
       if (is.null(present)) present <- character(0)
       renames <- character(0)
+      absent <- character(0)
 
       for (field in field_names) {
         key <- keys[[field]]
@@ -553,6 +556,7 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop"),
           }
           if (source != field) renames[source] <- field
         } else {
+          absent <- c(absent, key)
           default <- field_default(field_type)
           if (default$has) {
             x[field] <- list(default$value)
@@ -579,7 +583,8 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop"),
               ),
               expected = "no field",
               got = get_type_name(x[[field]]),
-              code = "unexpected_field"
+              code = "unexpected_field",
+              hint = field_hint(field, absent)
             )))
           }
         } else if (extra == "drop") {
@@ -787,6 +792,7 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"),
 
       issues <- list()
       renames <- character(0)
+      absent <- character(0)
       for (col in col_names) {
         key <- keys[[col]]
         source <- field_source(col, key, names(x))
@@ -808,6 +814,7 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"),
           }
           if (source != col) renames[source] <- col
         } else {
+          absent <- c(absent, key)
           default <- field_default(col_type)
           if (default$has) {
             x[[col]] <- rep_len(default$value, nrow(x))
@@ -834,7 +841,8 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"),
               ),
               expected = "no column",
               got = get_type_name(x[[col]]),
-              code = "unexpected_field"
+              code = "unexpected_field",
+              hint = field_hint(col, absent)
             )))
           }
         } else if (extra == "drop") {

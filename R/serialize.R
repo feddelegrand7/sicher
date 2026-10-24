@@ -40,6 +40,10 @@ dump_value <- function(x, type, opts, scalar = FALSE) {
     scalar = dump_value(x, meta$inner, opts, scalar = TRUE),
     sized = dump_value(x, meta$inner, opts, scalar = scalar || meta$size == 1),
     literal = dump_leaf(x, opts, scalar = TRUE),
+    # Without an output type, assume the value keeps the input's shape
+    transform = dump_value(x, if (is.null(meta$output)) meta$input else meta$output,
+                           opts, scalar),
+    pipe = dump_value(x, meta$types[[length(meta$types)]], opts, scalar),
     brand = {
       class(x) <- setdiff(oldClass(x), meta$brand)
       if (length(brand_classes(x)) == 0) x <- strip_brands(x)

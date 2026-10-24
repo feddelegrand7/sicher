@@ -18,6 +18,7 @@
 #   code     machine-readable kind of issue ("invalid_type", "custom", ...)
 #   index    positions of the failing elements of a vector (or NULL);
 #            data frame types relabel them as rows (index_label = "row")
+#   hint     a suggestion such as "Did you mean 'name'?" (or NULL)
 #
 # Plain create_type() types are leaves: their checker is called and a FALSE
 # result (or an error) becomes an issue. Structured types (lists, data
@@ -27,7 +28,7 @@
 
 new_issue <- function(path, message, expected = NA_character_,
                       got = NA_character_, received = NULL, details = NULL,
-                      code = "custom", index = NULL) {
+                      code = "custom", index = NULL, hint = NULL) {
   list(
     path     = path,
     message  = as.character(message),
@@ -36,8 +37,61 @@ new_issue <- function(path, message, expected = NA_character_,
     received = received,
     details  = details,
     code     = code,
-    index    = index
+    index    = index,
+    hint     = hint
   )
+}
+
+# The candidate closest to `x` (ignoring case), or NULL when none is close
+# enough to be a likely typo.
+suggest_name <- function(x, candidates) {
+  candidates <- unique(as.character(candidates))
+  if (!is.character(x) || length(x) != 1 || is.na(x) || !nzchar(x) ||
+      length(candidates) == 0) {
+    return(NULL)
+  }
+  same <- candidates[tolower(candidates) == tolower(x)]
+  if (length(same) > 0) return(same[1])
+  dist <- utils::adist(x, candidates, ignore.case = TRUE)[1, ]
+  # Swapping two neighbouring letters ("nmae") counts as one edit
+  dist[vapply(candidates, is_swap, logical(1), x = tolower(x))] <- 1
+  best <- which(dist == min(dist))
+  limit <- if (nchar(x) <= 3) 1 else 2
+  if (length(best) != 1 || dist[best] > limit || dist[best] >= nchar(x)) return(NULL)
+  candidates[best]
+}
+
+is_swap <- function(candidate, x) {
+  a <- strsplit(x, "")[[1]]
+  b <- strsplit(tolower(candidate), "")[[1]]
+  if (length(a) != length(b)) return(FALSE)
+  diff <- which(a != b)
+  length(diff) == 2 && diff[2] == diff[1] + 1 &&
+    a[diff[1]] == b[diff[2]] && a[diff[2]] == b[diff[1]]
+}
+
+# "Did you mean 'name'?" for a misspelled field name (NULL if no suggestion).
+field_hint <- function(x, candidates) {
+  match <- suggest_name(x, candidates)
+  if (is.null(match)) NULL else glue::glue("Did you mean '{match}'?")
+}
+
+# "Did you mean "active"?" for misspelled values, NULL if none is close to an
+# allowed value. With several bad values each suggestion names its value.
+value_hint <- function(bad, allowed) {
+  allowed <- as.character(Filter(is.character, allowed))
+  bad <- unique(bad[!is.na(bad)])
+  if (length(allowed) == 0 || !is.character(bad) || length(bad) == 0) return(NULL)
+  pairs <- character(0)
+  for (value in utils::head(bad, 3)) {
+    match <- suggest_name(value, allowed)
+    if (is.null(match)) next
+    pairs[value] <- encodeString(match, quote = "\"")
+  }
+  if (length(pairs) == 0) return(NULL)
+  if (length(bad) == 1) return(glue::glue("Did you mean {pairs}?"))
+  shown <- paste0(pairs, " instead of ", encodeString(names(pairs), quote = "\""))
+  glue::glue("Did you mean {paste(shown, collapse = ', ')}?")
 }
 
 # Positions of the elements (or data frame rows) of `x` flagged by `mask`,
@@ -51,13 +105,15 @@ failing_positions <- function(x, mask) {
 # The issue message followed by the failing positions, if any:
 # "... (at rows 2, 4)".
 issue_message <- function(issue) {
+  msg <- as.character(issue$message)
+  if (!is.null(issue$hint)) msg <- paste0(msg, ". ", issue$hint)
   idx <- issue$index
-  if (length(idx) == 0) return(as.character(issue$message))
+  if (length(idx) == 0) return(msg)
   label <- if (is.null(issue$index_label)) "position" else issue$index_label
   if (length(idx) > 1) label <- paste0(label, "s")
   shown <- paste(utils::head(idx, 5), collapse = ", ")
   if (length(idx) > 5) shown <- glue::glue("{shown} and {length(idx) - 5} more")
-  as.character(glue::glue("{issue$message} (at {label} {shown})"))
+  as.character(glue::glue("{msg} (at {label} {shown})"))
 }
 
 # The standard "Expected <type>, got <type>" issue.
@@ -92,9 +148,32 @@ is_plain_at <- function(issues, path) {
 delegate <- function(x, type, path, outer_name) {
   res <- run_type(x, type, path)
   if (is_plain_at(res$issues, path)) {
-    res$issues <- list(plain_issue(x, outer_name, path))
+    relabeled <- plain_issue(x, outer_name, path)
+    relabeled$hint <- res$issues[[1]]$hint
+    res$issues <- list(relabeled)
   }
   res
+}
+
+# Wrap an Enum() or Literal() leaf so that a misspelled string gets a
+# suggestion. The issue keeps code "invalid_type", so wrappers such as
+# Scalar() still relabel it (and keep the hint).
+with_value_hints <- function(leaf, allowed, matches) {
+  new_parser_type(
+    leaf$name,
+    function(x, path) {
+      res <- run_type(x, leaf, path)
+      if (length(res$issues) == 0 || !is.character(x) || !is.null(dim(x))) {
+        return(res)
+      }
+      ok <- vapply(as.list(x), function(value) {
+        any(vapply(allowed, function(a) matches(value, a), logical(1)))
+      }, logical(1))
+      res$issues[[1]]$hint <- value_hint(x[!ok], allowed)
+      res
+    },
+    meta = type_meta(leaf)
+  )
 }
 
 is_sicher_type_like <- function(type) {
@@ -255,7 +334,15 @@ field_is_optional <- function(type) {
   if (inherits(type, "sicher_union")) {
     return(union_has_null(type) && !isTRUE(attr(type, "sicher_nullable")))
   }
-  identical(meta_kind(type), "default")
+  kind <- meta_kind(type)
+  if (kind %in% c("transform", "pipe", "check")) {
+    # Transform(Optional(String), f) may be left out (and is then not
+    # transformed); a Default() inside is not filled in, so it does not count
+    meta <- type_meta(type)
+    inner <- switch(kind, transform = meta$input, pipe = meta$types[[1]], check = meta$inner)
+    return(field_is_optional(inner) && !field_default(inner)$has)
+  }
+  identical(kind, "default")
 }
 
 field_default <- function(type) {

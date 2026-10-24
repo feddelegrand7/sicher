@@ -500,6 +500,28 @@ pw %:% Password %<-% "correct horse battery"
 pw <- "short"
 ```
 
+### Rules Across Fields
+
+`Refine()` reports one problem about the whole value. `Check()` runs a rule that can report any number of problems, each at the field it is about, with `ctx$issue(message, path)`:
+
+```{r}
+Booking <- Check(
+  create_list_type(list(start = Date, end = Date, adults = Integer, kids = Integer)),
+  function(x, ctx) {
+    if (x$end < x$start) ctx$issue("must be after start", path = "end")
+    if (x$adults == 0L && x$kids > 0L) ctx$issue("children need an adult", path = "kids")
+  }
+)
+
+res <- safe_parse(
+  list(start = as.Date("2024-05-10"), end = as.Date("2024-05-01"), adults = 0L, kids = 2L),
+  Booking
+)
+res$issues[, c("path", "message")]
+```
+
+The path can point into nested values, e.g. `path = c("address", "zip")` or `path = list("items", 2, "qty")`.
+
 ### Nullable
 
 `Optional()` fields may be left out of a list; `Nullable()` fields must be present but may be `NULL`:
@@ -541,6 +563,26 @@ List and data frame types can also accept or remove unknown fields with `extra =
 Stripped <- create_list_type(list(name = String), extra = "drop")
 parse_as(list(name = "Ann", internal_id = 7), Stripped)
 ```
+
+### Transform and Pipe
+
+`Transform(type, fn)` checks a value, then converts it with `fn`. Unlike `Coerce()`, which only converts values that fail the check, it always runs. Give `output` to check the converted value too. `Pipe()` chains types, passing each parsed value to the next and stopping at the first one that fails:
+
+```{r}
+#| error: true
+
+Email <- Transform(Scalar(String), function(x) tolower(trimws(x)))
+parse_as("  Ada@Example.COM ", Email)
+
+Length <- Transform(String, nchar, output = Integer)
+parse_as("hello", Length)
+
+Share <- Pipe(Coerce(Numeric), Transform(Numeric, function(x) x / 100), Between(0, 1))
+parse_as("42", Share)
+parse_as("420", Share)
+```
+
+In a list type, a `Transform(Optional(type), fn)` field may be left out. To give a transformed field a default, put `Default()` outside: `Default(Transform(String, toupper), "A")`. `to_json_schema()` describes what the type accepts, before the transform.
 
 ## More Type Shapes
 
@@ -584,6 +626,40 @@ shape %:% Shape %<-% list(kind = "circle", radius = 2)
 shape <- list(kind = "square", radius = 3)
 ```
 
+### Exhaustive Matching
+
+`match_type()` builds a function that checks a value and calls the handler for its case. The handlers are checked when the matcher is created: a forgotten case is an error right away, not on the one call that reaches it, and so is a handler for a case that does not exist.
+
+```{r}
+#| error: true
+
+area <- match_type(Shape,
+  circle = function(s) pi * s$radius^2,
+  square = function(s) s$side^2
+)
+area(list(kind = "square", side = 3))
+
+match_type(Shape, circle = function(s) pi * s$radius^2)
+match_type(Shape, circle = function(s) 1, sqaure = function(s) 2)
+```
+
+Besides `DiscriminatedUnion()` tags, the cases can be the values of an `Enum()` or `Literal()`, the levels of a `Factor(levels = ...)`, or the members of a union, named by their type names. `.default` handles the cases without their own handler, and extra arguments are passed to the handler:
+
+```{r}
+status_label <- match_type(Enum("active", "paused", "closed"),
+  active = function(x) "Running",
+  .default = function(x) "Not running"
+)
+status_label("paused")
+
+describe <- match_type(Integer | String | Null,
+  integer = function(x) "a number",
+  string  = function(x) "some text",
+  null    = function(x) "nothing"
+)
+describe(NULL)
+```
+
 ### Recursive Types
 
 ```{r}
@@ -619,6 +695,23 @@ Formatter <- FunctionOf(list(x = Numeric), .return = String)
 fmt %:% Formatter %<-% function(x) format(x, nsmall = 2)
 fmt(3)
 fmt("a")
+```
+
+### Objects With Methods
+
+`InstanceOf()` checks the class. `HasMethods()` checks what an object can do: it accepts any object with methods for the given generics, so one type covers `lm`, `glm` and model classes from other packages. S3 methods (other than `default` methods), S4 methods and the function fields of R6 objects count.
+
+```{r}
+#| error: true
+
+Model <- HasMethods("predict", "residuals")
+
+fit_summary <- typed_function(
+  function(model) summary(residuals(model)),
+  params = list(model = Model)
+)
+fit_summary(lm(mpg ~ wt, data = mtcars))
+fit_summary(list(coefficients = 1))
 ```
 
 ### Generic Types
@@ -881,6 +974,26 @@ todos %:% ListOf(Todo) %<-% list(
 )
 ```
 
+### Positions and Rows
+
+For vectors and data frame columns, errors say which elements failed:
+
+```{r, error=TRUE}
+Patients <- create_dataframe_type(list(age = Positive, name = NonNA(String)))
+check_type(data.frame(age = c(31, -2, -5), name = c("Ann", NA, "Bo")), Patients)
+```
+
+The positions are also in the `index` column of `safe_parse()` issues.
+
+### Suggestions for Typos
+
+Misspelled field names, data frame columns, `Enum()` and `Literal()` values and `DiscriminatedUnion()` tags come with a suggestion:
+
+```{r, error=TRUE}
+Account <- create_list_type(list(name = String, status = Enum("active", "inactive")))
+check_type(list(nmae = "Ann", status = "actve"), Account)
+```
+
 ### Catching Type Errors
 
 Type errors are conditions of class `sicher_type_error`. Their `issues` element lists each problem with its `message`, `expected`, `got` and `code`:
@@ -898,6 +1011,36 @@ For a data frame of issues with readable paths, use `safe_parse()` instead:
 
 ```{r}
 safe_parse(list(id = "2", title = 3), Todo, context = "todo")$issues
+```
+
+### Errors for Forms and APIs
+
+`field_errors()` groups the messages of a failed check by field, which is what a form needs to show each message next to its input:
+
+```{r}
+Signup <- create_list_type(list(email = Matches("@"), age = Scalar(Between(18, 120))))
+res <- safe_parse(list(email = "nope", age = 12), Signup)
+field_errors(res)
+```
+
+`problem_json()` turns them into an RFC 9457 "problem details" body for a `400` or `422` response. Each error has a JSON Pointer to the bad value:
+
+```{r}
+str(problem_json(res, status = 422))
+```
+
+In a plumber endpoint:
+
+```{r, eval=FALSE}
+#* @post /signup
+function(req, res) {
+  parsed <- safe_parse(req$body, Signup)
+  if (!parsed$success) {
+    res$status <- 422
+    return(problem_json(parsed, status = 422))
+  }
+  create_account(parsed$data)
+}
 ```
 
 ### Forgotten Parentheses

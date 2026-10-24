@@ -110,6 +110,7 @@ schema_of <- function(type, scalar = FALSE) {
     unique = with_array_bounds(schema_of(meta$inner, scalar), unique = TRUE),
     non_na = ,
     refine = ,
+    check = ,
     coerce = ,
     alias = ,
     brand = schema_of(meta$inner, scalar),
@@ -125,6 +126,8 @@ schema_of <- function(type, scalar = FALSE) {
       schema$default <- json_value(meta$value)
       schema
     },
+    transform = schema_of(meta$input, scalar),
+    pipe = schema_of(meta$types[[1]], scalar),
     list_of = list(type = "array", items = schema_of(meta$inner)),
     list = object_schema(meta$spec, meta$extra, meta$keys),
     data.frame = list(

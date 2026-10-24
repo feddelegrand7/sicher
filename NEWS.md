@@ -17,6 +17,19 @@
 
 -   New `parse_env(type, prefix = "", env = Sys.getenv(), case_sensitive = FALSE)`: reads one environment variable per field of a list type (`prefix` + field name in upper case, or the field's `Alias()`), converts the text to the field's type (numbers, lenient logicals such as `yes`/`no`/`on`/`off`, dates, JSON arrays and objects) and checks it. Unset or empty variables fall back to `Default()` values, and every problem is reported at once with the name of the variable, so a misconfigured app fails at startup with a clear message.
 
+## Matching, rules and transforms
+
+-   New `match_type(type, ..., .default = NULL)`: builds a function that checks a value and calls the handler for its case, which is a `DiscriminatedUnion()` tag, an `Enum()` or `Literal()` value, a `Factor(levels = ...)` level or a member of a union. Missing handlers (without `.default`) and handlers for cases the type does not have are errors when the matcher is created.
+-   New `Check(type, fn)`: rules that report any number of problems, each at the field it is about, through `ctx$issue(message, path)`. Suited to rules across fields such as "end must be after start".
+-   New `Transform(type, fn, output = NULL)`: checks a value, then converts it. New `Pipe(...)`: chains types, passing each parsed value to the next.
+-   New `HasMethods(...)`: accepts any object with methods for the given generics (S3, S4, or R6 fields), e.g. `HasMethods("predict")` for any model.
+
+## Error messages and reports
+
+-   Misspelled field names, data frame columns, `Enum()` and `Literal()` values and `DiscriminatedUnion()` tags now come with a suggestion, e.g. `Unexpected field (valid fields: name, age). Did you mean 'name'?`.
+-   New `field_errors(x)`: the messages of a failed `safe_parse()` (or a caught type error) grouped by field, for showing errors next to form inputs.
+-   New `problem_json(x, status = 400L, ...)`: an RFC 9457 "problem details" body for HTTP error responses, with a JSON Pointer to each bad value.
+
 ## Other changes
 
 -   Fields wrapped in `Coerce()` are now treated like the type they wrap when deciding whether a field is optional, so `Coerce(Default(Integer, 1L))` and `Coerce(Optional(Integer))` fields may be left out of a list.
