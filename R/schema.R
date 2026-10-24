@@ -111,17 +111,25 @@ schema_of <- function(type, scalar = FALSE) {
     non_na = ,
     refine = ,
     coerce = ,
+    alias = ,
     brand = schema_of(meta$inner, scalar),
+    describe = {
+      schema <- schema_of(meta$inner, scalar)
+      if (!is.null(meta$title)) schema$title <- meta$title
+      if (!is.null(meta$description)) schema$description <- meta$description
+      if (!is.null(meta$examples)) schema$examples <- lapply(meta$examples, json_value)
+      schema
+    },
     default = {
       schema <- schema_of(meta$inner, scalar)
       schema$default <- json_value(meta$value)
       schema
     },
     list_of = list(type = "array", items = schema_of(meta$inner)),
-    list = object_schema(meta$spec, meta$extra),
+    list = object_schema(meta$spec, meta$extra, meta$keys),
     data.frame = list(
       type = "array",
-      items = object_schema(meta$spec, meta$extra, scalar_fields = TRUE)
+      items = object_schema(meta$spec, meta$extra, meta$keys, scalar_fields = TRUE)
     ),
     tuple = list(
       type = "array",
@@ -143,12 +151,18 @@ schema_of <- function(type, scalar = FALSE) {
   )
 }
 
-object_schema <- function(spec, extra, scalar_fields = FALSE) {
+# Properties are named by the fields' external names (their aliases), since
+# that is what appears in the JSON.
+object_schema <- function(spec, extra, keys = NULL, scalar_fields = FALSE) {
+  if (is.null(keys)) {
+    keys <- names(spec)
+    names(keys) <- keys
+  }
   properties <- empty_object()
   for (field in names(spec)) {
-    properties[[field]] <- schema_of(spec[[field]], scalar = scalar_fields)
+    properties[[keys[[field]]]] <- schema_of(spec[[field]], scalar = scalar_fields)
   }
-  required <- names(spec)[!vapply(spec, field_is_optional, logical(1))]
+  required <- unname(keys[!vapply(spec, field_is_optional, logical(1))])
   schema <- list(type = "object", properties = properties)
   if (length(required) > 0) schema$required <- as.list(required)
   if (identical(extra, "error")) schema$additionalProperties <- FALSE
@@ -166,7 +180,10 @@ object_schema <- function(spec, extra, scalar_fields = FALSE) {
 #' \code{Numeric} becomes "a number or an array of numbers"; wrap it in
 #' \code{Scalar()} to get a plain \code{number}. Rules that JSON Schema
 #' cannot express (\code{Refine()}, \code{Coerce()}, \code{Brand()},
-#' \code{NonNA()}) are dropped and only their base type is described. Types
+#' \code{NonNA()}) are dropped and only their base type is described.
+#' Fields are named by their \code{\link{Alias}()}, and
+#' \code{\link{Describe}()} adds \code{description}, \code{title} and
+#' \code{examples} keywords. Types
 #' with no JSON equivalent (\code{Function}, \code{Environment},
 #' \code{InstanceOf()}, \code{MatrixOf()}, \code{FunctionOf()},
 #' \code{Lazy()} and custom \code{create_type()} types) raise an error.

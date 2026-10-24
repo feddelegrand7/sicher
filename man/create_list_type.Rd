@@ -4,7 +4,7 @@
 \alias{create_list_type}
 \title{Create a List Type with Specific Structure}
 \usage{
-create_list_type(type_spec, extra = c("error", "allow", "drop"))
+create_list_type(type_spec, extra = c("error", "allow", "drop"), alias = NULL)
 }
 \arguments{
 \item{type_spec}{A named list where names are field names and values are sicher_type objects}
@@ -15,6 +15,13 @@ unchecked, and \code{"drop"} removes them from the parsed value (similar
 to zod's \code{.strict()}, \code{.passthrough()} and \code{.strip()}).
 Typed variables and \code{\link{parse_as}()} store the parsed value, so
 with \code{"drop"} unknown fields are silently removed.}
+
+\item{alias}{Optional external names for the fields: a naming convention
+(\code{"camel"}, \code{"pascal"}, \code{"snake"} or \code{"kebab"}) or
+a function that takes a field name and returns its external name. Each
+field is then read from its external name (or, if that is absent, from
+its R name) and stored under its R name. Fields wrapped in
+\code{\link{Alias}()} keep their own alias. See \code{\link{Alias}()}.}
 }
 \value{
 A sicher_type that validates list structure
@@ -40,5 +47,12 @@ user \%:\% User \%<-\% list(
   age = 25,
   preferences = list(color = "red", movie = "batman")
 )
+
+# Read camelCase data into snake_case fields
+Account <- create_list_type(list(
+  account_id = Scalar(Integer),
+  created_at = Scalar(String)
+), alias = "camel")
+parse_as(list(accountId = 1L, createdAt = "2024-01-05"), Account)
 
 }

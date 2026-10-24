@@ -1,3 +1,26 @@
+# sicher 0.3.0
+
+## Field aliases and output
+
+-   New `Alias(type, alias)`: gives a list field or data frame column an external name (a JSON key, a CSV header, an environment variable). Values are read from the alias, or from the R name when the alias is absent, and stored under the R name. Error messages point at the alias, since that is the key that appears in the data.
+-   `create_list_type()` and `create_dataframe_type()` gain an `alias` argument to rename every field with a naming convention (`"camel"`, `"pascal"`, `"snake"`, `"kebab"`) or a function, e.g. `create_list_type(list(user_id = Integer), alias = "camel")` reads `userId`. Fields wrapped in `Alias()` keep their own alias.
+-   Aliases are kept by `extend()`, `Pick()`, `Omit()`, `Partial()`, `Required()` and `&`.
+-   New `dump_as(value, type, by_alias = TRUE, exclude_null = FALSE)`: the reverse of `parse_as()`. It checks the value, then renames fields to their aliases, optionally leaves out `NULL` fields and removes brands, so the result is ready to send to another system.
+-   New `to_json(value, type, ...)`: the reverse of `validate_json()`. Values declared with `Scalar()` are written as JSON scalars and other vectors as arrays (even with one element), so the shape of the output follows the type and not the data. `NULL` and `NA` become `null`, dates and date-times are written in ISO 8601 format, and invalid values raise a type error instead of producing invalid JSON.
+-   `to_json_schema()` names properties by their aliases.
+
+## Describing types
+
+-   New `Describe(type, description, title, examples)`: attaches documentation to a type without changing how it checks values. `to_json_schema()` writes it as `description`, `title` and `examples`, which makes the exported schema usable as API documentation or as a tool definition for a language model. Examples are checked against the type. Described types show their description when printed.
+
+## Settings from environment variables
+
+-   New `parse_env(type, prefix = "", env = Sys.getenv(), case_sensitive = FALSE)`: reads one environment variable per field of a list type (`prefix` + field name in upper case, or the field's `Alias()`), converts the text to the field's type (numbers, lenient logicals such as `yes`/`no`/`on`/`off`, dates, JSON arrays and objects) and checks it. Unset or empty variables fall back to `Default()` values, and every problem is reported at once with the name of the variable, so a misconfigured app fails at startup with a clear message.
+
+## Other changes
+
+-   Fields wrapped in `Coerce()` are now treated like the type they wrap when deciding whether a field is optional, so `Coerce(Default(Integer, 1L))` and `Coerce(Optional(Integer))` fields may be left out of a list.
+
 # sicher 0.2.0
 
 ## Validating data

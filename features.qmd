@@ -690,6 +690,110 @@ validate_json('{"id": "7", "items": [{"sku": "A1"}]}', Order)
 cat(to_json_schema(Order, json = TRUE))
 ```
 
+### Field Aliases
+
+Data from other systems rarely follows R naming. `Alias()` gives a field an external name, and the `alias` argument of `create_list_type()` and `create_dataframe_type()` renames every field with a convention (`"camel"`, `"pascal"`, `"snake"`, `"kebab"`) or a function. Values are read from the external name and stored under the R name:
+
+```{r}
+#| error: true
+
+Customer <- create_list_type(list(
+  customer_id = Scalar(Integer),
+  full_name   = Alias(Scalar(String), "name"),   # explicit alias wins
+  signed_up   = Coerce(Scalar(Date)),
+  newsletter  = Default(Scalar(Bool), FALSE)
+), alias = "camel")
+
+customer <- validate_json(
+  '{"customerId": 42, "name": "Ann Lee", "signedUp": "2024-03-01"}',
+  Customer
+)
+str(customer)
+```
+
+The R name is accepted as well, so values built in R parse too. Errors point at the external names, because those are the keys in the data:
+
+```{r}
+#| error: true
+
+validate_json('{"customerId": "42", "signedUp": "yesterday", "fullName": "Ann"}', Customer)
+```
+
+Aliases survive `extend()`, `Pick()`, `Omit()`, `Partial()`, `Required()` and `&`, and data frame columns can be aliased the same way:
+
+```{r}
+Survey <- create_dataframe_type(list(
+  respondent = String,
+  score      = Between(0, 10)
+), alias = function(name) paste0("Q_", toupper(name)))
+
+parse_as(data.frame(Q_RESPONDENT = c("a", "b"), Q_SCORE = c(7, 9)), Survey)
+```
+
+### Writing JSON
+
+`to_json()` is the reverse of `validate_json()`, and `dump_as()` is the reverse of `parse_as()`. Both check the value first, so you can never send data that breaks its own schema, then write fields under their aliases:
+
+```{r}
+#| error: true
+
+cat(to_json(customer, Customer))
+
+# R list with the external names, e.g. for a plumber endpoint
+str(dump_as(customer, Customer))
+
+# Values that do not match the type are rejected
+broken <- customer
+broken$newsletter <- "yes"
+to_json(broken, Customer)
+```
+
+The type decides the shape of the JSON, not the data. `Scalar()` fields are written as JSON scalars and other vectors as arrays, even with a single element, so clients always get the same shape:
+
+```{r}
+Post <- create_list_type(list(
+  post_id = Scalar(Integer),
+  tags    = String,
+  draft   = Optional(Scalar(Bool))
+), alias = "camel")
+
+post <- list(post_id = 1L, tags = "r", draft = NULL)
+
+cat(to_json(post, Post))
+cat(to_json(post, Post, exclude_null = TRUE))
+
+# The round trip gives back the same value
+identical(validate_json(to_json(post, Post), Post), parse_as(post, Post))
+```
+
+`NULL` and `NA` are written as `null`, and dates and date-times use ISO 8601. Extra arguments go to `jsonlite::toJSON()`, e.g. `to_json(post, Post, pretty = TRUE)`.
+
+### Describing Types
+
+`Describe()` attaches a description, a title and examples to any type, including whole list types. They do not change how values are checked, but `to_json_schema()` writes them out. The resulting schema can serve as API documentation, or as the input schema of a tool for a language model:
+
+```{r}
+WeatherArgs <- Describe(create_list_type(list(
+  city = Describe(Scalar(String), "City name", examples = c("Paris", "Oslo")),
+  unit = Describe(
+    Default(Scalar(Enum("celsius", "fahrenheit")), "celsius"),
+    "Temperature unit"
+  )
+)), "Arguments of the get_weather tool")
+
+WeatherArgs
+
+cat(to_json_schema(WeatherArgs, json = TRUE))
+```
+
+Examples are checked against the type, so the documentation cannot drift from the schema:
+
+```{r}
+#| error: true
+
+Describe(Scalar(String), "City name", examples = list(75001))
+```
+
 ### Inspecting Typed Variables
 
 ```{r}
@@ -699,6 +803,48 @@ type_of(age_years)
 untype(age_years)
 age_years <- "no longer checked"
 ```
+
+## Settings From Environment Variables
+
+Apps usually read their configuration from environment variables, which are always text. `parse_env()` reads one variable per field of a list type, converts the text to the field's type and checks it. The variable for a field is the prefix plus the field name in upper case; a field with an `Alias()` is read from the alias as is, which is handy for standard names such as `DATABASE_URL`:
+
+```{r}
+#| error: true
+
+Settings <- create_list_type(list(
+  db_url  = Alias(Scalar(Matches("^postgres://")), "DATABASE_URL"),
+  port    = Default(Scalar(Integer), 8080L),
+  debug   = Default(Scalar(Bool), FALSE),
+  workers = Optional(Scalar(Between(1, 64))),
+  origins = Default(String, "*")
+))
+
+# Normally parse_env() reads Sys.getenv(); `env` makes the example reproducible
+env <- c(
+  DATABASE_URL = "postgres://localhost/app",
+  APP_PORT     = "9000",
+  APP_DEBUG    = "yes",
+  APP_ORIGINS  = '["https://a.example", "https://b.example"]'
+)
+
+str(parse_env(Settings, prefix = "APP_", env = env))
+```
+
+Whole numbers, numbers, logicals (`true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`), dates and date-times are recognised, and values that look like JSON arrays or objects are parsed as JSON. Unset or empty variables fall back to `Default()` values and `Optional()` fields are left out.
+
+A misconfigured app fails at startup, with every problem listed under its variable name:
+
+```{r}
+#| error: true
+
+parse_env(Settings, prefix = "APP_", env = c(
+  APP_PORT    = "80.5",
+  APP_DEBUG   = "maybe",
+  APP_WORKERS = "100"
+))
+```
+
+Rules that involve several settings can be added with `Refine()` on the list type, and a `.env` file can be loaded with `readRenviron(".env")` before calling `parse_env()`.
 
 ## Error Messages
 

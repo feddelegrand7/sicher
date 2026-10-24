@@ -188,11 +188,47 @@ union_has_null <- function(type) {
   any(vapply(type$types, function(t) identical(t, Null), logical(1)))
 }
 
+# Field wrappers: Alias() and Describe() only add information about a field
+# and Coerce() only changes how its value is read. Field-level questions (is
+# the field optional? does it have a default?) look through them.
+field_wrapper_kinds <- c("alias", "describe", "coerce")
+
+peel <- function(type, kinds = field_wrapper_kinds) {
+  repeat {
+    if (inherits(type, "sicher_readonly")) {
+      type <- type$base_type
+    } else if (inherits(type, "sicher_type") && meta_kind(type) %in% kinds) {
+      type <- type_meta(type)$inner
+    } else {
+      return(type)
+    }
+  }
+}
+
+# Apply `fn` to the type inside the field wrappers and wrap the result again,
+# so e.g. Partial() turns Alias(String, "x") into Alias(Optional(String), "x").
+map_core <- function(type, fn) {
+  if (inherits(type, "sicher_readonly")) {
+    return(Readonly(map_core(type$base_type, fn)))
+  }
+  kind <- if (inherits(type, "sicher_type")) meta_kind(type) else NA_character_
+  if (!(kind %in% field_wrapper_kinds)) return(fn(type))
+  meta <- type_meta(type)
+  inner <- map_core(meta$inner, fn)
+  switch(
+    kind,
+    alias = Alias(inner, meta$alias),
+    describe = Describe(inner, description = meta$description,
+                        title = meta$title, examples = meta$examples),
+    coerce = Coerce(inner, using = meta$using)
+  )
+}
+
 # A field may be omitted from a list (or data frame) when it is Optional()
 # (a union containing Null that was not built by Nullable()) or has a
 # Default().
 field_is_optional <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   if (inherits(type, "sicher_union")) {
     return(union_has_null(type) && !isTRUE(attr(type, "sicher_nullable")))
   }
@@ -200,7 +236,7 @@ field_is_optional <- function(type) {
 }
 
 field_default <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   if (identical(meta_kind(type), "default")) {
     return(list(has = TRUE, value = type_meta(type)$value))
   }

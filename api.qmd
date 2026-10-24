@@ -46,11 +46,11 @@ Creates a new type with a name and validation function.
 Even <- create_type("even", function(x) is.numeric(x) && all(x %% 2 == 0))
 ```
 
-### `create_list_type(type_spec, extra = "error")`
+### `create_list_type(type_spec, extra = "error", alias = NULL)`
 
 Creates a type for lists with specific field requirements.
 
-**Parameters:** - `type_spec`: Named list where names are field names and values are `sicher_type` or `sicher_union` objects - `extra`: What to do with fields that are not in `type_spec`: `"error"` (default) rejects them, `"allow"` keeps them unchecked, and `"drop"` removes them from the parsed value.
+**Parameters:** - `type_spec`: Named list where names are field names and values are `sicher_type` or `sicher_union` objects - `extra`: What to do with fields that are not in `type_spec`: `"error"` (default) rejects them, `"allow"` keeps them unchecked, and `"drop"` removes them from the parsed value. - `alias`: Optional external names for every field: a naming convention (`"camel"`, `"pascal"`, `"snake"` or `"kebab"`) or a function from field name to external name. Fields are read from their external name (or their R name) and stored under the R name. Fields wrapped in `Alias()` keep their own alias.
 
 **Returns:** A `sicher_type` that validates list fields, rejects missing required fields, and handles unknown fields according to `extra`. The original field specification is stored internally so it can be reused by `extend()`, `Pick()`, `Omit()`, `Partial()`, `Required()` and `KeyOf()`.
 
@@ -64,6 +64,9 @@ check_type(list(name = "Ann", note = "kept"), Loose)
 
 Strict <- create_list_type(list(name = String), extra = "drop")
 parse_as(list(name = "Ann", note = "removed"), Strict)
+
+Account <- create_list_type(list(account_id = Integer, created_at = String), alias = "camel")
+parse_as(list(accountId = 1L, createdAt = "2024-01-05"), Account)
 ```
 
 ### `extend(base, extra)`
@@ -95,11 +98,11 @@ Rows      <- create_dataframe_type(list(id = Integer))
 NamedRows <- extend(Rows, list(name = String))
 ```
 
-### `create_dataframe_type(col_spec, extra = "error")`
+### `create_dataframe_type(col_spec, extra = "error", alias = NULL)`
 
 Creates a type for data frames with column specifications.
 
-**Parameters:** - `col_spec`: Named list where names are column names and values are types - `extra`: What to do with columns that are not in `col_spec`: `"error"` (default), `"allow"` or `"drop"`, as in `create_list_type()`.
+**Parameters:** - `col_spec`: Named list where names are column names and values are types - `extra`: What to do with columns that are not in `col_spec`: `"error"` (default), `"allow"` or `"drop"`, as in `create_list_type()`. - `alias`: Optional external column names (a naming convention or a function), as in `create_list_type()`. Columns are renamed to their R names.
 
 **Example:**
 
@@ -264,7 +267,7 @@ Model <- InstanceOf("lm")
 
 ## Object Utilities
 
-These work on types created with `create_list_type()` or `create_dataframe_type()` and keep their `extra` setting.
+These work on types created with `create_list_type()` or `create_dataframe_type()` and keep their `extra` and `alias` settings.
 
 | Function | Result |
 |----------|--------|
@@ -419,6 +422,24 @@ Converts values before checking them (`as.numeric()`, `as.integer()`, `as.charac
 NumberFromText <- Coerce(Numeric)
 ```
 
+### `Alias(type, alias)`
+
+Gives a list field or data frame column an external name. The value is read from `alias` (or from the R name when `alias` is absent) and stored under the R name; errors, `dump_as()`, `to_json()` and `to_json_schema()` use the alias. Outside list and data frame types it has no effect.
+
+```{r}
+Customer <- create_list_type(list(customer_id = Alias(Scalar(Integer), "id")))
+parse_as(list(id = 5L), Customer)
+```
+
+### `Describe(type, description = NULL, title = NULL, examples = NULL)`
+
+Attaches a description, a title and examples to a type without changing how it checks values. `to_json_schema()` writes them as the `description`, `title` and `examples` keywords. `examples` is a list (or an atomic vector) of values that must each satisfy `type`.
+
+```{r}
+City <- Describe(Scalar(String), "City name", examples = c("Paris", "Oslo"))
+City
+```
+
 ## Validation
 
 ### `check_type(value, type, context = NULL)`
@@ -443,7 +464,19 @@ Parses JSON with `jsonlite::fromJSON()` and checks the result. Requires the json
 
 ### `to_json_schema(type, json = FALSE)`
 
-Converts a type to a JSON Schema (draft 2020-12) list, or a JSON string with `json = TRUE`.
+Converts a type to a JSON Schema (draft 2020-12) list, or a JSON string with `json = TRUE`. Properties are named by their aliases, and `Describe()` adds `description`, `title` and `examples`.
+
+### `dump_as(value, type, by_alias = TRUE, exclude_null = FALSE)`
+
+The reverse of `parse_as()`. Checks `value` against `type` (throwing a `sicher_type_error` if it does not match), then renames list fields and data frame columns to their aliases, leaves out `NULL` fields when `exclude_null = TRUE` and removes brands. With `by_alias = FALSE` the R names are kept.
+
+### `to_json(value, type, by_alias = TRUE, exclude_null = FALSE, pretty = FALSE, ...)`
+
+The reverse of `validate_json()`: `dump_as()` followed by `jsonlite::toJSON()`. `Scalar()` values become JSON scalars and other vectors become arrays, `NULL` and `NA` become `null`, and dates and date-times are written in ISO 8601 format. `...` is passed to `jsonlite::toJSON()`. Requires the jsonlite package.
+
+### `parse_env(type, prefix = "", env = Sys.getenv(), case_sensitive = FALSE)`
+
+Reads one environment variable per field of a list type and returns the settings as a named list. The variable for a field is `prefix` plus the field name in upper case (`APP_` + `db_url` = `APP_DB_URL`), or the field's `Alias()` without the prefix. Names match case-insensitively unless `case_sensitive = TRUE`. Values are converted to the field's type (whole numbers, numbers, logicals such as `yes`/`no`/`on`/`off`/`1`/`0`, dates, date-times, JSON arrays and objects, or the `Coerce()` conversion). Unset and empty variables use the field's `Default()` or are left out when `Optional()`; every problem is reported at once with the variable name. `Refine()` rules on the whole list type are checked too. Use `env` to pass variables explicitly, and `readRenviron(".env")` to load a `.env` file first.
 
 ### `type_of(x)` and `untype(x)`
 

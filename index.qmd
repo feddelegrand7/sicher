@@ -25,6 +25,9 @@ Every read and write to the variable is intercepted: reads return the stored val
 -   **Object Utilities**: Derive schemas with `Pick()`, `Omit()`, `Partial()`, `Required()` and `KeyOf()`
 -   **Data Validation**: Check data without typed variables using `is_type()`, `parse_as()`, `safe_parse()` and `validate_json()`, and export types with `to_json_schema()`
 -   **Transforming Types**: Fill in defaults with `Default()` and convert values with `Coerce()`
+-   **Field Aliases**: Read `camelCase` (or any other) data into `snake_case` fields with `Alias()` and the `alias` argument, and write it back with `to_json()` and `dump_as()`
+-   **Self-documenting Schemas**: Add descriptions and examples with `Describe()` and export them with `to_json_schema()`
+-   **Settings From the Environment**: Read, convert and check configuration from environment variables with `parse_env()`
 -   **Detailed Errors**: Every problem is reported at once, with its location (e.g. `todos[[2]]$title`)
 -   **Zero Runtime Overhead**: Types are checked only during assignment
 -   **Gradual Adoption**: Add types incrementally to existing code
@@ -404,6 +407,26 @@ result <- safe_parse(
 )
 result$success
 result$issues
+```
+
+### Data In, Data Out
+
+The same type can read external data, write it back and configure the app. Field names are converted with `alias`, and `to_json()` checks the value before writing it:
+
+```{r}
+Todo <- create_list_type(list(
+  todo_id = Scalar(Integer),
+  title   = Describe(Scalar(String), "What needs doing"),
+  done    = Default(Scalar(Bool), FALSE)
+), alias = "camel")
+
+todo <- validate_json('{"todoId": 1, "title": "Buy milk"}', Todo)
+todo$done
+
+cat(to_json(todo, Todo))
+
+Config <- create_list_type(list(port = Default(Scalar(Integer), 8080L)))
+parse_env(Config, prefix = "TODO_", env = c(TODO_PORT = "3000"))
 ```
 
 ## Error Examples

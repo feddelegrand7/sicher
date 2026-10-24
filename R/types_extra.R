@@ -3,7 +3,7 @@
 # =============================================================================
 
 object_spec <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   if (!inherits(type, "sicher_type")) return(NULL)
   meta <- type_meta(type)
   if (!is.null(meta) && meta$kind %in% c("list", "data.frame")) {
@@ -13,24 +13,31 @@ object_spec <- function(type) {
 }
 
 object_kind <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   kind <- meta_kind(type)
   if (identical(kind, "data.frame")) "data.frame" else "list"
 }
 
 object_extra <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   extra <- type_meta(type)$extra
   if (is.null(extra)) "error" else extra
 }
 
-# Build a new list / data frame type with the same kind and `extra` setting
-# as `base`, but a different field specification.
-rebuild_object_type <- function(base, spec, extra = object_extra(base)) {
+object_alias <- function(type) {
+  type <- peel(type)
+  if (!inherits(type, "sicher_type")) return(NULL)
+  type_meta(type)$alias
+}
+
+# Build a new list / data frame type with the same kind, `extra` and `alias`
+# settings as `base`, but a different field specification.
+rebuild_object_type <- function(base, spec, extra = object_extra(base),
+                                alias = object_alias(base)) {
   if (identical(object_kind(base), "data.frame")) {
-    create_dataframe_type(spec, extra = extra)
+    create_dataframe_type(spec, extra = extra, alias = alias)
   } else {
-    create_list_type(spec, extra = extra)
+    create_list_type(spec, extra = extra, alias = alias)
   }
 }
 
@@ -71,7 +78,9 @@ create_intersection <- function(type1, type2) {
     }
     extras <- c(object_extra(type1), object_extra(type2))
     extra <- if ("error" %in% extras) "error" else if ("drop" %in% extras) "drop" else "allow"
-    return(rebuild_object_type(type1, merged, extra = extra))
+    alias <- object_alias(type1)
+    if (is.null(alias)) alias <- object_alias(type2)
+    return(rebuild_object_type(type1, merged, extra = extra, alias = alias))
   }
 
   wrap <- function(type) {
@@ -497,7 +506,7 @@ Coerce <- function(type, using = NULL) {
       }
       run_type(converted, type, path)
     },
-    meta = list(kind = "coerce", inner = type)
+    meta = list(kind = "coerce", inner = type, using = coercer)
   )
 }
 

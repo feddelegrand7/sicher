@@ -200,8 +200,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#validating-data" id="toc-validating-data" class="nav-link" data-scroll-target="#validating-data">Validating Data</a>
   <ul class="collapse">
   <li><a href="#json" id="toc-json" class="nav-link" data-scroll-target="#json">JSON</a></li>
+  <li><a href="#field-aliases" id="toc-field-aliases" class="nav-link" data-scroll-target="#field-aliases">Field Aliases</a></li>
+  <li><a href="#writing-json" id="toc-writing-json" class="nav-link" data-scroll-target="#writing-json">Writing JSON</a></li>
+  <li><a href="#describing-types" id="toc-describing-types" class="nav-link" data-scroll-target="#describing-types">Describing Types</a></li>
   <li><a href="#inspecting-typed-variables" id="toc-inspecting-typed-variables" class="nav-link" data-scroll-target="#inspecting-typed-variables">Inspecting Typed Variables</a></li>
   </ul></li>
+  <li><a href="#settings-from-environment-variables" id="toc-settings-from-environment-variables" class="nav-link" data-scroll-target="#settings-from-environment-variables">Settings From Environment Variables</a></li>
   <li><a href="#error-messages" id="toc-error-messages" class="nav-link" data-scroll-target="#error-messages">Error Messages</a>
   <ul class="collapse">
   <li><a href="#every-problem-with-its-location" id="toc-every-problem-with-its-location" class="nav-link" data-scroll-target="#every-problem-with-its-location">Every Problem, With Its Location</a></li>
@@ -1072,41 +1076,247 @@ $items[[1]]$qty
 </div>
 </div>
 </section>
+<section id="field-aliases" class="level3">
+<h3 class="anchored" data-anchor-id="field-aliases">Field Aliases</h3>
+<p>Data from other systems rarely follows R naming. <code>Alias()</code> gives a field an external name, and the <code>alias</code> argument of <code>create_list_type()</code> and <code>create_dataframe_type()</code> renames every field with a convention (<code>"camel"</code>, <code>"pascal"</code>, <code>"snake"</code>, <code>"kebab"</code>) or a function. Values are read from the external name and stored under the R name:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb135"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb135-1"><a href="#cb135-1" aria-hidden="true" tabindex="-1"></a>Customer <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb135-2"><a href="#cb135-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">customer_id =</span> <span class="fu">Scalar</span>(Integer),</span>
+<span id="cb135-3"><a href="#cb135-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">full_name   =</span> <span class="fu">Alias</span>(<span class="fu">Scalar</span>(String), <span class="st">"name"</span>),   <span class="co"># explicit alias wins</span></span>
+<span id="cb135-4"><a href="#cb135-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">signed_up   =</span> <span class="fu">Coerce</span>(<span class="fu">Scalar</span>(Date)),</span>
+<span id="cb135-5"><a href="#cb135-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">newsletter  =</span> <span class="fu">Default</span>(<span class="fu">Scalar</span>(Bool), <span class="cn">FALSE</span>)</span>
+<span id="cb135-6"><a href="#cb135-6" aria-hidden="true" tabindex="-1"></a>), <span class="at">alias =</span> <span class="st">"camel"</span>)</span>
+<span id="cb135-7"><a href="#cb135-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb135-8"><a href="#cb135-8" aria-hidden="true" tabindex="-1"></a>customer <span class="ot">&lt;-</span> <span class="fu">validate_json</span>(</span>
+<span id="cb135-9"><a href="#cb135-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">'{"customerId": 42, "name": "Ann Lee", "signedUp": "2024-03-01"}'</span>,</span>
+<span id="cb135-10"><a href="#cb135-10" aria-hidden="true" tabindex="-1"></a>  Customer</span>
+<span id="cb135-11"><a href="#cb135-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb135-12"><a href="#cb135-12" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(customer)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>List of 4
+ $ customer_id: int 42
+ $ full_name  : chr "Ann Lee"
+ $ signed_up  : Date[1:1], format: "2024-03-01"
+ $ newsletter : logi FALSE</code></pre>
+</div>
+</div>
+<p>The R name is accepted as well, so values built in R parse too. Errors point at the external names, because those are the keys in the data:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb137"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1" aria-hidden="true" tabindex="-1"></a><span class="fu">validate_json</span>(<span class="st">'{"customerId": "42", "signedUp": "yesterday", "fullName": "Ann"}'</span>, Customer)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: 4 type errors found:
+  * Type error in 'customerId': Expected scalar&lt;integer&gt;, got string
+  * Type error in 'name': Missing required field (expected scalar&lt;string&gt;)
+  * Type error in 'signedUp': cannot convert value to scalar&lt;date&gt;: character string is not in a standard unambiguous format
+  * Type error in 'fullName': Unexpected field (valid fields: customerId, name, signedUp, newsletter)</code></pre>
+</div>
+</div>
+<p>Aliases survive <code>extend()</code>, <code>Pick()</code>, <code>Omit()</code>, <code>Partial()</code>, <code>Required()</code> and <code>&amp;</code>, and data frame columns can be aliased the same way:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb139"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb139-1"><a href="#cb139-1" aria-hidden="true" tabindex="-1"></a>Survey <span class="ot">&lt;-</span> <span class="fu">create_dataframe_type</span>(<span class="fu">list</span>(</span>
+<span id="cb139-2"><a href="#cb139-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">respondent =</span> String,</span>
+<span id="cb139-3"><a href="#cb139-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">score      =</span> <span class="fu">Between</span>(<span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb139-4"><a href="#cb139-4" aria-hidden="true" tabindex="-1"></a>), <span class="at">alias =</span> <span class="cf">function</span>(name) <span class="fu">paste0</span>(<span class="st">"Q_"</span>, <span class="fu">toupper</span>(name)))</span>
+<span id="cb139-5"><a href="#cb139-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb139-6"><a href="#cb139-6" aria-hidden="true" tabindex="-1"></a><span class="fu">parse_as</span>(<span class="fu">data.frame</span>(<span class="at">Q_RESPONDENT =</span> <span class="fu">c</span>(<span class="st">"a"</span>, <span class="st">"b"</span>), <span class="at">Q_SCORE =</span> <span class="fu">c</span>(<span class="dv">7</span>, <span class="dv">9</span>)), Survey)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  respondent score
+1          a     7
+2          b     9</code></pre>
+</div>
+</div>
+</section>
+<section id="writing-json" class="level3">
+<h3 class="anchored" data-anchor-id="writing-json">Writing JSON</h3>
+<p><code>to_json()</code> is the reverse of <code>validate_json()</code>, and <code>dump_as()</code> is the reverse of <code>parse_as()</code>. Both check the value first, so you can never send data that breaks its own schema, then write fields under their aliases:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb141"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb141-1"><a href="#cb141-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">to_json</span>(customer, Customer))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{"customerId":42,"name":"Ann Lee","signedUp":"2024-03-01","newsletter":false}</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb143"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb143-1"><a href="#cb143-1" aria-hidden="true" tabindex="-1"></a><span class="co"># R list with the external names, e.g. for a plumber endpoint</span></span>
+<span id="cb143-2"><a href="#cb143-2" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(<span class="fu">dump_as</span>(customer, Customer))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>List of 4
+ $ customerId: int 42
+ $ name      : chr "Ann Lee"
+ $ signedUp  : Date[1:1], format: "2024-03-01"
+ $ newsletter: logi FALSE</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb145"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb145-1"><a href="#cb145-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Values that do not match the type are rejected</span></span>
+<span id="cb145-2"><a href="#cb145-2" aria-hidden="true" tabindex="-1"></a>broken <span class="ot">&lt;-</span> customer</span>
+<span id="cb145-3"><a href="#cb145-3" aria-hidden="true" tabindex="-1"></a>broken<span class="sc">$</span>newsletter <span class="ot">&lt;-</span> <span class="st">"yes"</span></span>
+<span id="cb145-4"><a href="#cb145-4" aria-hidden="true" tabindex="-1"></a><span class="fu">to_json</span>(broken, Customer)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'newsletter': Expected scalar&lt;bool&gt; = FALSE, got string
+Received: yes</code></pre>
+</div>
+</div>
+<p>The type decides the shape of the JSON, not the data. <code>Scalar()</code> fields are written as JSON scalars and other vectors as arrays, even with a single element, so clients always get the same shape:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb147"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb147-1"><a href="#cb147-1" aria-hidden="true" tabindex="-1"></a>Post <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb147-2"><a href="#cb147-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">post_id =</span> <span class="fu">Scalar</span>(Integer),</span>
+<span id="cb147-3"><a href="#cb147-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">tags    =</span> String,</span>
+<span id="cb147-4"><a href="#cb147-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">draft   =</span> <span class="fu">Optional</span>(<span class="fu">Scalar</span>(Bool))</span>
+<span id="cb147-5"><a href="#cb147-5" aria-hidden="true" tabindex="-1"></a>), <span class="at">alias =</span> <span class="st">"camel"</span>)</span>
+<span id="cb147-6"><a href="#cb147-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb147-7"><a href="#cb147-7" aria-hidden="true" tabindex="-1"></a>post <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">post_id =</span> <span class="dv">1</span>L, <span class="at">tags =</span> <span class="st">"r"</span>, <span class="at">draft =</span> <span class="cn">NULL</span>)</span>
+<span id="cb147-8"><a href="#cb147-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb147-9"><a href="#cb147-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">to_json</span>(post, Post))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{"postId":1,"tags":["r"],"draft":null}</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb149"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb149-1"><a href="#cb149-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">to_json</span>(post, Post, <span class="at">exclude_null =</span> <span class="cn">TRUE</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{"postId":1,"tags":["r"]}</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb151"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb151-1"><a href="#cb151-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The round trip gives back the same value</span></span>
+<span id="cb151-2"><a href="#cb151-2" aria-hidden="true" tabindex="-1"></a><span class="fu">identical</span>(<span class="fu">validate_json</span>(<span class="fu">to_json</span>(post, Post), Post), <span class="fu">parse_as</span>(post, Post))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+</div>
+<p><code>NULL</code> and <code>NA</code> are written as <code>null</code>, and dates and date-times use ISO 8601. Extra arguments go to <code>jsonlite::toJSON()</code>, e.g.&nbsp;<code>to_json(post, Post, pretty = TRUE)</code>.</p>
+</section>
+<section id="describing-types" class="level3">
+<h3 class="anchored" data-anchor-id="describing-types">Describing Types</h3>
+<p><code>Describe()</code> attaches a description, a title and examples to any type, including whole list types. They do not change how values are checked, but <code>to_json_schema()</code> writes them out. The resulting schema can serve as API documentation, or as the input schema of a tool for a language model:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb153"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb153-1"><a href="#cb153-1" aria-hidden="true" tabindex="-1"></a>WeatherArgs <span class="ot">&lt;-</span> <span class="fu">Describe</span>(<span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb153-2"><a href="#cb153-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">city =</span> <span class="fu">Describe</span>(<span class="fu">Scalar</span>(String), <span class="st">"City name"</span>, <span class="at">examples =</span> <span class="fu">c</span>(<span class="st">"Paris"</span>, <span class="st">"Oslo"</span>)),</span>
+<span id="cb153-3"><a href="#cb153-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">unit =</span> <span class="fu">Describe</span>(</span>
+<span id="cb153-4"><a href="#cb153-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">Default</span>(<span class="fu">Scalar</span>(<span class="fu">Enum</span>(<span class="st">"celsius"</span>, <span class="st">"fahrenheit"</span>)), <span class="st">"celsius"</span>),</span>
+<span id="cb153-5"><a href="#cb153-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Temperature unit"</span></span>
+<span id="cb153-6"><a href="#cb153-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb153-7"><a href="#cb153-7" aria-hidden="true" tabindex="-1"></a>)), <span class="st">"Arguments of the get_weather tool"</span>)</span>
+<span id="cb153-8"><a href="#cb153-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb153-9"><a href="#cb153-9" aria-hidden="true" tabindex="-1"></a>WeatherArgs</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;type: {city: scalar&lt;string&gt;, unit?: scalar&lt;enum["celsius", "fahrenheit"]&gt; = "celsius"} &gt;
+  description: Arguments of the get_weather tool </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb155"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb155-1"><a href="#cb155-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">to_json_schema</span>(WeatherArgs, <span class="at">json =</span> <span class="cn">TRUE</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "city": {
+      "type": "string",
+      "description": "City name",
+      "examples": [
+        "Paris",
+        "Oslo"
+      ]
+    },
+    "unit": {
+      "enum": [
+        "celsius",
+        "fahrenheit"
+      ],
+      "default": "celsius",
+      "description": "Temperature unit"
+    }
+  },
+  "required": [
+    "city"
+  ],
+  "additionalProperties": false,
+  "description": "Arguments of the get_weather tool"
+}</code></pre>
+</div>
+</div>
+<p>Examples are checked against the type, so the documentation cannot drift from the schema:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb157"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb157-1"><a href="#cb157-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Describe</span>(<span class="fu">Scalar</span>(String), <span class="st">"City name"</span>, <span class="at">examples =</span> <span class="fu">list</span>(<span class="dv">75001</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: Type error in 'example 1': Expected scalar&lt;string&gt;, got double
+Received: 75001</code></pre>
+</div>
+</div>
+</section>
 <section id="inspecting-typed-variables" class="level3">
 <h3 class="anchored" data-anchor-id="inspecting-typed-variables">Inspecting Typed Variables</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb135"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb135-1"><a href="#cb135-1" aria-hidden="true" tabindex="-1"></a>age_years <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">30</span></span>
-<span id="cb135-2"><a href="#cb135-2" aria-hidden="true" tabindex="-1"></a><span class="fu">type_of</span>(age_years)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb159"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb159-1"><a href="#cb159-1" aria-hidden="true" tabindex="-1"></a>age_years <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">30</span></span>
+<span id="cb159-2"><a href="#cb159-2" aria-hidden="true" tabindex="-1"></a><span class="fu">type_of</span>(age_years)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;type: numeric &gt;</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb137"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1" aria-hidden="true" tabindex="-1"></a><span class="fu">untype</span>(age_years)</span>
-<span id="cb137-2"><a href="#cb137-2" aria-hidden="true" tabindex="-1"></a>age_years <span class="ot">&lt;-</span> <span class="st">"no longer checked"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb161"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb161-1"><a href="#cb161-1" aria-hidden="true" tabindex="-1"></a><span class="fu">untype</span>(age_years)</span>
+<span id="cb161-2"><a href="#cb161-2" aria-hidden="true" tabindex="-1"></a>age_years <span class="ot">&lt;-</span> <span class="st">"no longer checked"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
+</section>
+<section id="settings-from-environment-variables" class="level2">
+<h2 class="anchored" data-anchor-id="settings-from-environment-variables">Settings From Environment Variables</h2>
+<p>Apps usually read their configuration from environment variables, which are always text. <code>parse_env()</code> reads one variable per field of a list type, converts the text to the field’s type and checks it. The variable for a field is the prefix plus the field name in upper case; a field with an <code>Alias()</code> is read from the alias as is, which is handy for standard names such as <code>DATABASE_URL</code>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb162"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb162-1"><a href="#cb162-1" aria-hidden="true" tabindex="-1"></a>Settings <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(</span>
+<span id="cb162-2"><a href="#cb162-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">db_url  =</span> <span class="fu">Alias</span>(<span class="fu">Scalar</span>(<span class="fu">Matches</span>(<span class="st">"^postgres://"</span>)), <span class="st">"DATABASE_URL"</span>),</span>
+<span id="cb162-3"><a href="#cb162-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">port    =</span> <span class="fu">Default</span>(<span class="fu">Scalar</span>(Integer), <span class="dv">8080</span>L),</span>
+<span id="cb162-4"><a href="#cb162-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">debug   =</span> <span class="fu">Default</span>(<span class="fu">Scalar</span>(Bool), <span class="cn">FALSE</span>),</span>
+<span id="cb162-5"><a href="#cb162-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">workers =</span> <span class="fu">Optional</span>(<span class="fu">Scalar</span>(<span class="fu">Between</span>(<span class="dv">1</span>, <span class="dv">64</span>))),</span>
+<span id="cb162-6"><a href="#cb162-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">origins =</span> <span class="fu">Default</span>(String, <span class="st">"*"</span>)</span>
+<span id="cb162-7"><a href="#cb162-7" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb162-8"><a href="#cb162-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb162-9"><a href="#cb162-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Normally parse_env() reads Sys.getenv(); `env` makes the example reproducible</span></span>
+<span id="cb162-10"><a href="#cb162-10" aria-hidden="true" tabindex="-1"></a>env <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb162-11"><a href="#cb162-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">DATABASE_URL =</span> <span class="st">"postgres://localhost/app"</span>,</span>
+<span id="cb162-12"><a href="#cb162-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">APP_PORT     =</span> <span class="st">"9000"</span>,</span>
+<span id="cb162-13"><a href="#cb162-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">APP_DEBUG    =</span> <span class="st">"yes"</span>,</span>
+<span id="cb162-14"><a href="#cb162-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">APP_ORIGINS  =</span> <span class="st">'["https://a.example", "https://b.example"]'</span></span>
+<span id="cb162-15"><a href="#cb162-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb162-16"><a href="#cb162-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb162-17"><a href="#cb162-17" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(<span class="fu">parse_env</span>(Settings, <span class="at">prefix =</span> <span class="st">"APP_"</span>, <span class="at">env =</span> env))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>List of 4
+ $ db_url : chr "postgres://localhost/app"
+ $ port   : int 9000
+ $ debug  : logi TRUE
+ $ origins: chr [1:2] "https://a.example" "https://b.example"</code></pre>
+</div>
+</div>
+<p>Whole numbers, numbers, logicals (<code>true</code>/<code>false</code>, <code>yes</code>/<code>no</code>, <code>on</code>/<code>off</code>, <code>1</code>/<code>0</code>), dates and date-times are recognised, and values that look like JSON arrays or objects are parsed as JSON. Unset or empty variables fall back to <code>Default()</code> values and <code>Optional()</code> fields are left out.</p>
+<p>A misconfigured app fails at startup, with every problem listed under its variable name:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb164"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb164-1"><a href="#cb164-1" aria-hidden="true" tabindex="-1"></a><span class="fu">parse_env</span>(Settings, <span class="at">prefix =</span> <span class="st">"APP_"</span>, <span class="at">env =</span> <span class="fu">c</span>(</span>
+<span id="cb164-2"><a href="#cb164-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">APP_PORT    =</span> <span class="st">"80.5"</span>,</span>
+<span id="cb164-3"><a href="#cb164-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">APP_DEBUG   =</span> <span class="st">"maybe"</span>,</span>
+<span id="cb164-4"><a href="#cb164-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">APP_WORKERS =</span> <span class="st">"100"</span></span>
+<span id="cb164-5"><a href="#cb164-5" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error: 4 type errors found:
+  * Type error in 'DATABASE_URL': Missing required environment variable (expected scalar&lt;matches("^postgres://")&gt;)
+  * Type error in 'APP_PORT': cannot convert "80.5" to scalar&lt;integer&gt; = 8080
+  * Type error in 'APP_DEBUG': cannot convert "maybe" to scalar&lt;bool&gt; = FALSE
+  * Type error in 'APP_WORKERS': expected between[1, 64], but value [100] is outside [1, 64]</code></pre>
+</div>
+</div>
+<p>Rules that involve several settings can be added with <code>Refine()</code> on the list type, and a <code>.env</code> file can be loaded with <code>readRenviron(".env")</code> before calling <code>parse_env()</code>.</p>
 </section>
 <section id="error-messages" class="level2">
 <h2 class="anchored" data-anchor-id="error-messages">Error Messages</h2>
 <p><code>sicher</code> provides clear, contextual error messages:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb138"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb138-1"><a href="#cb138-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
-<span id="cb138-2"><a href="#cb138-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb166"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb166-1"><a href="#cb166-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Type mismatch</span></span>
+<span id="cb166-2"><a href="#cb166-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="st">"not a number"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'x': Expected numeric, got string
 Received: not a number</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb140"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb140-1"><a href="#cb140-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field</span></span>
-<span id="cb140-2"><a href="#cb140-2" aria-hidden="true" tabindex="-1"></a>PersonType <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
-<span id="cb140-3"><a href="#cb140-3" aria-hidden="true" tabindex="-1"></a>p <span class="sc">%:%</span> PersonType <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb168"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb168-1"><a href="#cb168-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing required field</span></span>
+<span id="cb168-2"><a href="#cb168-2" aria-hidden="true" tabindex="-1"></a>PersonType <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">name =</span> String, <span class="at">age =</span> Numeric))</span>
+<span id="cb168-3"><a href="#cb168-3" aria-hidden="true" tabindex="-1"></a>p <span class="sc">%:%</span> PersonType <span class="sc">%&lt;-%</span> <span class="fu">list</span>(<span class="at">name =</span> <span class="st">"Alice"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'p$age': Missing required field (expected numeric)</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb142"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb142-1"><a href="#cb142-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
-<span id="cb142-2"><a href="#cb142-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb170"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb170-1"><a href="#cb170-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrong vector length</span></span>
+<span id="cb170-2"><a href="#cb170-2" aria-hidden="true" tabindex="-1"></a>vec <span class="sc">%:%</span> Numeric[<span class="dv">3</span>] <span class="sc">%&lt;-%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Type error in 'vec': Expected numeric[3], got double of length 2
 Received: [1, 2]</code></pre>
@@ -1116,12 +1326,12 @@ Received: [1, 2]</code></pre>
 <h3 class="anchored" data-anchor-id="every-problem-with-its-location">Every Problem, With Its Location</h3>
 <p>Errors report every problem at once instead of stopping at the first one, and each problem says where it is:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb144"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb144-1"><a href="#cb144-1" aria-hidden="true" tabindex="-1"></a>Todo <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Numeric, <span class="at">title =</span> String))</span>
-<span id="cb144-2"><a href="#cb144-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb144-3"><a href="#cb144-3" aria-hidden="true" tabindex="-1"></a>todos <span class="sc">%:%</span> <span class="fu">ListOf</span>(Todo) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
-<span id="cb144-4"><a href="#cb144-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Buy milk"</span>),</span>
-<span id="cb144-5"><a href="#cb144-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>, <span class="at">extra_field =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb144-6"><a href="#cb144-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb172"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb172-1"><a href="#cb172-1" aria-hidden="true" tabindex="-1"></a>Todo <span class="ot">&lt;-</span> <span class="fu">create_list_type</span>(<span class="fu">list</span>(<span class="at">id =</span> Numeric, <span class="at">title =</span> String))</span>
+<span id="cb172-2"><a href="#cb172-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb172-3"><a href="#cb172-3" aria-hidden="true" tabindex="-1"></a>todos <span class="sc">%:%</span> <span class="fu">ListOf</span>(Todo) <span class="sc">%&lt;-%</span> <span class="fu">list</span>(</span>
+<span id="cb172-4"><a href="#cb172-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="dv">1</span>, <span class="at">title =</span> <span class="st">"Buy milk"</span>),</span>
+<span id="cb172-5"><a href="#cb172-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>, <span class="at">extra_field =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb172-6"><a href="#cb172-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: 3 type errors found:
   * Type error in 'todos[[2]]$id': Expected numeric, got string
@@ -1134,19 +1344,19 @@ Received: [1, 2]</code></pre>
 <h3 class="anchored" data-anchor-id="catching-type-errors">Catching Type Errors</h3>
 <p>Type errors are conditions of class <code>sicher_type_error</code>. Their <code>issues</code> element lists each problem with its <code>message</code>, <code>expected</code>, <code>got</code> and <code>code</code>:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb146"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1" aria-hidden="true" tabindex="-1"></a>err <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
-<span id="cb146-2"><a href="#cb146-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">check_type</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>), Todo, <span class="at">context =</span> <span class="st">"todo"</span>),</span>
-<span id="cb146-3"><a href="#cb146-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">sicher_type_error =</span> <span class="cf">function</span>(e) e</span>
-<span id="cb146-4"><a href="#cb146-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb146-5"><a href="#cb146-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb146-6"><a href="#cb146-6" aria-hidden="true" tabindex="-1"></a><span class="fu">vapply</span>(err<span class="sc">$</span>issues, <span class="cf">function</span>(issue) issue<span class="sc">$</span>message, <span class="fu">character</span>(<span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb174"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb174-1"><a href="#cb174-1" aria-hidden="true" tabindex="-1"></a>err <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb174-2"><a href="#cb174-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">check_type</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>), Todo, <span class="at">context =</span> <span class="st">"todo"</span>),</span>
+<span id="cb174-3"><a href="#cb174-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">sicher_type_error =</span> <span class="cf">function</span>(e) e</span>
+<span id="cb174-4"><a href="#cb174-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb174-5"><a href="#cb174-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb174-6"><a href="#cb174-6" aria-hidden="true" tabindex="-1"></a><span class="fu">vapply</span>(err<span class="sc">$</span>issues, <span class="cf">function</span>(issue) issue<span class="sc">$</span>message, <span class="fu">character</span>(<span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "Expected numeric, got string" "Expected string, got double" </code></pre>
 </div>
 </div>
 <p>For a data frame of issues with readable paths, use <code>safe_parse()</code> instead:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb148"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb148-1"><a href="#cb148-1" aria-hidden="true" tabindex="-1"></a><span class="fu">safe_parse</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>), Todo, <span class="at">context =</span> <span class="st">"todo"</span>)<span class="sc">$</span>issues</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb176"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a><span class="fu">safe_parse</span>(<span class="fu">list</span>(<span class="at">id =</span> <span class="st">"2"</span>, <span class="at">title =</span> <span class="dv">3</span>), Todo, <span class="at">context =</span> <span class="st">"todo"</span>)<span class="sc">$</span>issues</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        path                      message expected    got         code
 1    todo$id Expected numeric, got string  numeric string invalid_type
@@ -1158,7 +1368,7 @@ Received: [1, 2]</code></pre>
 <h3 class="anchored" data-anchor-id="forgotten-parentheses">Forgotten Parentheses</h3>
 <p>Using a type factory without calling it gives a hint:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb150"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb150-1"><a href="#cb150-1" aria-hidden="true" tabindex="-1"></a>size <span class="sc">%:%</span> Factor <span class="sc">%&lt;-%</span> <span class="fu">factor</span>(<span class="st">"M"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb178"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb178-1"><a href="#cb178-1" aria-hidden="true" tabindex="-1"></a>size <span class="sc">%:%</span> Factor <span class="sc">%&lt;-%</span> <span class="fu">factor</span>(<span class="st">"M"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error: Invalid type specification: expected a sicher_type, sicher_union, or sicher_readonly (e.g. Numeric, String | Bool, Optional(Integer)); got function. Did you forget to call a type factory, e.g. Factor() instead of Factor?</code></pre>
 </div>
@@ -1168,19 +1378,19 @@ Received: [1, 2]</code></pre>
 <h3 class="anchored" data-anchor-id="warnings-instead-of-errors">Warnings Instead of Errors</h3>
 <p>With <code>options(sicher.mode = "warn")</code>, violations become warnings and the assigned value is kept. This helps when adding sicher to existing code. <code>Readonly()</code> is still enforced.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb152"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb152-1"><a href="#cb152-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"warn"</span>)</span>
-<span id="cb152-2"><a href="#cb152-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb152-3"><a href="#cb152-3" aria-hidden="true" tabindex="-1"></a>score <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
-<span id="cb152-4"><a href="#cb152-4" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="st">"ten"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb180"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"warn"</span>)</span>
+<span id="cb180-2"><a href="#cb180-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb180-3"><a href="#cb180-3" aria-hidden="true" tabindex="-1"></a>score <span class="sc">%:%</span> Numeric <span class="sc">%&lt;-%</span> <span class="dv">10</span></span>
+<span id="cb180-4"><a href="#cb180-4" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="st">"ten"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Type error in 'score': Expected numeric, got string
 Received: ten</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb154"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb154-1"><a href="#cb154-1" aria-hidden="true" tabindex="-1"></a>score</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb182"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb182-1"><a href="#cb182-1" aria-hidden="true" tabindex="-1"></a>score</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "ten"</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb156"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb156-1"><a href="#cb156-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb184"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb184-1"><a href="#cb184-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">sicher.mode =</span> <span class="st">"on"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 
 
