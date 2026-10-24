@@ -34,6 +34,8 @@ Every read and write to the variable is intercepted: reads return the stored val
 
 ## Quick Start
 
+Want to try it first? The [Playground](playground.qmd) runs sicher in your browser, no installation needed.
+
 Install the package and start using types immediately:
 
 ```{r}

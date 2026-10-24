@@ -13,3 +13,5 @@
 ^CRAN-SUBMISSION$
 ^CODE_OF_CONDUCT\.md$
 ^\.github$
+^_extensions$
+^playground\.qmd$
