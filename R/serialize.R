@@ -42,6 +42,7 @@ dump_value <- function(x, type, opts, scalar = FALSE) {
     literal = dump_leaf(x, opts, scalar = TRUE),
     brand = {
       class(x) <- setdiff(oldClass(x), meta$brand)
+      if (length(brand_classes(x)) == 0) x <- strip_brands(x)
       if (length(oldClass(x)) == 0) x <- unclass(x)
       dump_value(x, meta$inner, opts, scalar)
     },

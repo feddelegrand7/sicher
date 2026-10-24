@@ -792,7 +792,15 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"),
         source <- field_source(col, key, names(x))
         col_type <- col_spec[[col]]
         if (!is.null(source)) {
-          res <- run_type(x[[source]], col_type, c(path, list(source)))
+          col_path <- c(path, list(source))
+          res <- run_type(x[[source]], col_type, col_path)
+          # Positions in a column are row numbers
+          res$issues <- lapply(res$issues, function(issue) {
+            if (!is.null(issue$index) && identical(issue$path, col_path)) {
+              issue$index_label <- "row"
+            }
+            issue
+          })
           issues <- c(issues, res$issues)
           if (length(res$issues) == 0 && !is.null(res$value) &&
               !identical(res$value, x[[source]])) {
@@ -924,7 +932,8 @@ NonNA <- function(type) {
           ),
           expected = glue::glue("non_na<{base_name}>"),
           got = "NA",
-          code = "na_value"
+          code = "na_value",
+          index = failing_positions(res$value, is.na(res$value))
         )))
       }
       res
@@ -1035,10 +1044,12 @@ Matches <- function(pattern) {
         return(issue_result(x, new_issue(
           path,
           glue::glue("expected {type_name}, but value contains NA(s)"),
-          expected = type_name, got = "NA", code = "na_value"
+          expected = type_name, got = "NA", code = "na_value",
+          index = failing_positions(x, is.na(x))
         )))
       }
-      failing <- x[!grepl(pattern, x, perl = TRUE)]
+      fails <- !grepl(pattern, x, perl = TRUE)
+      failing <- x[fails]
       if (length(failing) > 0) {
         quoted  <- encodeString(utils::head(failing, 3), quote = "\"")
         preview <- paste(quoted, collapse = ", ")
@@ -1051,7 +1062,8 @@ Matches <- function(pattern) {
             "expected {type_name}, ",
             "but {noun} [{preview}] {verb} not match the pattern"
           ),
-          expected = type_name, got = get_type_name(x), code = "invalid_string"
+          expected = type_name, got = get_type_name(x), code = "invalid_string",
+          index = failing_positions(x, fails)
         )))
       }
       ok_result(x)
@@ -1204,6 +1216,12 @@ create_union <- function(type1, type2) {
   }
 
   types_list <- c(union_members(type1), union_members(type2))
+  # Drop repeated members (Integer | Numeric | Integer)
+  keep <- !vapply(seq_along(types_list), function(i) {
+    any(vapply(types_list[seq_len(i - 1)], identical, logical(1), types_list[[i]]))
+  }, logical(1))
+  types_list <- types_list[keep]
+  if (length(types_list) == 1) return(types_list[[1]])
   names_list <- vapply(types_list, function(t) t$name, character(1))
 
   structure(
@@ -1421,7 +1439,10 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' @param params A named list mapping parameter names to their types
 #'   (e.g. \code{list(x = Numeric, y = String)}). Only listed parameters are
 #'   type-checked on each call; unlisted parameters pass through unchecked.
-#'   Defaults to an empty list (no parameter checking).
+#'   Defaults to an empty list (no parameter checking). Default values of
+#'   listed parameters are checked once, when the typed function is created,
+#'   if they are constants (such as \code{1L}, \code{"a"}, \code{c(1, 2)} or
+#'   \code{NULL}). Defaults computed from other arguments are not checked.
 #' @param .return Optional return type. When \code{NULL} (the default), the
 #'   return value is not checked. Accepts any \code{sicher_type} or
 #'   \code{sicher_union}.
@@ -1455,6 +1476,9 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' greet("Alice")                   # "Hello, Alice"
 #' greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
 #' try(greet("Alice", title = 42))  # Error: Type error in 'title'
+#'
+#' # Constant defaults must match their type
+#' try(typed_function(function(n = "a") n, params = list(n = Integer)))
 #'
 #' # Union type in params
 #' describe <- typed_function(
@@ -1513,6 +1537,8 @@ typed_function <- function(fn, params = list(), .return = NULL) {
     }
   }
 
+  check_param_defaults(fn, params)
+
   # Rename to avoid masking inside the closure
   .params <- params
   .ret    <- .return
@@ -1521,6 +1547,12 @@ typed_function <- function(fn, params = list(), .return = NULL) {
   wrapper <- function() {
     mc     <- match.call()
     caller <- parent.frame()
+
+    # sicher.mode = "off": call fn directly, keeping lazy evaluation
+    if (identical(sicher_mode(), "off")) {
+      mc[[1]] <- fn
+      return(eval(mc, caller))
+    }
 
     # Evaluate all explicitly supplied arguments in the calling environment
     supplied <- as.list(mc[-1])
@@ -1554,6 +1586,36 @@ typed_function <- function(fn, params = list(), .return = NULL) {
   class(wrapper) <- c("sicher_typed_function", "function")
 
   wrapper
+}
+
+# Check the constant defaults of the annotated parameters of `fn`. Other
+# defaults may depend on other arguments or have side effects, so they are
+# not evaluated here.
+check_param_defaults <- function(fn, params) {
+  defaults <- formals(fn)
+  for (nm in intersect(names(params), names(defaults))) {
+    if (identical(defaults[[nm]], quote(expr = ))) next
+    expr <- defaults[[nm]]
+    if (!is_constant_expr(expr)) next
+    value <- tryCatch(list(eval(expr, baseenv())), error = function(e) NULL)
+    if (is.null(value)) next
+    enforce_type(value[[1]], params[[nm]], glue::glue("{nm} (default)"))
+  }
+  invisible(NULL)
+}
+
+constant_calls <- c(
+  "c", "list", "-", "+", "*", "/", ":", "(", "character", "numeric",
+  "integer", "double", "logical", "as.integer", "as.numeric", "as.double",
+  "as.character", "as.logical", "as.Date"
+)
+
+is_constant_expr <- function(expr) {
+  if (is.null(expr) || is.atomic(expr)) return(TRUE)
+  if (is.symbol(expr)) return(as.character(expr) %in% c("Inf", "NaN"))
+  if (!is.call(expr) || !is.symbol(expr[[1]])) return(FALSE)
+  as.character(expr[[1]]) %in% constant_calls &&
+    all(vapply(as.list(expr)[-1], is_constant_expr, logical(1)))
 }
 
 # =============================================================================

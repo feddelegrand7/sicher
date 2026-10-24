@@ -28,6 +28,14 @@ zod's \code{.brand()}. A branded value carries the brand as a class, so
 an \code{OrderId} can no longer be passed where a \code{UserId} is
 expected even though both are strings. Use \code{brand()} to check a
 value against the base type and attach the brand.
+
+Arithmetic, comparisons and math functions on branded values return
+plain, unbranded values, since a computed value was never checked by
+\code{brand()}. Combining two values with different brands (for example
+\code{user_id + order_id}) is an error. On R versions before 4.3.0,
+combining a branded value with an unbranded value of a class that has its
+own arithmetic (such as \code{Date}) gives an "Incompatible methods"
+warning.
 }
 \examples{
 UserId  <- Brand(Scalar(String), "UserId")

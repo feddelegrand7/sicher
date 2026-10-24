@@ -13,7 +13,10 @@ callers use the exact same signature.}
 \item{params}{A named list mapping parameter names to their types
 (e.g. \code{list(x = Numeric, y = String)}). Only listed parameters are
 type-checked on each call; unlisted parameters pass through unchecked.
-Defaults to an empty list (no parameter checking).}
+Defaults to an empty list (no parameter checking). Default values of
+listed parameters are checked once, when the typed function is created,
+if they are constants (such as \code{1L}, \code{"a"}, \code{c(1, 2)} or
+\code{NULL}). Defaults computed from other arguments are not checked.}
 
 \item{.return}{Optional return type. When \code{NULL} (the default), the
 return value is not checked. Accepts any \code{sicher_type} or
@@ -63,6 +66,9 @@ greet <- typed_function(
 greet("Alice")                   # "Hello, Alice"
 greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
 try(greet("Alice", title = 42))  # Error: Type error in 'title'
+
+# Constant defaults must match their type
+try(typed_function(function(n = "a") n, params = list(n = Integer)))
 
 # Union type in params
 describe <- typed_function(

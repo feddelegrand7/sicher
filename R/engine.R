@@ -16,6 +16,8 @@
 #   received short preview of the received value (or NULL)
 #   details  optional extra explanation (or NULL)
 #   code     machine-readable kind of issue ("invalid_type", "custom", ...)
+#   index    positions of the failing elements of a vector (or NULL);
+#            data frame types relabel them as rows (index_label = "row")
 #
 # Plain create_type() types are leaves: their checker is called and a FALSE
 # result (or an error) becomes an issue. Structured types (lists, data
@@ -25,7 +27,7 @@
 
 new_issue <- function(path, message, expected = NA_character_,
                       got = NA_character_, received = NULL, details = NULL,
-                      code = "custom") {
+                      code = "custom", index = NULL) {
   list(
     path     = path,
     message  = as.character(message),
@@ -33,8 +35,29 @@ new_issue <- function(path, message, expected = NA_character_,
     got      = as.character(got),
     received = received,
     details  = details,
-    code     = code
+    code     = code,
+    index    = index
   )
+}
+
+# Positions of the elements (or data frame rows) of `x` flagged by `mask`,
+# kept only when there is more than one (a position adds nothing for a
+# single value).
+failing_positions <- function(x, mask) {
+  n <- if (is.data.frame(x)) nrow(x) else length(x)
+  if (n > 1) which(mask) else NULL
+}
+
+# The issue message followed by the failing positions, if any:
+# "... (at rows 2, 4)".
+issue_message <- function(issue) {
+  idx <- issue$index
+  if (length(idx) == 0) return(as.character(issue$message))
+  label <- if (is.null(issue$index_label)) "position" else issue$index_label
+  if (length(idx) > 1) label <- paste0(label, "s")
+  shown <- paste(utils::head(idx, 5), collapse = ", ")
+  if (length(idx) > 5) shown <- glue::glue("{shown} and {length(idx) - 5} more")
+  as.character(glue::glue("{issue$message} (at {label} {shown})"))
 }
 
 # The standard "Expected <type>, got <type>" issue.
@@ -299,9 +322,9 @@ format_received <- function(value) {
 format_issue <- function(issue) {
   where <- format_path(issue$path)
   msg <- if (nzchar(where)) {
-    glue::glue("Type error in '{where}': {issue$message}")
+    glue::glue("Type error in '{where}': {issue_message(issue)}")
   } else {
-    glue::glue("Type error: {issue$message}")
+    glue::glue("Type error: {issue_message(issue)}")
   }
   if (!is.null(issue$details)) {
     msg <- glue::glue("{msg}\n  Details: {issue$details}")
@@ -348,9 +371,10 @@ sicher_mode <- function() {
 }
 
 # Run a type at a top-level entry point (typed variable, typed function
-# argument or return value). Honors sicher.mode = "warn": violations are
-# reported as warnings and the original value is kept.
+# argument or return value). Honors sicher.mode: "off" skips the check,
+# "warn" reports violations as warnings and keeps the original value.
 enforce_type <- function(value, type, context) {
+  if (identical(sicher_mode(), "off")) return(value)
   res <- run_type(value, type, if (is.null(context)) list() else list(context))
   if (length(res$issues) == 0) return(res$value)
   if (identical(sicher_mode(), "warn")) {
@@ -362,19 +386,23 @@ enforce_type <- function(value, type, context) {
 
 issues_to_df <- function(issues) {
   if (length(issues) == 0) {
-    return(data.frame(
+    df <- data.frame(
       path = character(0), message = character(0), expected = character(0),
       got = character(0), code = character(0), stringsAsFactors = FALSE
-    ))
+    )
+    df$index <- list()
+    return(df)
   }
-  data.frame(
+  df <- data.frame(
     path     = vapply(issues, function(i) format_path(i$path), character(1)),
-    message  = vapply(issues, function(i) as.character(i$message), character(1)),
+    message  = vapply(issues, issue_message, character(1)),
     expected = vapply(issues, function(i) as.character(i$expected), character(1)),
     got      = vapply(issues, function(i) as.character(i$got), character(1)),
     code     = vapply(issues, function(i) as.character(i$code), character(1)),
     stringsAsFactors = FALSE
   )
+  df$index <- lapply(issues, function(i) as.integer(i$index))
+  df
 }
 
 check_spec_list <- function(spec, arg, what = "Field") {
@@ -430,10 +458,12 @@ numeric_rule_type <- function(type_name, test, desc_single, desc_plural,
             "expected {type_name} (no NA values), ",
             "but value contains NA(s)"
           ),
-          expected = type_name, got = "NA", code = "na_value"
+          expected = type_name, got = "NA", code = "na_value",
+          index = failing_positions(x, is.na(x))
         )))
       }
-      failing <- x[!test(x)]
+      fails <- !test(x)
+      failing <- x[fails]
       if (length(failing) > 0) {
         preview <- paste(utils::head(failing, 5), collapse = ", ")
         if (length(failing) > 5) preview <- paste0(preview, ", ...")
@@ -444,7 +474,8 @@ numeric_rule_type <- function(type_name, test, desc_single, desc_plural,
         return(issue_result(x, new_issue(
           path,
           glue::glue("expected {type_name}, but {noun} [{preview}] {verb} {desc}"),
-          expected = type_name, got = get_type_name(x), code = "out_of_range"
+          expected = type_name, got = get_type_name(x), code = "out_of_range",
+          index = failing_positions(x, fails)
         )))
       }
       ok_result(x)

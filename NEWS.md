@@ -20,6 +20,15 @@
 ## Other changes
 
 -   Fields wrapped in `Coerce()` are now treated like the type they wrap when deciding whether a field is optional, so `Coerce(Default(Integer, 1L))` and `Coerce(Optional(Integer))` fields may be left out of a list.
+-   Issues for vectors and data frame columns now give the positions of the failing elements, for example `Type error in 'age': expected positive, but values [-2, -5] are not > 0 (at rows 2, 3)`. This applies to `Positive`, `NonNegative`, `Whole`, `Between()`, `NonNA()`, `Matches()` and `Unique()`. The issues data frame returned by `safe_parse()` gains an `index` list column with these positions.
+-   Unions no longer repeat a member: `Integer | Numeric | Integer` is `integer | numeric`.
+
+## Bug fixes
+
+-   `typed_function()` now checks the default values of annotated parameters when the typed function is created, so `typed_function(function(n = "a") n, params = list(n = Integer))` is an error instead of returning `"a"` when `n` is omitted. Only constant defaults (such as `1L`, `"a"`, `c(1, 2)` or `NULL`) are checked; defaults computed from other arguments, like `n = length(x)`, are not evaluated. A `NULL` default now needs an `Optional()` or `Nullable()` type. The check follows `sicher.mode`.
+
+-   `options(sicher.mode = "off")` now also turns off the checks of `typed_function()` and of typed variables that were declared before the option was set. Before, only new `%<-%` declarations were affected. In `"off"` mode a typed function calls the original function directly, so arguments are evaluated lazily as usual.
+-   Arithmetic, comparisons and math functions on branded values now return plain values without the brand (before, `brand(1L, UserId) + 1L` kept the `UserId` class although the result was never checked). Combining two values with different brands, such as `user_id + order_id`, is now an error. Branded values get the extra class `"sicher_branded"`, placed after their brands. On R versions before 4.3.0, combining a branded value with an unbranded value of a class that has its own arithmetic (such as `Date`) gives an "Incompatible methods" warning.
 
 # sicher 0.2.0
 

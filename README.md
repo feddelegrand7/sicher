@@ -949,7 +949,7 @@ type enforcement and a fully disabled mode depending on your use case.
 
 ### `sicher.mode`
 
-Controls how typed assignments (`%:%` and `%<-%`) behave.
+Controls how typed variables (`%:%` and `%<-%`) and typed functions (`typed_function()`) behave.
 
 #### Values
 
@@ -964,9 +964,12 @@ Controls how typed assignments (`%:%` and `%<-%`) behave.
   every violation without breaking anything. Applies to typed variables
   and typed functions (`Readonly()` is still enforced).
 - **`"off"`**  
-  Disables the type system entirely.
+  Disables the type system entirely (`Readonly()` is still enforced on
+  variables declared before the option was set).
   - Typed annotations are ignored  
   - Assignments behave like standard R assignments (`<-`)  
+  - Typed functions call the original function without checking
+    arguments or the return value  
   - No validation is performed  
   - No active bindings are created
 

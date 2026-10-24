@@ -289,11 +289,14 @@ Unique <- function(type) {
         } else {
           glue::glue("{sum(duplicated(value))} duplicated element(s)")
         }
-        return(issue_result(value, new_issue(
+        issue <- new_issue(
           path,
           glue::glue("expected {type_name}, but found {detail}"),
-          expected = type_name, got = get_type_name(value), code = "not_unique"
-        )))
+          expected = type_name, got = get_type_name(value), code = "not_unique",
+          index = failing_positions(value, duplicated(value))
+        )
+        if (is.data.frame(value)) issue$index_label <- "row"
+        return(issue_result(value, issue))
       }
       res
     },
@@ -709,6 +712,14 @@ InstanceOf <- function(class) {
 #' expected even though both are strings. Use \code{brand()} to check a
 #' value against the base type and attach the brand.
 #'
+#' Arithmetic, comparisons and math functions on branded values return
+#' plain, unbranded values, since a computed value was never checked by
+#' \code{brand()}. Combining two values with different brands (for example
+#' \code{user_id + order_id}) is an error. On R versions before 4.3.0,
+#' combining a branded value with an unbranded value of a class that has its
+#' own arithmetic (such as \code{Date}) gives an "Incompatible methods"
+#' warning.
+#'
 #' @param type A sicher_type or sicher_union object (the base type).
 #' @param brand A single string naming the brand. It is added as a class to
 #'   branded values.
@@ -741,7 +752,8 @@ Brand <- function(type, brand) {
       res <- delegate(x, type, path, type_name)
       if (length(res$issues) > 0) return(res)
       if (!inherits(x, brand)) {
-        other <- oldClass(x)
+        other <- brand_classes(x)
+        if (length(other) == 0) other <- oldClass(x)
         got_desc <- if (length(other) > 0) {
           glue::glue("a value branded as {paste(other, collapse = '/')}")
         } else {
@@ -771,9 +783,53 @@ brand <- function(value, type) {
   }
   meta <- type_meta(type)
   value <- parse_as(value, meta$inner)
-  class(value) <- unique(c(meta$brand, oldClass(value)))
+  brands <- unique(c(meta$brand, brand_classes(value)))
+  class(value) <- c(brands, "sicher_branded", oldClass(strip_brands(value)))
   value
 }
+
+# Branded values carry their brands as the classes in front of the
+# "sicher_branded" marker class.
+brand_classes <- function(x) {
+  cls <- oldClass(x)
+  pos <- match("sicher_branded", cls)
+  if (is.na(pos)) character(0) else cls[seq_len(pos - 1)]
+}
+
+strip_brands <- function(x) {
+  cls <- oldClass(x)
+  pos <- match("sicher_branded", cls)
+  if (is.na(pos)) return(x)
+  rest <- cls[-seq_len(pos)]
+  if (length(rest) == 0) unclass(x) else structure(x, class = rest)
+}
+
+# Arithmetic and comparisons on branded values drop the brand (a computed
+# value was never checked by brand()), and values with different brands
+# cannot be combined.
+#' @export
+Ops.sicher_branded <- function(e1, e2) {
+  if (missing(e2)) return(get(.Generic)(strip_brands(e1)))
+  b1 <- brand_classes(e1)
+  b2 <- brand_classes(e2)
+  if (length(b1) > 0 && length(b2) > 0 && !setequal(b1, b2)) {
+    stop(glue::glue(
+      "Cannot combine a value branded {paste(b1, collapse = '/')} with a value ",
+      "branded {paste(b2, collapse = '/')} using `{.Generic}`"
+    ), call. = FALSE)
+  }
+  get(.Generic)(strip_brands(e1), strip_brands(e2))
+}
+
+#' @export
+Math.sicher_branded <- function(x, ...) {
+  get(.Generic)(strip_brands(x), ...)
+}
+
+# Lets Ops.sicher_branded win over the other operand's method (e.g. a
+# branded Date minus a plain Date). The generic exists from R 4.3.0.
+#' @rawNamespace if (getRversion() >= "4.3.0") S3method(chooseOpsMethod, sicher_branded)
+chooseOpsMethod.sicher_branded <- function(x, y, mx, my, cl, reverse) TRUE
 
 # =============================================================================
 # Structural types
