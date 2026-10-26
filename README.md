@@ -8,6 +8,13 @@
 [![CRAN
 status](https://www.r-pkg.org/badges/version/sicher)](https://CRAN.R-project.org/package=sicher)
 [![R-CMD-check](https://github.com/feddelegrand7/sicher/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/feddelegrand7/sicher/actions/workflows/R-CMD-check.yaml)
+[![R
+badge](https://img.shields.io/badge/Build%20with-♥%20and%20R-blue)](https://github.com/feddelegrand7/sicher)
+[![metacran
+downloads](https://cranlogs.r-pkg.org/badges/sicher)](https://cran.r-project.org/package=sicher)
+[![metacran
+downloads](https://cranlogs.r-pkg.org/badges/grand-total/sicher)](https://cran.r-project.org/package=sicher)
+
 
 <!-- badges: end -->
 
