@@ -207,6 +207,26 @@ pw %:% Password %<-% "correct horse battery"
 pw <- "short"   # Error: must be at least 8 characters
 ```
 
+#### 🧮 `Check()` — rules across fields
+
+`Refine()` reports one problem about the whole value. `Check()` lets a rule report any number of problems, each at the field it is about:
+
+```{r}
+Booking <- Check(
+  create_list_type(list(start = Date, end = Date, adults = Integer, kids = Integer)),
+  function(x, ctx) {
+    if (x$end < x$start) ctx$issue("must be after start", path = "end")
+    if (x$adults == 0L && x$kids > 0L) ctx$issue("children need an adult", path = "kids")
+  }
+)
+
+res <- safe_parse(
+  list(start = as.Date("2024-05-10"), end = as.Date("2024-05-01"), adults = 0L, kids = 2L),
+  Booking
+)
+res$issues[, c("path", "message")]
+```
+
 #### 🪄 `Default()` and `Coerce()` — transform values
 
 `Default(type, value)` replaces `NULL` (or a missing list field) with a default. `Coerce(type)` converts values with the matching `as.*()` function before checking them, and reports values that cannot be converted instead of silently producing `NA`. A typed variable stores the transformed value.
@@ -221,6 +241,19 @@ age <- "forty"  # Error: cannot convert
 
 when %:% Coerce(Date) %<-% "2024-05-01"
 class(when)
+```
+
+#### 🔁 `Transform()` and `Pipe()` — cleaning steps inside the type
+
+`Transform(type, fn)` checks a value, then converts it with `fn`. Unlike `Coerce()`, it always runs. `Pipe()` chains types, passing each parsed value to the next:
+
+```{r, error = TRUE}
+Email <- Transform(Scalar(String), function(x) tolower(trimws(x)))
+parse_as("  Ada@Example.COM ", Email)
+
+Share <- Pipe(Coerce(Numeric), Transform(Numeric, function(x) x / 100), Between(0, 1))
+parse_as("42", Share)
+parse_as("420", Share)   # Error: outside [0, 1]
 ```
 
 #### 🕳️ `Nullable()` — present, but possibly `NULL`
@@ -472,6 +505,18 @@ current_user <- brand("o-789", OrderId)   # Error: wrong brand
 current_user <- "u-456"                   # Error: not branded
 ```
 
+#### `HasMethods()` — anything with the right methods
+
+`InstanceOf("lm")` only accepts linear models. `HasMethods("predict")` accepts any object that `predict()` works on:
+
+```{r, error = TRUE}
+Model <- HasMethods("predict", "residuals")
+
+model %:% Model %<-% lm(mpg ~ wt, data = mtcars)
+model <- glm(am ~ wt, data = mtcars, family = binomial)
+model <- list()   # Error: no predict() or residuals() method
+```
+
 #### `FunctionOf()` — function signatures
 
 The function is wrapped with `typed_function()`, so every later call is checked too:
@@ -483,6 +528,26 @@ fmt %:% Formatter %<-% function(x) format(x, nsmall = 2)
 fmt(3)
 fmt("a")                    # Error: argument x
 fmt <- function(y) y        # Error: no parameter named x
+```
+
+### 🎯 Exhaustive matching with `match_type()`
+
+`match_type()` builds a function that checks a value and calls the handler for its case. Cases are the tags of a `DiscriminatedUnion()`, the values of an `Enum()` or `Literal()`, the levels of a `Factor()`, or the members of a union. Handlers are checked when the matcher is created, so a forgotten case fails right away, not on the rare call that reaches it:
+
+```{r, error = TRUE}
+area <- match_type(Shape,
+  circle = function(s) pi * s$radius^2,
+  square = function(s) s$side^2
+)
+area(list(kind = "square", side = 3))
+
+match_type(Shape, circle = function(s) pi * s$radius^2)   # Error: no handler for 'square'
+
+label <- match_type(Enum("active", "paused", "closed"),
+  active = function(x) "Running",
+  .default = function(x) "Not running"
+)
+label("paused")
 ```
 
 ### 🧬 Generic Types
@@ -668,6 +733,25 @@ result$issues
 
 The error is a condition of class `sicher_type_error` with the same issues in `e$issues`, so it can be handled with `tryCatch(..., sicher_type_error = function(e) ...)`.
 
+Misspelled field names, enum values and union tags come with a suggestion:
+
+```{r, error = TRUE}
+Person <- create_list_type(list(name = String, status = Enum("active", "inactive")))
+check_type(list(nmae = "Ada", status = "actve"), Person)
+```
+
+### 🧾 Error reports for forms and APIs
+
+`field_errors()` groups messages by field, ready to show next to Shiny inputs. `problem_json()` builds an RFC 9457 "problem details" body for a `400` or `422` response, with a JSON Pointer to each bad value:
+
+```{r}
+Signup <- create_list_type(list(email = Matches("@"), age = Scalar(Between(18, 120))))
+res <- safe_parse(list(email = "nope", age = 12), Signup)
+
+field_errors(res)
+str(problem_json(res, status = 422))
+```
+
 ### 🌐 JSON
 
 `validate_json()` parses JSON with jsonlite and checks it in one step, which is handy for plumber request bodies. `to_json_schema()` exports a type as JSON Schema:
@@ -737,7 +821,7 @@ The behavior of **sicher** can be controlled globally using R’s `options()` me
 
 ### `sicher.mode`
 
-Controls how typed assignments (`%:%` and `%<-%`) behave.
+Controls how typed variables (`%:%` and `%<-%`) and typed functions (`typed_function()`) behave.
 
 #### Values
 
@@ -749,9 +833,10 @@ Controls how typed assignments (`%:%` and `%<-%`) behave.
 -   **`"warn"`**\
     Reports type violations as warnings instead of errors and keeps the assigned value. Useful when adding sicher to existing code: you see every violation without breaking anything. Applies to typed variables and typed functions (`Readonly()` is still enforced).
 -   **`"off"`**\
-    Disables the type system entirely.
+    Disables the type system entirely (`Readonly()` is still enforced on variables declared before the option was set).
     -   Typed annotations are ignored\
     -   Assignments behave like standard R assignments (`<-`)\
+    -   Typed functions call the original function without checking arguments or the return value\
     -   No validation is performed\
     -   No active bindings are created
 

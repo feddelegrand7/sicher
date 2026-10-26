@@ -39,8 +39,10 @@ is_type <- function(value, type) {
 #'   \item{success}{\code{TRUE} if the value matches the type.}
 #'   \item{data}{The parsed value, or \code{NULL} on failure.}
 #'   \item{issues}{A data frame with one row per problem and the columns
-#'     \code{path}, \code{message}, \code{expected}, \code{got} and
-#'     \code{code}.}
+#'     \code{path}, \code{message}, \code{expected}, \code{got},
+#'     \code{code} and \code{index}. \code{index} is a list column holding
+#'     the positions of the failing elements of a vector (the row numbers
+#'     for a data frame column), or an empty integer vector.}
 #'   \item{error}{The \code{"sicher_type_error"} condition on failure, or
 #'     \code{NULL}.}
 #' }

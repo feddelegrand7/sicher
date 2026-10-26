@@ -102,6 +102,10 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link" href="./api.html"> 
 <span class="menu-text">API Reference</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./playground.html"> 
+<span class="menu-text">Playground</span></a>
+  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
@@ -129,31 +133,11 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<p>── R CMD check results ──────────────────── sicher 0.1.0 ──── Duration: 9.9s</p>
+<p>── R CMD check results ───────────── sicher 0.2.0 ──── Duration: 14.6s</p>
 <p>❯ checking for future file timestamps … NOTE unable to verify current time</p>
 <p>0 errors ✔ | 0 warnings ✔ | 1 note ✖</p>
-<ul>
-<li>Adding the <code>Literal</code> type check</li>
-<li>Adding the <code>extend</code> method to extend a preexisting <code>list</code> schema.</li>
-<li>Adding <code>NonNA()</code> modifier — rejects any value that contains at least one <code>NA</code>.</li>
-<li>Adding <code>Between(min, max)</code> — closed-interval numeric range constraint.</li>
-<li>Adding <code>Matches(pattern)</code> — PCRE regex-constrained string type.</li>
-<li>Adding <code>NonEmpty()</code> modifier — rejects zero-length vectors, lists, and zero-row data frames.</li>
-</ul>
-<p>── R CMD check results ───────────────────────── sicher 0.1.0 ──── Duration: 7.3s</p>
-<p>❯ checking for future file timestamps … NOTE unable to verify current time</p>
-<p>0 errors ✔ | 0 warnings ✔ | 1 note ✖</p>
-<ul>
-<li>Fixed the following issues:</li>
-</ul>
-<section id="comments-from-benjamin-altmann" class="level4">
-<h4 class="anchored" data-anchor-id="comments-from-benjamin-altmann">Comments from Benjamin Altmann</h4>
-<p>Please omit the redundant “for R” at the end your title in the description.</p>
-<p>Some code lines in examples are commented out. Please never do that. Ideally find toy examples that can be regularly executed and checked. Lengthy examples (&gt; 5 sec), can be wrapped in . -&gt; check_type.Rd I believe you want to show an error message? In that case, please wrap the example in try(). That way the error is thrown but the execution not halted.</p>
-<p>Please fix and resubmit.</p>
 
 
-</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

@@ -64,6 +64,38 @@ testthat::test_that("data frame column errors include the variable name", {
   )
 })
 
+testthat::test_that("issues report the positions of failing elements", {
+  res <- safe_parse(c(1, -2, 3, -4), Positive)
+  testthat::expect_equal(res$issues$index[[1]], c(2L, 4L))
+  testthat::expect_match(res$issues$message, "\\(at positions 2, 4\\)$")
+
+  testthat::expect_equal(safe_parse(c("a", NA), NonNA(String))$issues$index[[1]], 2L)
+  testthat::expect_equal(safe_parse(c("A", "b"), Matches("^[A-Z]$"))$issues$index[[1]], 2L)
+  testthat::expect_equal(safe_parse(c(1, NA), Between(0, 1))$issues$index[[1]], 2L)
+  testthat::expect_equal(safe_parse(c(1, 2, 1), Unique(Numeric))$issues$index[[1]], 3L)
+
+  # A single value has no position to report
+  single <- safe_parse(-1, Positive)
+  testthat::expect_equal(single$issues$index[[1]], integer(0))
+  testthat::expect_false(grepl("at position", single$issues$message))
+
+  # Long lists are shortened
+  testthat::expect_error(check_type(-(1:8), Positive), "positions 1, 2, 3, 4, 5 and 3 more")
+  testthat::expect_identical(safe_parse(1, Positive)$issues$index, list())
+})
+
+testthat::test_that("data frame issues report row numbers", {
+  Patients <- create_dataframe_type(list(age = Positive, name = NonNA(String)))
+  df <- data.frame(age = c(1, -2, -5), name = c("a", NA, "c"))
+  res <- safe_parse(df, Patients)
+  testthat::expect_equal(res$issues$index, list(c(2L, 3L), 2L))
+  testthat::expect_match(res$issues$message[1], "\\(at rows 2, 3\\)$")
+  testthat::expect_error(check_type(df, Patients), "Type error in 'name'.*\\(at row 2\\)")
+
+  dups <- safe_parse(data.frame(a = c(1, 1)), Unique(DataFrame))
+  testthat::expect_match(dups$issues$message, "\\(at row 2\\)$")
+})
+
 testthat::test_that("check_type throws a classed condition", {
   err <- tryCatch(check_type("a", Numeric), error = function(e) e)
   testthat::expect_s3_class(err, "sicher_type_error")
@@ -88,6 +120,25 @@ testthat::test_that("sicher.mode = 'warn' warns and keeps the value", {
   f <- typed_function(function(x) x, params = list(x = Numeric))
   testthat::expect_warning(res <- f("a"), "Expected numeric")
   testthat::expect_equal(res, "a")
+})
+
+testthat::test_that("sicher.mode = 'off' skips typed function checks", {
+  withr::local_options(sicher.mode = "off")
+  f <- typed_function(function(x) x, params = list(x = Numeric), .return = Numeric)
+  testthat::expect_equal(f("a"), "a")
+
+  # Arguments are passed through unevaluated, as with a plain call
+  g <- typed_function(function(x, y) if (missing(y)) x else y, params = list(x = Numeric))
+  testthat::expect_equal(g("a"), "a")
+  h <- typed_function(function(x, y) x, params = list(x = Numeric))
+  testthat::expect_equal(h(1, stop("not forced")), 1)
+})
+
+testthat::test_that("sicher.mode = 'off' skips checks on existing typed variables", {
+  v %:% Numeric %<-% 1
+  withr::with_options(list(sicher.mode = "off"), v <- "a")
+  testthat::expect_equal(v, "a")
+  testthat::expect_error(v <- "b", "Expected numeric")
 })
 
 testthat::test_that("readonly is still enforced in warn mode", {

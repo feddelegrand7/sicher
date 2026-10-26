@@ -90,13 +90,16 @@ Omit <- function(type, ...) {
 Partial <- function(type) {
   spec <- require_object_type(type, "Partial")
   spec[] <- lapply(spec, function(field) {
-    if (field_is_optional(field)) field else Optional(field)
+    if (field_is_optional(field)) field else map_core(field, Optional)
   })
   rebuild_object_type(type, spec)
 }
 
 make_required <- function(field) {
-  if (inherits(field, "sicher_readonly")) field <- field$base_type
+  map_core(field, make_required_core)
+}
+
+make_required_core <- function(field) {
   if (inherits(field, "sicher_type") && identical(meta_kind(field), "default")) {
     return(type_meta(field)$inner)
   }

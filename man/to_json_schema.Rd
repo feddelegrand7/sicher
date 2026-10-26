@@ -25,7 +25,10 @@ Because R has no separate scalar type, an unconstrained type such as
 \code{Numeric} becomes "a number or an array of numbers"; wrap it in
 \code{Scalar()} to get a plain \code{number}. Rules that JSON Schema
 cannot express (\code{Refine()}, \code{Coerce()}, \code{Brand()},
-\code{NonNA()}) are dropped and only their base type is described. Types
+\code{NonNA()}) are dropped and only their base type is described.
+Fields are named by their \code{\link{Alias}()}, and
+\code{\link{Describe}()} adds \code{description}, \code{title} and
+\code{examples} keywords. Types
 with no JSON equivalent (\code{Function}, \code{Environment},
 \code{InstanceOf()}, \code{MatrixOf()}, \code{FunctionOf()},
 \code{Lazy()} and custom \code{create_type()} types) raise an error.

@@ -268,6 +268,14 @@ testthat::test_that("create_union combines correctly", {
   testthat::expect_true(check_type(5, u))
 })
 
+testthat::test_that("unions drop repeated members", {
+  u <- Integer | Numeric | Integer
+  testthat::expect_length(u$types, 2)
+  testthat::expect_equal(u$name, "integer | numeric")
+  testthat::expect_identical(String | String, String)
+  testthat::expect_length((Integer | String | (String | Integer))$types, 2)
+})
+
 # corner cases for check_type with NULL and Any
 
 testthat::test_that("check_type handles Any and Null properly", {
@@ -713,10 +721,40 @@ testthat::test_that("typed_function keeps unchecked defaults", {
   testthat::expect_equal(f("hi"), "hi ok")
 })
 
-testthat::test_that("typed_function does not validate omitted annotated defaults", {
-  f <- typed_function(function(x = "bad") x, params = list(x = Numeric))
+testthat::test_that("typed_function checks constant defaults when it is created", {
+  testthat::expect_error(
+    typed_function(function(x = "bad") x, params = list(x = Numeric)),
+    "Type error in 'x \\(default\\)': Expected numeric, got string"
+  )
+  testthat::expect_error(
+    typed_function(function(x = NULL) x, params = list(x = String)),
+    "got null"
+  )
+  testthat::expect_error(
+    typed_function(function(x = c(1, -2)) x, params = list(x = Positive)),
+    "not > 0"
+  )
+  f <- typed_function(function(n = 1L, x = NULL) n, params = list(n = Integer, x = Optional(String)))
+  testthat::expect_equal(f(), 1L)
+})
 
-  testthat::expect_equal(f(), "bad")
+testthat::test_that("typed_function does not evaluate computed defaults", {
+  f <- typed_function(function(x, n = length(x)) n, params = list(n = Integer))
+  testthat::expect_equal(f(1:3), 3L)
+  g <- typed_function(function(x = stop("x is required")) x, params = list(x = Integer))
+  testthat::expect_error(g(), "x is required")
+  h <- typed_function(function(d = as.Date("not a date")) d, params = list(d = Date))
+  testthat::expect_s3_class(h, "sicher_typed_function")
+})
+
+testthat::test_that("default checks follow sicher.mode", {
+  withr::local_options(sicher.mode = "warn")
+  testthat::expect_warning(
+    typed_function(function(x = "bad") x, params = list(x = Numeric)),
+    "x \\(default\\)"
+  )
+  withr::local_options(sicher.mode = "off")
+  testthat::expect_silent(typed_function(function(x = "bad") x, params = list(x = Numeric)))
 })
 
 testthat::test_that("typed_function accepts readonly parameter specifications", {
@@ -1085,12 +1123,6 @@ testthat::test_that("typed_function keeps unchecked defaults", {
   f <- typed_function(function(x, y = "ok") paste(x, y), params = list(x = String))
 
   testthat::expect_equal(f("hi"), "hi ok")
-})
-
-testthat::test_that("typed_function does not validate omitted annotated defaults", {
-  f <- typed_function(function(x = "bad") x, params = list(x = Numeric))
-
-  testthat::expect_equal(f(), "bad")
 })
 
 testthat::test_that("typed_function accepts readonly parameter specifications", {

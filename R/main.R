@@ -312,7 +312,7 @@ Enum <- function(...) {
     "enum[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
   )
 
-  with_meta(
+  leaf <- with_meta(
     create_type(
       type_name,
       function(x) {
@@ -329,6 +329,7 @@ Enum <- function(...) {
     ),
     kind = "enum", values = allowed_values
   )
+  with_value_hints(leaf, allowed_values, enum_value_matches)
 }
 
 #' Literal Type Factory
@@ -378,7 +379,7 @@ Literal <- function(...) {
     "literal[{paste(vapply(allowed_values, format_enum_value, character(1)), collapse = ', ')}]"
   )
 
-  with_meta(
+  leaf <- with_meta(
     create_type(
       type_name,
       function(x) {
@@ -393,6 +394,7 @@ Literal <- function(...) {
     ),
     kind = "literal", values = allowed_values
   )
+  with_value_hints(leaf, allowed_values, literal_value_matches)
 }
 
 # =============================================================================
@@ -454,6 +456,12 @@ Literal <- function(...) {
 #'   to zod's \code{.strict()}, \code{.passthrough()} and \code{.strip()}).
 #'   Typed variables and \code{\link{parse_as}()} store the parsed value, so
 #'   with \code{"drop"} unknown fields are silently removed.
+#' @param alias Optional external names for the fields: a naming convention
+#'   (\code{"camel"}, \code{"pascal"}, \code{"snake"} or \code{"kebab"}) or
+#'   a function that takes a field name and returns its external name. Each
+#'   field is then read from its external name (or, if that is absent, from
+#'   its R name) and stored under its R name. Fields wrapped in
+#'   \code{\link{Alias}()} keep their own alias. See \code{\link{Alias}()}.
 #'
 #' @return A sicher_type that validates list structure
 #'
@@ -475,8 +483,16 @@ Literal <- function(...) {
 #'   preferences = list(color = "red", movie = "batman")
 #' )
 #'
+#' # Read camelCase data into snake_case fields
+#' Account <- create_list_type(list(
+#'   account_id = Scalar(Integer),
+#'   created_at = Scalar(String)
+#' ), alias = "camel")
+#' parse_as(list(accountId = 1L, createdAt = "2024-01-05"), Account)
+#'
 #' @export
-create_list_type <- function(type_spec, extra = c("error", "allow", "drop")) {
+create_list_type <- function(type_spec, extra = c("error", "allow", "drop"),
+                             alias = NULL) {
   extra <- match.arg(extra)
 
   if (!is.list(type_spec) || is.null(names(type_spec))) {
@@ -506,6 +522,8 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop")) {
   }
 
   field_names <- names(type_spec)
+  keys <- resolve_field_keys(type_spec, alias)
+  has_aliases <- any(keys != field_names)
   is_optional <- vapply(type_spec, field_is_optional, logical(1))
   type_labels <- vapply(type_spec, type_label, character(1))
   field_parts <- glue::glue(
@@ -523,23 +541,28 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop")) {
       issues <- list()
       present <- names(x)
       if (is.null(present)) present <- character(0)
+      renames <- character(0)
+      absent <- character(0)
 
       for (field in field_names) {
-        field_path <- c(path, list(field))
+        key <- keys[[field]]
+        source <- field_source(field, key, present)
         field_type <- type_spec[[field]]
-        if (field %in% present) {
-          res <- run_type(x[[field]], field_type, field_path)
+        if (!is.null(source)) {
+          res <- run_type(x[[source]], field_type, c(path, list(source)))
           issues <- c(issues, res$issues)
-          if (length(res$issues) == 0 && !identical(res$value, x[[field]])) {
-            x[field] <- list(res$value)
+          if (length(res$issues) == 0 && !identical(res$value, x[[source]])) {
+            x[source] <- list(res$value)
           }
+          if (source != field) renames[source] <- field
         } else {
+          absent <- c(absent, key)
           default <- field_default(field_type)
           if (default$has) {
             x[field] <- list(default$value)
           } else if (!field_is_optional(field_type)) {
             issues <- c(issues, list(new_issue(
-              field_path,
+              c(path, list(key)),
               glue::glue("Missing required field (expected {type_label(field_type)})"),
               expected = type_label(field_type),
               got = "missing",
@@ -549,18 +572,19 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop")) {
         }
       }
 
-      unknown <- setdiff(present, field_names)
+      unknown <- setdiff(present, c(field_names, keys))
       if (length(unknown) > 0) {
         if (extra == "error") {
           for (field in unknown) {
             issues <- c(issues, list(new_issue(
               c(path, list(field)),
               glue::glue(
-                "Unexpected field (valid fields: {paste(field_names, collapse = ', ')})"
+                "Unexpected field (valid fields: {paste(keys, collapse = ', ')})"
               ),
               expected = "no field",
               got = get_type_name(x[[field]]),
-              code = "unexpected_field"
+              code = "unexpected_field",
+              hint = field_hint(field, absent)
             )))
           }
         } else if (extra == "drop") {
@@ -568,9 +592,14 @@ create_list_type <- function(type_spec, extra = c("error", "allow", "drop")) {
         }
       }
 
+      if (has_aliases && length(issues) == 0) {
+        x <- rename_aliased(x, renames)
+      }
+
       list(value = x, issues = issues)
     },
-    meta = list(kind = "list", spec = type_spec, extra = extra)
+    meta = list(kind = "list", spec = type_spec, extra = extra,
+                alias = alias, keys = keys)
   )
 
   # Store the raw spec so extend() can retrieve it later.
@@ -697,6 +726,9 @@ extend <- function(base, extra) {
 #' @param extra What to do with columns that are not part of \code{col_spec}:
 #'   \code{"error"} (the default), \code{"allow"} or \code{"drop"}. See
 #'   \code{\link{create_list_type}()}.
+#' @param alias Optional external column names: a naming convention or a
+#'   function, as in \code{\link{create_list_type}()}. Columns are read from
+#'   their external names and renamed to the R names.
 #'
 #' @return A sicher_type representing the data frame schema.
 #'
@@ -713,7 +745,8 @@ extend <- function(base, extra) {
 #' )
 #'
 #' @export
-create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop")) {
+create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"),
+                                  alias = NULL) {
   extra <- match.arg(extra)
 
   if (!is.list(col_spec) || is.null(names(col_spec))) {
@@ -743,6 +776,8 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"))
   }
 
   col_names <- names(col_spec)
+  keys <- resolve_field_keys(col_spec, alias, what = "column")
+  has_aliases <- any(keys != col_names)
   is_optional <- vapply(col_spec, field_is_optional, logical(1))
   type_labels <- vapply(col_spec, type_label, character(1))
   col_parts <- glue::glue("{col_names}{ifelse(is_optional, '?', '')}: {type_labels}")
@@ -756,23 +791,36 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"))
       }
 
       issues <- list()
+      renames <- character(0)
+      absent <- character(0)
       for (col in col_names) {
-        col_path <- c(path, list(col))
+        key <- keys[[col]]
+        source <- field_source(col, key, names(x))
         col_type <- col_spec[[col]]
-        if (col %in% names(x)) {
-          res <- run_type(x[[col]], col_type, col_path)
+        if (!is.null(source)) {
+          col_path <- c(path, list(source))
+          res <- run_type(x[[source]], col_type, col_path)
+          # Positions in a column are row numbers
+          res$issues <- lapply(res$issues, function(issue) {
+            if (!is.null(issue$index) && identical(issue$path, col_path)) {
+              issue$index_label <- "row"
+            }
+            issue
+          })
           issues <- c(issues, res$issues)
           if (length(res$issues) == 0 && !is.null(res$value) &&
-              !identical(res$value, x[[col]])) {
-            x[[col]] <- res$value
+              !identical(res$value, x[[source]])) {
+            x[[source]] <- res$value
           }
+          if (source != col) renames[source] <- col
         } else {
+          absent <- c(absent, key)
           default <- field_default(col_type)
           if (default$has) {
             x[[col]] <- rep_len(default$value, nrow(x))
           } else if (!field_is_optional(col_type)) {
             issues <- c(issues, list(new_issue(
-              col_path,
+              c(path, list(key)),
               glue::glue("Missing required column (expected {type_label(col_type)})"),
               expected = type_label(col_type),
               got = "missing",
@@ -782,18 +830,19 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"))
         }
       }
 
-      unknown <- setdiff(names(x), col_names)
+      unknown <- setdiff(names(x), c(col_names, keys))
       if (length(unknown) > 0) {
         if (extra == "error") {
           for (col in unknown) {
             issues <- c(issues, list(new_issue(
               c(path, list(col)),
               glue::glue(
-                "Unexpected column (valid columns: {paste(col_names, collapse = ', ')})"
+                "Unexpected column (valid columns: {paste(keys, collapse = ', ')})"
               ),
               expected = "no column",
               got = get_type_name(x[[col]]),
-              code = "unexpected_field"
+              code = "unexpected_field",
+              hint = field_hint(col, absent)
             )))
           }
         } else if (extra == "drop") {
@@ -801,9 +850,14 @@ create_dataframe_type <- function(col_spec, extra = c("error", "allow", "drop"))
         }
       }
 
+      if (has_aliases && length(issues) == 0) {
+        x <- rename_aliased(x, renames)
+      }
+
       list(value = x, issues = issues)
     },
-    meta = list(kind = "data.frame", spec = col_spec, extra = extra)
+    meta = list(kind = "data.frame", spec = col_spec, extra = extra,
+                alias = alias, keys = keys)
   )
 
   attr(result, "sicher_spec") <- col_spec
@@ -886,7 +940,8 @@ NonNA <- function(type) {
           ),
           expected = glue::glue("non_na<{base_name}>"),
           got = "NA",
-          code = "na_value"
+          code = "na_value",
+          index = failing_positions(res$value, is.na(res$value))
         )))
       }
       res
@@ -997,10 +1052,12 @@ Matches <- function(pattern) {
         return(issue_result(x, new_issue(
           path,
           glue::glue("expected {type_name}, but value contains NA(s)"),
-          expected = type_name, got = "NA", code = "na_value"
+          expected = type_name, got = "NA", code = "na_value",
+          index = failing_positions(x, is.na(x))
         )))
       }
-      failing <- x[!grepl(pattern, x, perl = TRUE)]
+      fails <- !grepl(pattern, x, perl = TRUE)
+      failing <- x[fails]
       if (length(failing) > 0) {
         quoted  <- encodeString(utils::head(failing, 3), quote = "\"")
         preview <- paste(quoted, collapse = ", ")
@@ -1013,7 +1070,8 @@ Matches <- function(pattern) {
             "expected {type_name}, ",
             "but {noun} [{preview}] {verb} not match the pattern"
           ),
-          expected = type_name, got = get_type_name(x), code = "invalid_string"
+          expected = type_name, got = get_type_name(x), code = "invalid_string",
+          index = failing_positions(x, fails)
         )))
       }
       ok_result(x)
@@ -1166,6 +1224,12 @@ create_union <- function(type1, type2) {
   }
 
   types_list <- c(union_members(type1), union_members(type2))
+  # Drop repeated members (Integer | Numeric | Integer)
+  keep <- !vapply(seq_along(types_list), function(i) {
+    any(vapply(types_list[seq_len(i - 1)], identical, logical(1), types_list[[i]]))
+  }, logical(1))
+  types_list <- types_list[keep]
+  if (length(types_list) == 1) return(types_list[[1]])
   names_list <- vapply(types_list, function(t) t$name, character(1))
 
   structure(
@@ -1383,7 +1447,10 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' @param params A named list mapping parameter names to their types
 #'   (e.g. \code{list(x = Numeric, y = String)}). Only listed parameters are
 #'   type-checked on each call; unlisted parameters pass through unchecked.
-#'   Defaults to an empty list (no parameter checking).
+#'   Defaults to an empty list (no parameter checking). Default values of
+#'   listed parameters are checked once, when the typed function is created,
+#'   if they are constants (such as \code{1L}, \code{"a"}, \code{c(1, 2)} or
+#'   \code{NULL}). Defaults computed from other arguments are not checked.
 #' @param .return Optional return type. When \code{NULL} (the default), the
 #'   return value is not checked. Accepts any \code{sicher_type} or
 #'   \code{sicher_union}.
@@ -1417,6 +1484,9 @@ create_typed_binding <- function(var_name, value, type, envir) {
 #' greet("Alice")                   # "Hello, Alice"
 #' greet("Alice", title = "Dr.")    # "Hello, Dr. Alice"
 #' try(greet("Alice", title = 42))  # Error: Type error in 'title'
+#'
+#' # Constant defaults must match their type
+#' try(typed_function(function(n = "a") n, params = list(n = Integer)))
 #'
 #' # Union type in params
 #' describe <- typed_function(
@@ -1475,6 +1545,8 @@ typed_function <- function(fn, params = list(), .return = NULL) {
     }
   }
 
+  check_param_defaults(fn, params)
+
   # Rename to avoid masking inside the closure
   .params <- params
   .ret    <- .return
@@ -1483,6 +1555,12 @@ typed_function <- function(fn, params = list(), .return = NULL) {
   wrapper <- function() {
     mc     <- match.call()
     caller <- parent.frame()
+
+    # sicher.mode = "off": call fn directly, keeping lazy evaluation
+    if (identical(sicher_mode(), "off")) {
+      mc[[1]] <- fn
+      return(eval(mc, caller))
+    }
 
     # Evaluate all explicitly supplied arguments in the calling environment
     supplied <- as.list(mc[-1])
@@ -1516,6 +1594,36 @@ typed_function <- function(fn, params = list(), .return = NULL) {
   class(wrapper) <- c("sicher_typed_function", "function")
 
   wrapper
+}
+
+# Check the constant defaults of the annotated parameters of `fn`. Other
+# defaults may depend on other arguments or have side effects, so they are
+# not evaluated here.
+check_param_defaults <- function(fn, params) {
+  defaults <- formals(fn)
+  for (nm in intersect(names(params), names(defaults))) {
+    if (identical(defaults[[nm]], quote(expr = ))) next
+    expr <- defaults[[nm]]
+    if (!is_constant_expr(expr)) next
+    value <- tryCatch(list(eval(expr, baseenv())), error = function(e) NULL)
+    if (is.null(value)) next
+    enforce_type(value[[1]], params[[nm]], glue::glue("{nm} (default)"))
+  }
+  invisible(NULL)
+}
+
+constant_calls <- c(
+  "c", "list", "-", "+", "*", "/", ":", "(", "character", "numeric",
+  "integer", "double", "logical", "as.integer", "as.numeric", "as.double",
+  "as.character", "as.logical", "as.Date"
+)
+
+is_constant_expr <- function(expr) {
+  if (is.null(expr) || is.atomic(expr)) return(TRUE)
+  if (is.symbol(expr)) return(as.character(expr) %in% c("Inf", "NaN"))
+  if (!is.call(expr) || !is.symbol(expr[[1]])) return(FALSE)
+  as.character(expr[[1]]) %in% constant_calls &&
+    all(vapply(as.list(expr)[-1], is_constant_expr, logical(1)))
 }
 
 # =============================================================================
@@ -1603,6 +1711,11 @@ typed_function <- function(fn, params = list(), .return = NULL) {
 #' @export
 print.sicher_type <- function(x, ...) {
   cat("<type:", x$name, ">\n")
+  info <- type_description(x)
+  if (!is.null(info$title)) cat("  title:", info$title, "\n")
+  if (!is.null(info$description)) cat("  description:", info$description, "\n")
+  alias <- field_alias(x)
+  if (!is.null(alias)) cat("  alias:", alias, "\n")
   invisible(x)
 }
 

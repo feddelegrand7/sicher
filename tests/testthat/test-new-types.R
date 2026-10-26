@@ -243,6 +243,41 @@ testthat::test_that("Brand and brand() create nominal types", {
   testthat::expect_error(brand("a", String), "Brand\\(\\)")
 })
 
+testthat::test_that("arithmetic on branded values drops the brand", {
+  UserId <- Brand(Integer, "UserId")
+  OrderId <- Brand(Integer, "OrderId")
+  uid <- brand(c(1L, 2L), UserId)
+
+  testthat::expect_identical(uid + 1L, c(2L, 3L))
+  testthat::expect_identical(uid == 1L, c(TRUE, FALSE))
+  testthat::expect_identical(-uid, c(-1L, -2L))
+  testthat::expect_identical(abs(uid), c(1L, 2L))
+  testthat::expect_identical(uid + uid, c(2L, 4L))
+  testthat::expect_error(check_type(uid + 1L, UserId), "unbranded integer")
+  testthat::expect_error(
+    uid + brand(1L, OrderId),
+    "Cannot combine a value branded UserId with a value branded OrderId"
+  )
+  testthat::expect_error(uid == brand(1L, OrderId), "using `==`")
+})
+
+testthat::test_that("branded values keep the methods of their base class", {
+  Day <- Brand(Date, "Day")
+  d <- brand(as.Date("2024-01-10"), Day)
+  testthat::expect_s3_class(d, c("Day", "sicher_branded", "Date"), exact = TRUE)
+  testthat::expect_identical(d + 1, as.Date("2024-01-11"))
+  testthat::expect_equal(as.numeric(d - as.Date("2024-01-01")), 9)
+})
+
+testthat::test_that("brands can be stacked and are all removed by dump_as()", {
+  A <- Brand(Integer, "A")
+  AB <- Brand(A, "AB")
+  ab <- brand(brand(1L, A), AB)
+  testthat::expect_s3_class(ab, c("AB", "A", "sicher_branded"), exact = TRUE)
+  testthat::expect_true(check_type(ab, AB))
+  testthat::expect_identical(dump_as(ab, AB), 1L)
+})
+
 testthat::test_that("FunctionOf checks and wraps functions", {
   Formatter <- FunctionOf(list(x = Numeric), .return = String)
   testthat::expect_output(print(Formatter), "function\\(x: numeric\\) => string")

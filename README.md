@@ -153,7 +153,7 @@ silent bugs in data pipelines. The underlying type is validated first;
 ``` r
 salary %:% NonNA(Numeric) %<-% c(1800, 2300, 4000)
 salary <- c(1800, NA, 4000)   # Error: value contains NA(s)
-#> Error: Type error in 'salary': expected non_na<numeric> (no NA values), but value contains NA(s)
+#> Error: Type error in 'salary': expected non_na<numeric> (no NA values), but value contains NA(s) (at position 2)
 ```
 
 Composes freely with other modifiers:
@@ -222,7 +222,7 @@ top3 <- c(9, 8, 7, 6)   # Error: more than 3 elements
 
 ids %:% Unique(Integer) %<-% c(1L, 2L, 3L)
 ids <- c(1L, 2L, 2L)    # Error: duplicated value
-#> Error: Type error in 'ids': expected unique<integer>, but found duplicated value(s): [2]
+#> Error: Type error in 'ids': expected unique<integer>, but found duplicated value(s): [2] (at position 3)
 ```
 
 #### ✅ `Refine()` — custom rules on top of a type
@@ -241,6 +241,30 @@ pw %:% Password %<-% "correct horse battery"
 pw <- "short"   # Error: must be at least 8 characters
 #> Error: Type error in 'pw': must be at least 8 characters
 #> Received: short
+```
+
+#### 🧮 `Check()` — rules across fields
+
+`Refine()` reports one problem about the whole value. `Check()` lets a
+rule report any number of problems, each at the field it is about:
+
+``` r
+Booking <- Check(
+  create_list_type(list(start = Date, end = Date, adults = Integer, kids = Integer)),
+  function(x, ctx) {
+    if (x$end < x$start) ctx$issue("must be after start", path = "end")
+    if (x$adults == 0L && x$kids > 0L) ctx$issue("children need an adult", path = "kids")
+  }
+)
+
+res <- safe_parse(
+  list(start = as.Date("2024-05-10"), end = as.Date("2024-05-01"), adults = 0L, kids = 2L),
+  Booking
+)
+res$issues[, c("path", "message")]
+#>   path                message
+#> 1  end    must be after start
+#> 2 kids children need an adult
 ```
 
 #### 🪄 `Default()` and `Coerce()` — transform values
@@ -265,6 +289,24 @@ age <- "forty"  # Error: cannot convert
 when %:% Coerce(Date) %<-% "2024-05-01"
 class(when)
 #> [1] "Date"
+```
+
+#### 🔁 `Transform()` and `Pipe()` — cleaning steps inside the type
+
+`Transform(type, fn)` checks a value, then converts it with `fn`. Unlike
+`Coerce()`, it always runs. `Pipe()` chains types, passing each parsed
+value to the next:
+
+``` r
+Email <- Transform(Scalar(String), function(x) tolower(trimws(x)))
+parse_as("  Ada@Example.COM ", Email)
+#> [1] "ada@example.com"
+
+Share <- Pipe(Coerce(Numeric), Transform(Numeric, function(x) x / 100), Between(0, 1))
+parse_as("42", Share)
+#> [1] 0.42
+parse_as("420", Share)   # Error: outside [0, 1]
+#> Error: Type error: expected between[0, 1], but value [4.2] is outside [0, 1]
 ```
 
 #### 🕳️ `Nullable()` — present, but possibly `NULL`
@@ -561,6 +603,21 @@ current_user <- "u-456"                   # Error: not branded
 #> Received: u-456
 ```
 
+#### `HasMethods()` — anything with the right methods
+
+`InstanceOf("lm")` only accepts linear models. `HasMethods("predict")`
+accepts any object that `predict()` works on:
+
+``` r
+Model <- HasMethods("predict", "residuals")
+
+model %:% Model %<-% lm(mpg ~ wt, data = mtcars)
+model <- glm(am ~ wt, data = mtcars, family = binomial)
+model <- list()   # Error: no predict() or residuals() method
+#> Error: Type error in 'model': Expected has_methods[predict, residuals], but class 'list' has no predict() or residuals() method
+#> Received: (empty)
+```
+
 #### `FunctionOf()` — function signatures
 
 The function is wrapped with `typed_function()`, so every later call is
@@ -577,6 +634,34 @@ fmt("a")                    # Error: argument x
 #> Received: a
 fmt <- function(y) y        # Error: no parameter named x
 #> Error: Type error in 'fmt': Expected function(x: numeric) => string, but the function has no parameter(s) named x
+```
+
+### 🎯 Exhaustive matching with `match_type()`
+
+`match_type()` builds a function that checks a value and calls the
+handler for its case. Cases are the tags of a `DiscriminatedUnion()`,
+the values of an `Enum()` or `Literal()`, the levels of a `Factor()`, or
+the members of a union. Handlers are checked when the matcher is
+created, so a forgotten case fails right away, not on the rare call that
+reaches it:
+
+``` r
+area <- match_type(Shape,
+  circle = function(s) pi * s$radius^2,
+  square = function(s) s$side^2
+)
+area(list(kind = "square", side = 3))
+#> [1] 9
+
+match_type(Shape, circle = function(s) pi * s$radius^2)   # Error: no handler for 'square'
+#> Error: match_type() is not exhaustive: no handler for 'square'. Add a handler for each case or a .default handler
+
+label <- match_type(Enum("active", "paused", "closed"),
+  active = function(x) "Running",
+  .default = function(x) "Not running"
+)
+label("paused")
+#> [1] "Not running"
 ```
 
 ### 🧬 Generic Types
@@ -800,15 +885,62 @@ result$issues
 #> 1        [[2]]$id           Expected numeric, got string  numeric  string
 #> 2     [[2]]$title            Expected string, got double   string  double
 #> 3 [[2]]$completed Missing required field (expected bool)     bool missing
-#>            code
-#> 1  invalid_type
-#> 2  invalid_type
+#>            code index
+#> 1  invalid_type      
+#> 2  invalid_type      
 #> 3 missing_field
 ```
 
 The error is a condition of class `sicher_type_error` with the same
 issues in `e$issues`, so it can be handled with
 `tryCatch(..., sicher_type_error = function(e) ...)`.
+
+Misspelled field names, enum values and union tags come with a
+suggestion:
+
+``` r
+Person <- create_list_type(list(name = String, status = Enum("active", "inactive")))
+check_type(list(nmae = "Ada", status = "actve"), Person)
+#> Error: 3 type errors found:
+#>   * Type error in 'name': Missing required field (expected string)
+#>   * Type error in 'status': Expected enum["active", "inactive"], got string. Did you mean "active"?
+#>   * Type error in 'nmae': Unexpected field (valid fields: name, status). Did you mean 'name'?
+```
+
+### 🧾 Error reports for forms and APIs
+
+`field_errors()` groups messages by field, ready to show next to Shiny
+inputs. `problem_json()` builds an RFC 9457 “problem details” body for a
+`400` or `422` response, with a JSON Pointer to each bad value:
+
+``` r
+Signup <- create_list_type(list(email = Matches("@"), age = Scalar(Between(18, 120))))
+res <- safe_parse(list(email = "nope", age = 12), Signup)
+
+field_errors(res)
+#> $email
+#> [1] "expected matches(\"@\"), but value [\"nope\"] does not match the pattern"
+#> 
+#> $age
+#> [1] "expected between[18, 120], but value [12] is outside [18, 120]"
+str(problem_json(res, status = 422))
+#> List of 5
+#>  $ type  : chr "about:blank"
+#>  $ title : chr "Invalid request"
+#>  $ status: int 422
+#>  $ detail: chr "2 validation errors"
+#>  $ errors:List of 2
+#>   ..$ :List of 4
+#>   .. ..$ path   : chr "email"
+#>   .. ..$ pointer: chr "/email"
+#>   .. ..$ message: chr "expected matches(\"@\"), but value [\"nope\"] does not match the pattern"
+#>   .. ..$ code   : chr "invalid_string"
+#>   ..$ :List of 4
+#>   .. ..$ path   : chr "age"
+#>   .. ..$ pointer: chr "/age"
+#>   .. ..$ message: chr "expected between[18, 120], but value [12] is outside [18, 120]"
+#>   .. ..$ code   : chr "out_of_range"
+```
 
 ### 🌐 JSON
 
@@ -949,7 +1081,8 @@ type enforcement and a fully disabled mode depending on your use case.
 
 ### `sicher.mode`
 
-Controls how typed assignments (`%:%` and `%<-%`) behave.
+Controls how typed variables (`%:%` and `%<-%`) and typed functions
+(`typed_function()`) behave.
 
 #### Values
 
@@ -964,9 +1097,12 @@ Controls how typed assignments (`%:%` and `%<-%`) behave.
   every violation without breaking anything. Applies to typed variables
   and typed functions (`Readonly()` is still enforced).
 - **`"off"`**  
-  Disables the type system entirely.
+  Disables the type system entirely (`Readonly()` is still enforced on
+  variables declared before the option was set).
   - Typed annotations are ignored  
   - Assignments behave like standard R assignments (`<-`)  
+  - Typed functions call the original function without checking
+    arguments or the return value  
   - No validation is performed  
   - No active bindings are created
 

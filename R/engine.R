@@ -16,6 +16,9 @@
 #   received short preview of the received value (or NULL)
 #   details  optional extra explanation (or NULL)
 #   code     machine-readable kind of issue ("invalid_type", "custom", ...)
+#   index    positions of the failing elements of a vector (or NULL);
+#            data frame types relabel them as rows (index_label = "row")
+#   hint     a suggestion such as "Did you mean 'name'?" (or NULL)
 #
 # Plain create_type() types are leaves: their checker is called and a FALSE
 # result (or an error) becomes an issue. Structured types (lists, data
@@ -25,7 +28,7 @@
 
 new_issue <- function(path, message, expected = NA_character_,
                       got = NA_character_, received = NULL, details = NULL,
-                      code = "custom") {
+                      code = "custom", index = NULL, hint = NULL) {
   list(
     path     = path,
     message  = as.character(message),
@@ -33,8 +36,84 @@ new_issue <- function(path, message, expected = NA_character_,
     got      = as.character(got),
     received = received,
     details  = details,
-    code     = code
+    code     = code,
+    index    = index,
+    hint     = hint
   )
+}
+
+# The candidate closest to `x` (ignoring case), or NULL when none is close
+# enough to be a likely typo.
+suggest_name <- function(x, candidates) {
+  candidates <- unique(as.character(candidates))
+  if (!is.character(x) || length(x) != 1 || is.na(x) || !nzchar(x) ||
+      length(candidates) == 0) {
+    return(NULL)
+  }
+  same <- candidates[tolower(candidates) == tolower(x)]
+  if (length(same) > 0) return(same[1])
+  dist <- utils::adist(x, candidates, ignore.case = TRUE)[1, ]
+  # Swapping two neighbouring letters ("nmae") counts as one edit
+  dist[vapply(candidates, is_swap, logical(1), x = tolower(x))] <- 1
+  best <- which(dist == min(dist))
+  limit <- if (nchar(x) <= 3) 1 else 2
+  if (length(best) != 1 || dist[best] > limit || dist[best] >= nchar(x)) return(NULL)
+  candidates[best]
+}
+
+is_swap <- function(candidate, x) {
+  a <- strsplit(x, "")[[1]]
+  b <- strsplit(tolower(candidate), "")[[1]]
+  if (length(a) != length(b)) return(FALSE)
+  diff <- which(a != b)
+  length(diff) == 2 && diff[2] == diff[1] + 1 &&
+    a[diff[1]] == b[diff[2]] && a[diff[2]] == b[diff[1]]
+}
+
+# "Did you mean 'name'?" for a misspelled field name (NULL if no suggestion).
+field_hint <- function(x, candidates) {
+  match <- suggest_name(x, candidates)
+  if (is.null(match)) NULL else glue::glue("Did you mean '{match}'?")
+}
+
+# "Did you mean "active"?" for misspelled values, NULL if none is close to an
+# allowed value. With several bad values each suggestion names its value.
+value_hint <- function(bad, allowed) {
+  allowed <- as.character(Filter(is.character, allowed))
+  bad <- unique(bad[!is.na(bad)])
+  if (length(allowed) == 0 || !is.character(bad) || length(bad) == 0) return(NULL)
+  pairs <- character(0)
+  for (value in utils::head(bad, 3)) {
+    match <- suggest_name(value, allowed)
+    if (is.null(match)) next
+    pairs[value] <- encodeString(match, quote = "\"")
+  }
+  if (length(pairs) == 0) return(NULL)
+  if (length(bad) == 1) return(glue::glue("Did you mean {pairs}?"))
+  shown <- paste0(pairs, " instead of ", encodeString(names(pairs), quote = "\""))
+  glue::glue("Did you mean {paste(shown, collapse = ', ')}?")
+}
+
+# Positions of the elements (or data frame rows) of `x` flagged by `mask`,
+# kept only when there is more than one (a position adds nothing for a
+# single value).
+failing_positions <- function(x, mask) {
+  n <- if (is.data.frame(x)) nrow(x) else length(x)
+  if (n > 1) which(mask) else NULL
+}
+
+# The issue message followed by the failing positions, if any:
+# "... (at rows 2, 4)".
+issue_message <- function(issue) {
+  msg <- as.character(issue$message)
+  if (!is.null(issue$hint)) msg <- paste0(msg, ". ", issue$hint)
+  idx <- issue$index
+  if (length(idx) == 0) return(msg)
+  label <- if (is.null(issue$index_label)) "position" else issue$index_label
+  if (length(idx) > 1) label <- paste0(label, "s")
+  shown <- paste(utils::head(idx, 5), collapse = ", ")
+  if (length(idx) > 5) shown <- glue::glue("{shown} and {length(idx) - 5} more")
+  as.character(glue::glue("{msg} (at {label} {shown})"))
 }
 
 # The standard "Expected <type>, got <type>" issue.
@@ -69,9 +148,32 @@ is_plain_at <- function(issues, path) {
 delegate <- function(x, type, path, outer_name) {
   res <- run_type(x, type, path)
   if (is_plain_at(res$issues, path)) {
-    res$issues <- list(plain_issue(x, outer_name, path))
+    relabeled <- plain_issue(x, outer_name, path)
+    relabeled$hint <- res$issues[[1]]$hint
+    res$issues <- list(relabeled)
   }
   res
+}
+
+# Wrap an Enum() or Literal() leaf so that a misspelled string gets a
+# suggestion. The issue keeps code "invalid_type", so wrappers such as
+# Scalar() still relabel it (and keep the hint).
+with_value_hints <- function(leaf, allowed, matches) {
+  new_parser_type(
+    leaf$name,
+    function(x, path) {
+      res <- run_type(x, leaf, path)
+      if (length(res$issues) == 0 || !is.character(x) || !is.null(dim(x))) {
+        return(res)
+      }
+      ok <- vapply(as.list(x), function(value) {
+        any(vapply(allowed, function(a) matches(value, a), logical(1)))
+      }, logical(1))
+      res$issues[[1]]$hint <- value_hint(x[!ok], allowed)
+      res
+    },
+    meta = type_meta(leaf)
+  )
 }
 
 is_sicher_type_like <- function(type) {
@@ -188,19 +290,63 @@ union_has_null <- function(type) {
   any(vapply(type$types, function(t) identical(t, Null), logical(1)))
 }
 
+# Field wrappers: Alias() and Describe() only add information about a field
+# and Coerce() only changes how its value is read. Field-level questions (is
+# the field optional? does it have a default?) look through them.
+field_wrapper_kinds <- c("alias", "describe", "coerce")
+
+peel <- function(type, kinds = field_wrapper_kinds) {
+  repeat {
+    if (inherits(type, "sicher_readonly")) {
+      type <- type$base_type
+    } else if (inherits(type, "sicher_type") && meta_kind(type) %in% kinds) {
+      type <- type_meta(type)$inner
+    } else {
+      return(type)
+    }
+  }
+}
+
+# Apply `fn` to the type inside the field wrappers and wrap the result again,
+# so e.g. Partial() turns Alias(String, "x") into Alias(Optional(String), "x").
+map_core <- function(type, fn) {
+  if (inherits(type, "sicher_readonly")) {
+    return(Readonly(map_core(type$base_type, fn)))
+  }
+  kind <- if (inherits(type, "sicher_type")) meta_kind(type) else NA_character_
+  if (!(kind %in% field_wrapper_kinds)) return(fn(type))
+  meta <- type_meta(type)
+  inner <- map_core(meta$inner, fn)
+  switch(
+    kind,
+    alias = Alias(inner, meta$alias),
+    describe = Describe(inner, description = meta$description,
+                        title = meta$title, examples = meta$examples),
+    coerce = Coerce(inner, using = meta$using)
+  )
+}
+
 # A field may be omitted from a list (or data frame) when it is Optional()
 # (a union containing Null that was not built by Nullable()) or has a
 # Default().
 field_is_optional <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   if (inherits(type, "sicher_union")) {
     return(union_has_null(type) && !isTRUE(attr(type, "sicher_nullable")))
   }
-  identical(meta_kind(type), "default")
+  kind <- meta_kind(type)
+  if (kind %in% c("transform", "pipe", "check")) {
+    # Transform(Optional(String), f) may be left out (and is then not
+    # transformed); a Default() inside is not filled in, so it does not count
+    meta <- type_meta(type)
+    inner <- switch(kind, transform = meta$input, pipe = meta$types[[1]], check = meta$inner)
+    return(field_is_optional(inner) && !field_default(inner)$has)
+  }
+  identical(kind, "default")
 }
 
 field_default <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   if (identical(meta_kind(type), "default")) {
     return(list(has = TRUE, value = type_meta(type)$value))
   }
@@ -263,9 +409,9 @@ format_received <- function(value) {
 format_issue <- function(issue) {
   where <- format_path(issue$path)
   msg <- if (nzchar(where)) {
-    glue::glue("Type error in '{where}': {issue$message}")
+    glue::glue("Type error in '{where}': {issue_message(issue)}")
   } else {
-    glue::glue("Type error: {issue$message}")
+    glue::glue("Type error: {issue_message(issue)}")
   }
   if (!is.null(issue$details)) {
     msg <- glue::glue("{msg}\n  Details: {issue$details}")
@@ -312,9 +458,10 @@ sicher_mode <- function() {
 }
 
 # Run a type at a top-level entry point (typed variable, typed function
-# argument or return value). Honors sicher.mode = "warn": violations are
-# reported as warnings and the original value is kept.
+# argument or return value). Honors sicher.mode: "off" skips the check,
+# "warn" reports violations as warnings and keeps the original value.
 enforce_type <- function(value, type, context) {
+  if (identical(sicher_mode(), "off")) return(value)
   res <- run_type(value, type, if (is.null(context)) list() else list(context))
   if (length(res$issues) == 0) return(res$value)
   if (identical(sicher_mode(), "warn")) {
@@ -326,19 +473,23 @@ enforce_type <- function(value, type, context) {
 
 issues_to_df <- function(issues) {
   if (length(issues) == 0) {
-    return(data.frame(
+    df <- data.frame(
       path = character(0), message = character(0), expected = character(0),
       got = character(0), code = character(0), stringsAsFactors = FALSE
-    ))
+    )
+    df$index <- list()
+    return(df)
   }
-  data.frame(
+  df <- data.frame(
     path     = vapply(issues, function(i) format_path(i$path), character(1)),
-    message  = vapply(issues, function(i) as.character(i$message), character(1)),
+    message  = vapply(issues, issue_message, character(1)),
     expected = vapply(issues, function(i) as.character(i$expected), character(1)),
     got      = vapply(issues, function(i) as.character(i$got), character(1)),
     code     = vapply(issues, function(i) as.character(i$code), character(1)),
     stringsAsFactors = FALSE
   )
+  df$index <- lapply(issues, function(i) as.integer(i$index))
+  df
 }
 
 check_spec_list <- function(spec, arg, what = "Field") {
@@ -394,10 +545,12 @@ numeric_rule_type <- function(type_name, test, desc_single, desc_plural,
             "expected {type_name} (no NA values), ",
             "but value contains NA(s)"
           ),
-          expected = type_name, got = "NA", code = "na_value"
+          expected = type_name, got = "NA", code = "na_value",
+          index = failing_positions(x, is.na(x))
         )))
       }
-      failing <- x[!test(x)]
+      fails <- !test(x)
+      failing <- x[fails]
       if (length(failing) > 0) {
         preview <- paste(utils::head(failing, 5), collapse = ", ")
         if (length(failing) > 5) preview <- paste0(preview, ", ...")
@@ -408,7 +561,8 @@ numeric_rule_type <- function(type_name, test, desc_single, desc_plural,
         return(issue_result(x, new_issue(
           path,
           glue::glue("expected {type_name}, but {noun} [{preview}] {verb} {desc}"),
-          expected = type_name, got = get_type_name(x), code = "out_of_range"
+          expected = type_name, got = get_type_name(x), code = "out_of_range",
+          index = failing_positions(x, fails)
         )))
       }
       ok_result(x)

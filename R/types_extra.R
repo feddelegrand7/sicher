@@ -3,7 +3,7 @@
 # =============================================================================
 
 object_spec <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   if (!inherits(type, "sicher_type")) return(NULL)
   meta <- type_meta(type)
   if (!is.null(meta) && meta$kind %in% c("list", "data.frame")) {
@@ -13,24 +13,31 @@ object_spec <- function(type) {
 }
 
 object_kind <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   kind <- meta_kind(type)
   if (identical(kind, "data.frame")) "data.frame" else "list"
 }
 
 object_extra <- function(type) {
-  if (inherits(type, "sicher_readonly")) type <- type$base_type
+  type <- peel(type)
   extra <- type_meta(type)$extra
   if (is.null(extra)) "error" else extra
 }
 
-# Build a new list / data frame type with the same kind and `extra` setting
-# as `base`, but a different field specification.
-rebuild_object_type <- function(base, spec, extra = object_extra(base)) {
+object_alias <- function(type) {
+  type <- peel(type)
+  if (!inherits(type, "sicher_type")) return(NULL)
+  type_meta(type)$alias
+}
+
+# Build a new list / data frame type with the same kind, `extra` and `alias`
+# settings as `base`, but a different field specification.
+rebuild_object_type <- function(base, spec, extra = object_extra(base),
+                                alias = object_alias(base)) {
   if (identical(object_kind(base), "data.frame")) {
-    create_dataframe_type(spec, extra = extra)
+    create_dataframe_type(spec, extra = extra, alias = alias)
   } else {
-    create_list_type(spec, extra = extra)
+    create_list_type(spec, extra = extra, alias = alias)
   }
 }
 
@@ -71,7 +78,9 @@ create_intersection <- function(type1, type2) {
     }
     extras <- c(object_extra(type1), object_extra(type2))
     extra <- if ("error" %in% extras) "error" else if ("drop" %in% extras) "drop" else "allow"
-    return(rebuild_object_type(type1, merged, extra = extra))
+    alias <- object_alias(type1)
+    if (is.null(alias)) alias <- object_alias(type2)
+    return(rebuild_object_type(type1, merged, extra = extra, alias = alias))
   }
 
   wrap <- function(type) {
@@ -280,11 +289,14 @@ Unique <- function(type) {
         } else {
           glue::glue("{sum(duplicated(value))} duplicated element(s)")
         }
-        return(issue_result(value, new_issue(
+        issue <- new_issue(
           path,
           glue::glue("expected {type_name}, but found {detail}"),
-          expected = type_name, got = get_type_name(value), code = "not_unique"
-        )))
+          expected = type_name, got = get_type_name(value), code = "not_unique",
+          index = failing_positions(value, duplicated(value))
+        )
+        if (is.data.frame(value)) issue$index_label <- "row"
+        return(issue_result(value, issue))
       }
       res
     },
@@ -417,6 +429,9 @@ find_coercer <- function(type) {
   if (is.null(meta)) return(NULL)
   if (is.function(meta$coerce)) return(meta$coerce)
   if (!is.null(meta$inner)) return(find_coercer(meta$inner))
+  # Transforms convert to the type they accept as input
+  if (identical(meta$kind, "transform")) return(find_coercer(meta$input))
+  if (identical(meta$kind, "pipe")) return(find_coercer(meta$types[[1]]))
   NULL
 }
 
@@ -497,7 +512,7 @@ Coerce <- function(type, using = NULL) {
       }
       run_type(converted, type, path)
     },
-    meta = list(kind = "coerce", inner = type)
+    meta = list(kind = "coerce", inner = type, using = coercer)
   )
 }
 
@@ -691,6 +706,78 @@ InstanceOf <- function(class) {
   )
 }
 
+#' Types for objects that have certain methods
+#'
+#' @description
+#' Creates a structural type that accepts any object with methods for the
+#' given generic functions, like a Python protocol or a C++ concept. Where
+#' \code{\link{InstanceOf}("lm")} accepts only linear models,
+#' \code{HasMethods("predict")} accepts any object \code{predict()} works on:
+#' \code{lm}, \code{glm} or a model class from another package.
+#'
+#' An object has a method when one of its classes (including implicit
+#' classes such as \code{"numeric"}) has an S3 method for the generic, other
+#' than the \code{default} method. For S4 objects S4 methods count too, and
+#' for R6 objects (and other environments) a function field with the
+#' generic's name counts. S7 methods are not detected. S3 methods are
+#' looked up from where \code{HasMethods()} was called (and among registered
+#' methods), so a method defined inside another function is not found.
+#'
+#' @param ... Names of generic functions, as strings.
+#'
+#' @return A sicher_type.
+#'
+#' @examples
+#' Model <- HasMethods("predict", "residuals")
+#' is_type(lm(mpg ~ wt, data = mtcars), Model)   # TRUE
+#' try(check_type(list(), Model))
+#'
+#' @export
+HasMethods <- function(...) {
+  generics <- c(...)
+  if (!is.character(generics) || length(generics) == 0 || anyNA(generics) ||
+      any(!nzchar(generics))) {
+    stop("HasMethods() needs one or more generic function names, e.g. HasMethods(\"predict\")",
+         call. = FALSE)
+  }
+  generics <- unique(generics)
+  env <- parent.frame()
+  type_name <- glue::glue("has_methods[{paste(generics, collapse = ', ')}]")
+
+  has_method <- function(x, generic) {
+    classes <- setdiff(.class2(x), "default")
+    for (cls in classes) {
+      if (!is.null(utils::getS3method(generic, cls, optional = TRUE, envir = env))) {
+        return(TRUE)
+      }
+    }
+    if (isS4(x) && methods::hasMethod(generic, class(x))) return(TRUE)
+    if (is.environment(x) && is.function(x[[generic]])) return(TRUE)
+    FALSE
+  }
+
+  new_parser_type(
+    type_name,
+    function(x, path) {
+      missing_methods <- generics[!vapply(generics, has_method, logical(1), x = x)]
+      if (length(missing_methods) == 0) return(ok_result(x))
+      shown <- paste0(missing_methods, "()")
+      if (length(shown) > 1) {
+        shown <- paste(paste(utils::head(shown, -1), collapse = ", "), "or", utils::tail(shown, 1))
+      }
+      cls <- paste(class(x), collapse = "/")
+      issue_result(x, new_issue(
+        path,
+        glue::glue("Expected {type_name}, but class '{cls}' has no {shown} method"),
+        expected = type_name, got = get_type_name(x),
+        received = format_received(x), code = "missing_method"
+      ))
+    },
+    meta = list(kind = "has_methods", generics = generics),
+    strict_check = TRUE
+  )
+}
+
 #' Branded types
 #'
 #' @description
@@ -699,6 +786,14 @@ InstanceOf <- function(class) {
 #' an \code{OrderId} can no longer be passed where a \code{UserId} is
 #' expected even though both are strings. Use \code{brand()} to check a
 #' value against the base type and attach the brand.
+#'
+#' Arithmetic, comparisons and math functions on branded values return
+#' plain, unbranded values, since a computed value was never checked by
+#' \code{brand()}. Combining two values with different brands (for example
+#' \code{user_id + order_id}) is an error. On R versions before 4.3.0,
+#' combining a branded value with an unbranded value of a class that has its
+#' own arithmetic (such as \code{Date}) gives an "Incompatible methods"
+#' warning.
 #'
 #' @param type A sicher_type or sicher_union object (the base type).
 #' @param brand A single string naming the brand. It is added as a class to
@@ -732,7 +827,8 @@ Brand <- function(type, brand) {
       res <- delegate(x, type, path, type_name)
       if (length(res$issues) > 0) return(res)
       if (!inherits(x, brand)) {
-        other <- oldClass(x)
+        other <- brand_classes(x)
+        if (length(other) == 0) other <- oldClass(x)
         got_desc <- if (length(other) > 0) {
           glue::glue("a value branded as {paste(other, collapse = '/')}")
         } else {
@@ -762,9 +858,53 @@ brand <- function(value, type) {
   }
   meta <- type_meta(type)
   value <- parse_as(value, meta$inner)
-  class(value) <- unique(c(meta$brand, oldClass(value)))
+  brands <- unique(c(meta$brand, brand_classes(value)))
+  class(value) <- c(brands, "sicher_branded", oldClass(strip_brands(value)))
   value
 }
+
+# Branded values carry their brands as the classes in front of the
+# "sicher_branded" marker class.
+brand_classes <- function(x) {
+  cls <- oldClass(x)
+  pos <- match("sicher_branded", cls)
+  if (is.na(pos)) character(0) else cls[seq_len(pos - 1)]
+}
+
+strip_brands <- function(x) {
+  cls <- oldClass(x)
+  pos <- match("sicher_branded", cls)
+  if (is.na(pos)) return(x)
+  rest <- cls[-seq_len(pos)]
+  if (length(rest) == 0) unclass(x) else structure(x, class = rest)
+}
+
+# Arithmetic and comparisons on branded values drop the brand (a computed
+# value was never checked by brand()), and values with different brands
+# cannot be combined.
+#' @export
+Ops.sicher_branded <- function(e1, e2) {
+  if (missing(e2)) return(get(.Generic)(strip_brands(e1)))
+  b1 <- brand_classes(e1)
+  b2 <- brand_classes(e2)
+  if (length(b1) > 0 && length(b2) > 0 && !setequal(b1, b2)) {
+    stop(glue::glue(
+      "Cannot combine a value branded {paste(b1, collapse = '/')} with a value ",
+      "branded {paste(b2, collapse = '/')} using `{.Generic}`"
+    ), call. = FALSE)
+  }
+  get(.Generic)(strip_brands(e1), strip_brands(e2))
+}
+
+#' @export
+Math.sicher_branded <- function(x, ...) {
+  get(.Generic)(strip_brands(x), ...)
+}
+
+# Lets Ops.sicher_branded win over the other operand's method (e.g. a
+# branded Date minus a plain Date). The generic exists from R 4.3.0.
+#' @rawNamespace if (getRversion() >= "4.3.0") S3method(chooseOpsMethod, sicher_branded)
+chooseOpsMethod.sicher_branded <- function(x, y, mx, my, cl, reverse) TRUE
 
 # =============================================================================
 # Structural types
@@ -1055,7 +1195,11 @@ DiscriminatedUnion <- function(key, ...) {
         return(issue_result(x, new_issue(
           key_path,
           glue::glue("Missing discriminator field (expected one of {shown_tags})"),
-          expected = shown_tags, got = "missing", code = "invalid_discriminator"
+          expected = shown_tags, got = "missing", code = "invalid_discriminator",
+          hint = {
+            found <- suggest_name(key, setdiff(names(x), key))
+            if (!is.null(found)) glue::glue("Found field '{found}'; did you mean '{key}'?")
+          }
         )))
       }
       tag <- x[[key]]
@@ -1065,7 +1209,8 @@ DiscriminatedUnion <- function(key, ...) {
           key_path,
           glue::glue("Invalid discriminator value (expected one of {shown_tags})"),
           expected = shown_tags, got = get_type_name(tag),
-          received = format_received(tag), code = "invalid_discriminator"
+          received = format_received(tag), code = "invalid_discriminator",
+          hint = if (is.character(tag)) value_hint(tag, as.list(tags))
         )))
       }
       run_type(x, members[[as.character(tag)]], path)

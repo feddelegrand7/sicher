@@ -273,3 +273,9 @@ body {
     break-inside: avoid;
   }
 }
+/* Playground: wrap long error messages instead of cutting them off */
+.qwebr-output-code-area pre,
+.qwebr-output-code-area code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

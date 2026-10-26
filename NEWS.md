@@ -1,3 +1,48 @@
+# sicher 0.3.0
+
+## Field aliases and output
+
+-   New `Alias(type, alias)`: gives a list field or data frame column an external name (a JSON key, a CSV header, an environment variable). Values are read from the alias, or from the R name when the alias is absent, and stored under the R name. Error messages point at the alias, since that is the key that appears in the data.
+-   `create_list_type()` and `create_dataframe_type()` gain an `alias` argument to rename every field with a naming convention (`"camel"`, `"pascal"`, `"snake"`, `"kebab"`) or a function, e.g. `create_list_type(list(user_id = Integer), alias = "camel")` reads `userId`. Fields wrapped in `Alias()` keep their own alias.
+-   Aliases are kept by `extend()`, `Pick()`, `Omit()`, `Partial()`, `Required()` and `&`.
+-   New `dump_as(value, type, by_alias = TRUE, exclude_null = FALSE)`: the reverse of `parse_as()`. It checks the value, then renames fields to their aliases, optionally leaves out `NULL` fields and removes brands, so the result is ready to send to another system.
+-   New `to_json(value, type, ...)`: the reverse of `validate_json()`. Values declared with `Scalar()` are written as JSON scalars and other vectors as arrays (even with one element), so the shape of the output follows the type and not the data. `NULL` and `NA` become `null`, dates and date-times are written in ISO 8601 format, and invalid values raise a type error instead of producing invalid JSON.
+-   `to_json_schema()` names properties by their aliases.
+
+## Describing types
+
+-   New `Describe(type, description, title, examples)`: attaches documentation to a type without changing how it checks values. `to_json_schema()` writes it as `description`, `title` and `examples`, which makes the exported schema usable as API documentation or as a tool definition for a language model. Examples are checked against the type. Described types show their description when printed.
+
+## Settings from environment variables
+
+-   New `parse_env(type, prefix = "", env = Sys.getenv(), case_sensitive = FALSE)`: reads one environment variable per field of a list type (`prefix` + field name in upper case, or the field's `Alias()`), converts the text to the field's type (numbers, lenient logicals such as `yes`/`no`/`on`/`off`, dates, JSON arrays and objects) and checks it. Unset or empty variables fall back to `Default()` values, and every problem is reported at once with the name of the variable, so a misconfigured app fails at startup with a clear message.
+
+## Matching, rules and transforms
+
+-   New `match_type(type, ..., .default = NULL)`: builds a function that checks a value and calls the handler for its case, which is a `DiscriminatedUnion()` tag, an `Enum()` or `Literal()` value, a `Factor(levels = ...)` level or a member of a union. Missing handlers (without `.default`) and handlers for cases the type does not have are errors when the matcher is created.
+-   New `Check(type, fn)`: rules that report any number of problems, each at the field it is about, through `ctx$issue(message, path)`. Suited to rules across fields such as "end must be after start".
+-   New `Transform(type, fn, output = NULL)`: checks a value, then converts it. New `Pipe(...)`: chains types, passing each parsed value to the next.
+-   New `HasMethods(...)`: accepts any object with methods for the given generics (S3, S4, or R6 fields), e.g. `HasMethods("predict")` for any model.
+
+## Error messages and reports
+
+-   Misspelled field names, data frame columns, `Enum()` and `Literal()` values and `DiscriminatedUnion()` tags now come with a suggestion, e.g. `Unexpected field (valid fields: name, age). Did you mean 'name'?`.
+-   New `field_errors(x)`: the messages of a failed `safe_parse()` (or a caught type error) grouped by field, for showing errors next to form inputs.
+-   New `problem_json(x, status = 400L, ...)`: an RFC 9457 "problem details" body for HTTP error responses, with a JSON Pointer to each bad value.
+
+## Other changes
+
+-   Fields wrapped in `Coerce()` are now treated like the type they wrap when deciding whether a field is optional, so `Coerce(Default(Integer, 1L))` and `Coerce(Optional(Integer))` fields may be left out of a list.
+-   Issues for vectors and data frame columns now give the positions of the failing elements, for example `Type error in 'age': expected positive, but values [-2, -5] are not > 0 (at rows 2, 3)`. This applies to `Positive`, `NonNegative`, `Whole`, `Between()`, `NonNA()`, `Matches()` and `Unique()`. The issues data frame returned by `safe_parse()` gains an `index` list column with these positions.
+-   Unions no longer repeat a member: `Integer | Numeric | Integer` is `integer | numeric`.
+
+## Bug fixes
+
+-   `typed_function()` now checks the default values of annotated parameters when the typed function is created, so `typed_function(function(n = "a") n, params = list(n = Integer))` is an error instead of returning `"a"` when `n` is omitted. Only constant defaults (such as `1L`, `"a"`, `c(1, 2)` or `NULL`) are checked; defaults computed from other arguments, like `n = length(x)`, are not evaluated. A `NULL` default now needs an `Optional()` or `Nullable()` type. The check follows `sicher.mode`.
+
+-   `options(sicher.mode = "off")` now also turns off the checks of `typed_function()` and of typed variables that were declared before the option was set. Before, only new `%<-%` declarations were affected. In `"off"` mode a typed function calls the original function directly, so arguments are evaluated lazily as usual.
+-   Arithmetic, comparisons and math functions on branded values now return plain values without the brand (before, `brand(1L, UserId) + 1L` kept the `UserId` class although the result was never checked). Combining two values with different brands, such as `user_id + order_id`, is now an error. Branded values get the extra class `"sicher_branded"`, placed after their brands. On R versions before 4.3.0, combining a branded value with an unbranded value of a class that has its own arithmetic (such as `Date`) gives an "Incompatible methods" warning.
+
 # sicher 0.2.0
 
 ## Validating data

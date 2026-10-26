@@ -1,0 +1,29 @@
+---
+title: "Playground"
+subtitle: "Try sicher in your browser, no installation needed"
+filters:
+  - webr
+webr:
+  packages: ['sicher']
+  repos:
+    - https://feddelegrand7.r-universe.dev
+  show-startup-message: true
+---
+
+The console below runs R directly in your browser with [webR](https://docs.r-wasm.org/webr/latest/). Nothing is sent to a server. The first visit downloads R and the packages, which takes a few seconds; after that, code runs instantly.
+
+The playground installs the latest build of sicher from GitHub, through [r-universe](https://feddelegrand7.r-universe.dev/sicher).
+
+## Try it
+
+Declare a typed variable, then try to assign a value of the wrong type. Press **Run Code** to see sicher stop it, then edit the code and run it again: try another type such as `String` or `Scalar(Numeric)`, or change the value.
+
+```{webr-r}
+library(sicher)
+
+x %:% Integer %<-% 20L
+
+x <- "hello error"
+```
+
+To use sicher in your own R session, install it with `install.packages("sicher")`, then head to the [Features](features.qmd) page for everything it can do.

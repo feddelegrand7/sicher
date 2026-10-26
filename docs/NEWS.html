@@ -102,6 +102,10 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link" href="./api.html"> 
 <span class="menu-text">API Reference</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./playground.html"> 
+<span class="menu-text">Playground</span></a>
+  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
@@ -125,7 +129,14 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sicher-0.2.0" id="toc-sicher-0.2.0" class="nav-link active" data-scroll-target="#sicher-0.2.0">sicher 0.2.0</a>
+  <li><a href="#sicher-0.3.0" id="toc-sicher-0.3.0" class="nav-link active" data-scroll-target="#sicher-0.3.0">sicher 0.3.0</a>
+  <ul class="collapse">
+  <li><a href="#field-aliases-and-output" id="toc-field-aliases-and-output" class="nav-link" data-scroll-target="#field-aliases-and-output">Field aliases and output</a></li>
+  <li><a href="#describing-types" id="toc-describing-types" class="nav-link" data-scroll-target="#describing-types">Describing types</a></li>
+  <li><a href="#settings-from-environment-variables" id="toc-settings-from-environment-variables" class="nav-link" data-scroll-target="#settings-from-environment-variables">Settings from environment variables</a></li>
+  <li><a href="#other-changes" id="toc-other-changes" class="nav-link" data-scroll-target="#other-changes">Other changes</a></li>
+  </ul></li>
+  <li><a href="#sicher-0.2.0" id="toc-sicher-0.2.0" class="nav-link" data-scroll-target="#sicher-0.2.0">sicher 0.2.0</a>
   <ul class="collapse">
   <li><a href="#validating-data" id="toc-validating-data" class="nav-link" data-scroll-target="#validating-data">Validating data</a></li>
   <li><a href="#better-error-messages" id="toc-better-error-messages" class="nav-link" data-scroll-target="#better-error-messages">Better error messages</a></li>
@@ -133,7 +144,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#new-modifiers" id="toc-new-modifiers" class="nav-link" data-scroll-target="#new-modifiers">New modifiers</a></li>
   <li><a href="#object-utilities" id="toc-object-utilities" class="nav-link" data-scroll-target="#object-utilities">Object utilities</a></li>
   <li><a href="#typed-variables-and-functions" id="toc-typed-variables-and-functions" class="nav-link" data-scroll-target="#typed-variables-and-functions">Typed variables and functions</a></li>
-  <li><a href="#other-changes" id="toc-other-changes" class="nav-link" data-scroll-target="#other-changes">Other changes</a></li>
+  <li><a href="#other-changes-1" id="toc-other-changes-1" class="nav-link" data-scroll-target="#other-changes-1">Other changes</a></li>
   </ul></li>
   <li><a href="#sicher-0.1.1" id="toc-sicher-0.1.1" class="nav-link" data-scroll-target="#sicher-0.1.1">sicher 0.1.1</a></li>
   <li><a href="#sicher-0.1.0" id="toc-sicher-0.1.0" class="nav-link" data-scroll-target="#sicher-0.1.0">sicher 0.1.0</a></li>
@@ -146,6 +157,38 @@ ul.task-list li input[type="checkbox"] {
 
 
 
+<section id="sicher-0.3.0" class="level1">
+<h1>sicher 0.3.0</h1>
+<section id="field-aliases-and-output" class="level2">
+<h2 class="anchored" data-anchor-id="field-aliases-and-output">Field aliases and output</h2>
+<ul>
+<li>New <code>Alias(type, alias)</code>: gives a list field or data frame column an external name (a JSON key, a CSV header, an environment variable). Values are read from the alias, or from the R name when the alias is absent, and stored under the R name. Error messages point at the alias, since that is the key that appears in the data.</li>
+<li><code>create_list_type()</code> and <code>create_dataframe_type()</code> gain an <code>alias</code> argument to rename every field with a naming convention (<code>"camel"</code>, <code>"pascal"</code>, <code>"snake"</code>, <code>"kebab"</code>) or a function, e.g.&nbsp;<code>create_list_type(list(user_id = Integer), alias = "camel")</code> reads <code>userId</code>. Fields wrapped in <code>Alias()</code> keep their own alias.</li>
+<li>Aliases are kept by <code>extend()</code>, <code>Pick()</code>, <code>Omit()</code>, <code>Partial()</code>, <code>Required()</code> and <code>&amp;</code>.</li>
+<li>New <code>dump_as(value, type, by_alias = TRUE, exclude_null = FALSE)</code>: the reverse of <code>parse_as()</code>. It checks the value, then renames fields to their aliases, optionally leaves out <code>NULL</code> fields and removes brands, so the result is ready to send to another system.</li>
+<li>New <code>to_json(value, type, ...)</code>: the reverse of <code>validate_json()</code>. Values declared with <code>Scalar()</code> are written as JSON scalars and other vectors as arrays (even with one element), so the shape of the output follows the type and not the data. <code>NULL</code> and <code>NA</code> become <code>null</code>, dates and date-times are written in ISO 8601 format, and invalid values raise a type error instead of producing invalid JSON.</li>
+<li><code>to_json_schema()</code> names properties by their aliases.</li>
+</ul>
+</section>
+<section id="describing-types" class="level2">
+<h2 class="anchored" data-anchor-id="describing-types">Describing types</h2>
+<ul>
+<li>New <code>Describe(type, description, title, examples)</code>: attaches documentation to a type without changing how it checks values. <code>to_json_schema()</code> writes it as <code>description</code>, <code>title</code> and <code>examples</code>, which makes the exported schema usable as API documentation or as a tool definition for a language model. Examples are checked against the type. Described types show their description when printed.</li>
+</ul>
+</section>
+<section id="settings-from-environment-variables" class="level2">
+<h2 class="anchored" data-anchor-id="settings-from-environment-variables">Settings from environment variables</h2>
+<ul>
+<li>New <code>parse_env(type, prefix = "", env = Sys.getenv(), case_sensitive = FALSE)</code>: reads one environment variable per field of a list type (<code>prefix</code> + field name in upper case, or the field’s <code>Alias()</code>), converts the text to the field’s type (numbers, lenient logicals such as <code>yes</code>/<code>no</code>/<code>on</code>/<code>off</code>, dates, JSON arrays and objects) and checks it. Unset or empty variables fall back to <code>Default()</code> values, and every problem is reported at once with the name of the variable, so a misconfigured app fails at startup with a clear message.</li>
+</ul>
+</section>
+<section id="other-changes" class="level2">
+<h2 class="anchored" data-anchor-id="other-changes">Other changes</h2>
+<ul>
+<li>Fields wrapped in <code>Coerce()</code> are now treated like the type they wrap when deciding whether a field is optional, so <code>Coerce(Default(Integer, 1L))</code> and <code>Coerce(Optional(Integer))</code> fields may be left out of a list.</li>
+</ul>
+</section>
+</section>
 <section id="sicher-0.2.0" class="level1">
 <h1>sicher 0.2.0</h1>
 <section id="validating-data" class="level2">
@@ -209,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
 <li>New <code>sicher.mode = "warn"</code> option: type violations are reported as warnings and the assigned value is kept, which helps when adding sicher to existing code. <code>Readonly()</code> is still enforced.</li>
 </ul>
 </section>
-<section id="other-changes" class="level2">
-<h2 class="anchored" data-anchor-id="other-changes">Other changes</h2>
+<section id="other-changes-1" class="level2">
+<h2 class="anchored" data-anchor-id="other-changes-1">Other changes</h2>
 <ul>
 <li><code>Scalar()</code> now also accepts union types.</li>
 <li><code>infer_type()</code> now infers <code>Factor()</code>, <code>Date</code> and <code>DateTime</code> instead of <code>Any</code>.</li>
